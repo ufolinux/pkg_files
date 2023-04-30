@@ -1,0 +1,148 @@
+pkgname=libvirt
+pkgver=8.0.0
+pkgrel=1
+arch=('x86_64')
+depends=('libpciaccess' 'yajl' 'fuse2' 'gnutls' 'parted' 'libssh' 'libxml2' 'numactl' 'polkit'
+	'ceph')
+makedepends=('meson' 'libxslt' 'lvm2' 'python3-pip'
+            'bash-completion' 'rpcsvc-proto' 'dnsmasq' 'iproute2' 'qemu')
+export PATH=$PATH:/home/$(whoami)/.local/bin/
+backup=(
+'etc/conf.d/libvirtd'
+'etc/conf.d/libvirt-guests'
+'etc/conf.d/virtchd'
+'etc/conf.d/virtinterfaced'
+'etc/conf.d/virtlockd'
+'etc/conf.d/virtlogd'
+'etc/conf.d/virtlxcd'
+'etc/conf.d/virtnetworkd'
+'etc/conf.d/virtnodedevd'
+'etc/conf.d/virtnwfilterd'
+'etc/conf.d/virtproxyd'
+'etc/conf.d/virtqemud'
+'etc/conf.d/virtsecretd'
+'etc/conf.d/virtstoraged'
+'etc/conf.d/virtvboxd'
+'etc/libvirt/libvirt-admin.conf'
+'etc/libvirt/libvirt.conf'
+'etc/libvirt/libvirtd.conf'
+'etc/libvirt/lxc.conf'
+'etc/libvirt/nwfilter/allow-arp.xml'
+'etc/libvirt/nwfilter/allow-dhcp-server.xml'
+'etc/libvirt/nwfilter/allow-dhcpv6-server.xml'
+'etc/libvirt/nwfilter/allow-dhcp.xml'
+'etc/libvirt/nwfilter/allow-dhcpv6.xml'
+'etc/libvirt/nwfilter/allow-incoming-ipv4.xml'
+'etc/libvirt/nwfilter/allow-incoming-ipv6.xml'
+'etc/libvirt/nwfilter/allow-ipv6.xml'
+'etc/libvirt/nwfilter/allow-ipv4.xml'
+'etc/libvirt/nwfilter/clean-traffic-gateway.xml'
+'etc/libvirt/nwfilter/clean-traffic.xml'
+'etc/libvirt/nwfilter/no-arp-ip-spoofing.xml'
+'etc/libvirt/nwfilter/no-arp-mac-spoofing.xml'
+'etc/libvirt/nwfilter/no-arp-spoofing.xml'
+'etc/libvirt/nwfilter/no-ip-multicast.xml'
+'etc/libvirt/nwfilter/no-ipv6-multicast.xml'
+'etc/libvirt/nwfilter/no-ip-spoofing.xml'
+'etc/libvirt/nwfilter/no-ipv6-spoofing.xml'
+'etc/libvirt/nwfilter/no-mac-spoofing.xml'
+'etc/libvirt/nwfilter/no-mac-broadcast.xml'
+'etc/libvirt/nwfilter/no-other-l2-traffic.xml'
+'etc/libvirt/nwfilter/no-other-rarp-traffic.xml'
+'etc/libvirt/nwfilter/qemu-announce-self-rarp.xml'
+'etc/libvirt/nwfilter/qemu-announce-self.xml'
+'etc/libvirt/qemu.conf'
+'etc/libvirt/qemu-lockd.conf'
+'etc/libvirt/qemu/networks/default.xml'
+'etc/libvirt/virtchd.conf'
+'etc/libvirt/virtinterfaced.conf'
+'etc/libvirt/virtlockd.conf'
+'etc/libvirt/virtlogd.conf'
+'etc/libvirt/virt-login-shell.conf'
+'etc/libvirt/virtlxcd.conf'
+'etc/libvirt/virtnetworkd.conf'
+'etc/libvirt/virtnodedevd.conf'
+'etc/libvirt/virtnwfilterd.conf'
+'etc/libvirt/virtproxyd.conf'
+'etc/libvirt/virtqemud.conf'
+'etc/libvirt/virtsecretd.conf'
+'etc/libvirt/virtstoraged.conf'
+'etc/libvirt/virtvboxd.conf'
+'etc/logrotate.d/libvirtd'
+'etc/logrotate.d/libvirtd.lxc'
+'etc/logrotate.d/libvirtd.qemu'
+'etc/sasl2/libvirt.conf'
+)
+source=("https://libvirt.org/sources/$pkgname-$pkgver.tar.xz")
+
+prepare() {
+    cd "$pkgname-$pkgver"
+
+    sed -i 's|/sysconfig/|/conf.d/|g' \
+    src/remote/libvirtd.service.in \
+    tools/{libvirt-guests.service,libvirt-guests.sh,virt-pki-validate}.in \
+    src/locking/virtlockd.service.in \
+    src/logging/virtlogd.service.in
+
+    sed -i 's|/usr/libexec/qemu-bridge-helper|/usr/lib/qemu/qemu-bridge-helper|g' \
+    src/qemu/qemu.conf \
+    src/qemu/test_libvirtd_qemu.aug.in
+
+    pip install setuptools
+    pip install docutils
+}
+
+build() {
+    cd "$pkgname-$pkgver"
+
+    meson build \
+    --prefix=/usr \
+    --libexecdir=lib/libvirt \
+    -Drunstatedir=/run \
+    -Dqemu_group=kvm \
+    -Dnetcf=disabled \
+    -Dopenwsman=disabled \
+    -Dapparmor=disabled \
+    -Dapparmor_profiles=disabled \
+    -Dselinux=disabled \
+    -Dwireshark_dissector=disabled \
+    -Ddriver_bhyve=disabled \
+    -Ddriver_hyperv=disabled \
+    -Ddriver_libxl=disabled \
+    -Ddriver_vz=disabled \
+    -Dsanlock=disabled \
+    -Dsecdriver_apparmor=disabled \
+    -Dsecdriver_selinux=disabled \
+    -Dstorage_sheepdog=disabled \
+    -Dstorage_vstorage=disabled \
+    -Ddtrace=disabled \
+    -Dnumad=disabled \
+    -Dstorage_zfs=enabled \
+    -Dstorage_rbd=enabled
+
+    ninja -C build
+}
+
+package_libvirt() {
+    cd "$pkgname-$pkgver"
+
+    DESTDIR="$pkgdir" ninja -C build install
+
+    mv "$pkgdir"/etc/{sysconfig,conf.d}
+    mkdir "$pkgdir"/usr/lib/{sysusers,tmpfiles}.d
+    echo "g libvirt - -" > "$pkgdir/usr/lib/sysusers.d/libvirt.conf"
+    echo "z /var/lib/libvirt/qemu 0751" > "$pkgdir/usr/lib/tmpfiles.d/libvirt.conf"
+
+    chown 0:102 "$pkgdir/usr/share/polkit-1/rules.d"
+    chmod 0750 "$pkgdir/usr/share/polkit-1/rules.d"
+    chmod 600 "$pkgdir"/etc/libvirt/nwfilter/*.xml \
+    "$pkgdir/etc/libvirt/qemu/networks/default.xml"
+
+    rm -rf \
+    "$pkgdir/run" \
+    "$pkgdir/var/lib/libvirt/qemu" \
+    "$pkgdir/var/cache/libvirt/qemu" \
+    "$pkgdir/etc/logrotate.d/libvirtd.libxl"
+
+    rm -f "$pkgdir/etc/libvirt/qemu/networks/autostart/default.xml"
+}

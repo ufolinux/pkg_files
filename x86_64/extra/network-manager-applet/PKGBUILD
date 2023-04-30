@@ -1,0 +1,30 @@
+pkgname=network-manager-applet
+pkgver=1.24.0
+pkgrel=1
+arch=('x86_64')
+depends=(gtk+ libnma libnotify libsecret gobject-introspection polkit networkmanager modemmanager)
+source=(https://download.gnome.org/sources/network-manager-applet/1.24/$pkgname-$pkgver.tar.xz)
+
+prepare() {
+	mkdir -p $pkgname-$pkgver/build
+}
+
+build() {
+	cd $pkgname-$pkgver/build
+
+	meson			\
+	--prefix=/usr		\
+	--buildtype=release	\
+	-D appindicator=no	\
+	-D selinux=false	\
+	-D wwan=true		\
+	..
+
+	ninja
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+
+	DESTDIR=$pkgdir ninja install
+}

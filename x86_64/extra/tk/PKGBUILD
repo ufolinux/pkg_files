@@ -1,0 +1,41 @@
+pkgname=tk
+pkgver=8.6.12
+pkgrel=1
+arch=(x86_64)
+depends=(tcl libxss libxft)
+makedepends=(make gcc)
+source=(https://downloads.sourceforge.net/sourceforge/tcl/tk$pkgver-src.tar.gz)
+
+build() {
+	cd $pkgname$pkgver/unix
+
+	./configure \
+	--prefix=/usr \
+	--enable-threads \
+	--enable-64bit
+
+	make
+}
+
+package() {
+	cd $pkgname$pkgver/unix
+
+	make DESTDIR=$pkgdir install
+
+	# Linking
+	ln -sf wish${pkgver%.*} "${pkgdir}/usr/bin/wish"
+	ln -sf libtk${pkgver%.*}.so "${pkgdir}/usr/lib/libtk.so"
+
+	# Install headers
+	cd ..
+
+	for dir in compat generic generic/ttk unix; do
+		install -dm755 "${pkgdir}"/usr/include/tk-private/$dir
+		install -m644 -t "${pkgdir}"/usr/include/tk-private/$dir $dir/*.h
+	done
+
+	# remove buildroot traces
+	sed -e "s#${srcdir}/tk${pkgver}/unix#/usr/lib#" \
+		-e "s#${srcdir}/tk${pkgver}#/usr/include#" \
+		-i "${pkgdir}/usr/lib/tkConfig.sh"
+}

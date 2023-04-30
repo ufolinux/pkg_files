@@ -1,0 +1,97 @@
+pkgname=wxwidgets
+rname=wxWidgets # Typical upper case namings :/
+pkgver=3.0.5
+pkgrel=1
+arch=(x86_64)
+depends=(gst-plugins-base glu webkit2gtk libnotify gtk2+ expat
+	libsm libxxf86vm libnotify libglvnd gtk3+ libtiff libpng libjpeg
+	libxpm sdl2 qt5 egl-wayland clang)
+makedepends=()
+source=(https://github.com/wxWidgets/wxWidgets/releases/download/v$pkgver/wxWidgets-$pkgver.tar.bz2)
+
+prepare() {
+	cp -rf $rname-$pkgver $rname-$pkgver-gtk2
+	cp -rf $rname-$pkgver $rname-$pkgver-qt5
+}
+
+build() {
+	# GTK2
+	cd $srcdir/$rname-$pkgver-gtk2
+	echo "GTK2"
+	./configure \
+	--prefix=/usr \
+	--with-gtk=2 \
+	--with-opengl \
+	--enable-unicode \
+	--enable-graphics_ctx \
+	--enable-mediactrl \
+	--with-regex=builtin \
+	--with-libpng=sys \
+	--with-libxpm=sys \
+	--with-libjpeg=sys \
+	--enable-webview \
+	--with-libtiff=sys \
+	--disable-precomp-headers
+
+	make -j6
+
+	# GTK3
+	echo " "
+	echo "GTK3"
+	cd $srcdir/$rname-$pkgver
+
+	./configure \
+	--prefix=/usr \
+	--with-gtk=3 \
+	--with-opengl \
+	--enable-unicode \
+	--enable-graphics_ctx \
+	--enable-mediactrl \
+	--with-regex=builtin \
+	--with-libpng=sys \
+	--with-libxpm=sys \
+	--with-libjpeg=sys \
+	--with-libtiff=sys \
+	--with-sdl=sys \
+	--with-libtiff=sys \
+	--disable-precomp-headers
+
+	make -j6
+
+	# QT5
+	echo " "
+	echo "QT5"
+	cd $srcdir/$rname-$pkgver-qt5
+
+	./configure \
+	--prefix=/usr \
+	--with-qt \
+	--with-opengl \
+	--enable-unicode \
+	--enable-graphics_ctx \
+	--enable-mediactrl \
+	--with-regex=builtin \
+	--with-libpng=sys \
+	--with-libxpm=sys \
+	--with-libjpeg=sys \
+	--with-libtiff=sys \
+	--with-sdl=sys \
+	--with-libtiff=sys \
+	--disable-precomp-headers
+
+	make -j6
+}
+
+package() {
+	# GTK2
+	cd $srcdir/$rname-$pkgver-gtk2
+	make DESTDIR=$pkgdir install
+
+	# QT5
+	cd $srcdir/$rname-$pkgver-qt5
+	make DESTDIR=$pkgdir install
+
+	# GTK3
+	cd $srcdir/$rname-$pkgver
+	make DESTDIR=$pkgdir install
+}

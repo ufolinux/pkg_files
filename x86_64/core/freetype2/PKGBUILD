@@ -1,0 +1,26 @@
+pkgname=freetype2
+pkgver=2.11.1
+pkgrel=1
+arch=('x86_64')
+depends=(zlib bzip2 bash libpng harfbuzz brotli)
+source=(https://downloads.sourceforge.net/freetype/freetype-$pkgver.tar.xz)
+
+build() {
+	cd freetype-$pkgver
+
+	sed -ri "s:.*(AUX_MODULES.*valid):\1:" modules.cfg
+
+        sed -r "s:.*(#.*SUBPIXEL_RENDERING) .*:\1:" \
+            -i include/freetype/config/ftoption.h
+
+        ./configure	\
+	--prefix=/usr	\
+	--enable-freetype-config
+
+        make
+}
+
+package() {
+	cd freetype-$pkgver
+        make DESTDIR=$pkgdir install
+}

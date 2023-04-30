@@ -1,0 +1,80 @@
+pkgname=samba
+pkgver=4.16.1
+pkgrel=1
+arch=(x86_64)
+depends=(python3 docbook-xsl libbsd db popt cups readline tevent
+		acl openldap libcap ldb linux-pam systemd gnutls talloc tdb
+		dbus libaio perl-modules libnsl libtirpc rpcsvc-proto jansson
+		ceph liburing)
+backup=(etc/logrotate.d/samba
+        etc/pam.d/samba
+        etc/conf.d/samba
+	etc/samba/smb.conf)
+makedepends=(python3-pip)
+source=(https://us1.samba.org/samba/ftp/stable/${pkgname}-${pkgver}.tar.gz
+		samba-pam.conf
+		samba-tmp.conf
+		samba.logrotate)
+
+prepare() {
+	# Install some python made deps
+	pip3 install setuptools
+	pip3 install Pygments toml typogrify
+	pip3 install markdown dnspython
+
+	cd $pkgname-$pkgver
+
+	idmap_modules='idmap_ad,idmap_rid,idmap_adex,idmap_hash,idmap_tdb2'
+	pdb_modules='pdb_tdbsam,pdb_ldap,pdb_ads,pdb_smbpasswd,pdb_wbc_sam,pdb_samba4'
+	auth_modules='auth_unix,auth_wbc,auth_server,auth_netlogond,auth_script,auth_samba4'
+
+	./configure \
+	--prefix=/usr \
+	--sysconfdir=/etc \
+	--enable-fhs \
+	--with-ads \
+	--with-ldap \
+	--with-winbind \
+	--with-acl-support \
+	--with-systemd \
+	--systemd-install-services \
+	--with-pam \
+	--with-shared-modules=${idmap_modules},${pdb_modules},${auth_modules} \
+	--with-pammodulesdir=/usr/lib/security
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	#make -j6
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+
+	# Install dirs and give/change perms
+	install -d -m755  $pkgdir/etc/conf.d
+	install -d -m755 $pkgdir/etc/samba
+	mkdir -p $pkgdir/etc/samba/private
+	chmod 700 $pkgdir/etc/samba/private
+	install -d -m1777 $pkgdir/var/spool/samba
+
+	# Other things
+	sed -i -e '/^EnvironmentFile/ s/sysconfig/conf.d/' $pkgdir/usr/lib/systemd/system/*.service
+	install -m644 $srcdir/samba-$pkgver/packaging/systemd/samba.sysconfig $pkgdir/etc/conf.d/samba
+	install -D -m644 $srcdir/samba-$pkgver/examples/LDAP/samba.schema $pkgdir/usr/share/doc/samba/examples/LDAP/samba.schema
+	install -D -m644 $srcdir/samba-$pkgver/ctdb/config/ctdb.service  $pkgdir/usr/lib/systemd/system/ctdb.service
+	install -D -m644 $srcdir/samba.logrotate $pkgdir/etc/logrotate.d/samba
+	install -D -m644 $srcdir/samba-pam.conf $pkgdir/etc/pam.d/samba
+	install -D -m644 $srcdir/samba-tmp.conf $pkgdir/usr/lib/tmpfiles.d/samba.conf
+	touch $pkgdir/etc/samba/smb.conf
+
+	# Delete some files that conflict with other packages
+	rm -f $pkgdir/usr/bin/{ldbadd,ldbdel,ldbedit,ldbmodify,ldbrename,ldbsearch,tdbbackup,tdbdump,tdbrestore,tdbtool}
+
+	rm -f $pkgdir/usr/lib/python3.10/site-packages/{_ldb_text.py,_tdb_text.py,ldb.cpython-310-x86_64-linux-gnu.so,tdb.cpython-310-x86_64-linux-gnu.so}
+
+	rm -rf $pkgdir/usr/share/man/man*/{ldb*,tdb*}
+}

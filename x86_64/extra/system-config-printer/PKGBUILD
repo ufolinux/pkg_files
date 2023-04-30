@@ -1,0 +1,50 @@
+pkgname=system-config-printer
+pkgver=1.5.16
+pkgrel=4
+arch=(x86_64)
+depends=(libnotify gtk3+ cairo cups cups-pk-helper
+	python3-pysmbc python3-gobject python3-cairo
+	python3-pycups python3-pycurl)
+makedepends=(xmlto docbook-xsl desktop-file-utils libsecret)
+source=(https://github.com/OpenPrinting/system-config-printer/releases/download/v${pkgver}/system-config-printer-${pkgver}.tar.xz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	./bootstrap
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure \
+	--prefix=/usr \
+	--sysconfdir=/etc \
+	--with-systemdsystemunitdir=/usr/lib/systemd/system \
+	--with-udevdir=/usr/lib/udev \
+	--with-udev-rules
+
+	make
+
+	python setup.py build
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR="$pkgdir" install
+
+	rm -rf $pkgdir/usr/lib/python3.10
+
+	# Install cupshelpers manually
+	python setup.py install --root=${pkgdir}
+
+	# Compile all py files
+	find "$pkgdir" -name '*.py' -exec python -mpy_compile {} +
+	find "$pkgdir" -name '*.py' -exec python -O -mpy_compile {} +
+
+	# fix dbus policy location
+	install -dm755 "$pkgdir"/usr/share/dbus-1/system.d
+	mv "$pkgdir"/etc/dbus-1/system.d/* "$pkgdir"/usr/share/dbus-1/system.d
+	rm -rf "$pkgdir"/etc/dbus-1
+}

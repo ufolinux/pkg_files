@@ -1,0 +1,22 @@
+pkgname=xmessage
+pkgver=1.0.5
+pkgrel=1
+arch=('x86_64')
+depends=(libxaw)
+makedepends=(util-macros)
+source=(https://xorg.freedesktop.org/archive/individual/app/xmessage-${pkgver}.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure	\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

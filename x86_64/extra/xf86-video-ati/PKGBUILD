@@ -1,0 +1,24 @@
+pkgname=xf86-video-ati
+pkgver=19.1.0
+pkgrel=4
+arch=('x86_64')
+depends=(xorg-server)
+source=(https://x.org/pub/individual/driver/$pkgname-$pkgver.tar.bz2
+	https://linuxfromscratch.org/patches/blfs/11.0/xf86-video-ati-19.1.0-upstream_fixes-1.patch)
+
+build() {
+	cd $pkgname-$pkgver
+
+	patch -Np1 -i ../$pkgname-$pkgver-upstream_fixes-1.patch
+
+	./configure		\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+	mkdir -p $pkgdir/etc/X11/xorg.conf.d
+}

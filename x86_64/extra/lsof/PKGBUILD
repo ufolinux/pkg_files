@@ -1,0 +1,28 @@
+pkgname=lsof
+pkgver=4.94.0
+pkgrel=1
+arch=('x86_64')
+depends=(glibc libtirpc)
+source=(https://github.com/lsof-org/lsof/archive/${pkgver}/${pkgname}-${pkgver}.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	sed -i 's|/\* #define\tHASSECURITY\t1 \*/|#define\tHASSECURITY\t1|' dialects/linux/machine.h
+	sed -i "s|.so ./version|.ds VN ${pkgver}|" -i Lsof.8
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	./Configure -n linux
+
+	make CC="cc ${CFLAGS} ${CPPFLAGS} ${LDFLAGS}"
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	install -Dm 755 lsof -t "${pkgdir}"/usr/bin
+	install -Dm 644 Lsof.8 "${pkgdir}"/usr/share/man/man8/lsof.8
+}

@@ -1,0 +1,23 @@
+pkgname=keybinder
+pkgver=3.0.0.3.2
+rver=3.0-0.3.2
+pkgrel=1
+arch=('x86_64')
+depends=(gtk+ gobject-introspection)
+makedepends=(gtk-doc)
+source=(https://github.com/kupferlauncher/$pkgname/releases/download/$pkgname-3.0-v0.3.2/$pkgname-$rver.tar.gz)
+
+build() {
+	cd $pkgname-$rver
+
+	./configure		\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$rver
+
+	make DESTDIR=$pkgdir install
+}

@@ -1,0 +1,37 @@
+_name=libsndfile
+pkgname=lib32-$_name
+pkgver=1.0.31
+pkgrel=1
+arch=('x86_64')
+depends=('lib32-opus' "${_name}=${pkgver}")
+makedepends=('cmake' 'lib32-alsa-lib' 'lib32-libogg'
+'lib32-libvorbis' 'lib32-sqlite3' 'python3')
+source=("https://github.com/${_name}/${_name}/releases/download/${pkgver}/${_name}-${pkgver}.tar.bz2"{,.sig})
+
+build() {
+	export CC="gcc -m32"
+	export CXX="g++ -m32"
+	export PKG_CONFIG_PATH="/usr/lib32/pkgconfig"
+
+	cd $_name-$pkgver
+
+	cmake -DCMAKE_INSTALL_PREFIX=/usr \
+	-DCMAKE_BUILD_TYPE='None' \
+	-DBUILD_SHARED_LIBS=ON \
+	-DCMAKE_INSTALL_LIBDIR=lib32 \
+	-Wno-dev \
+	-B build \
+	-S .
+
+	make VERBOSE=1 -C build
+}
+
+package() {
+	  cd "${_name}-${pkgver}"
+	make DESTDIR="$pkgdir" install -C build
+	install -vDm 644 {AUTHORS,ChangeLog,NEWS,README} \
+	-t "${pkgdir}/usr/share/doc/${pkgname}"
+
+	# remove everything that is provided by libsndfile
+	rm -rf "$pkgdir/usr/"{bin,include,share/{man,doc/${_name}}}
+}

@@ -1,0 +1,23 @@
+pkgname=bubblewrap
+pkgver=0.7.0
+pkgrel=1
+arch=(x86_64)
+depends=(glibc libcap)
+makedepends=(libxslt docbook-xsl git meson bash-completion)
+source=(https://github.com/containers/bubblewrap/releases/download/v$pkgver/bubblewrap-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	meson build \
+	--prefix=/usr \
+	-D selinux=disabled
+
+	ninja -C build
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	DESTDIR=$pkgdir ninja install -C build
+}

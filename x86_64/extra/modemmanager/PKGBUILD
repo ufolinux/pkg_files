@@ -1,0 +1,31 @@
+pkgname=modemmanager
+pkgver=1.18.4
+pkgrel=1
+pkgdesc="Mobile broadband modem management service"
+arch=(x86_64)
+url="https://www.freedesktop.org/wiki/Software/ModemManager/"
+license=(GPL2 LGPL2.1)
+depends=(systemd libgudev polkit)
+makedepends=(gtk-doc gobject-introspection vala meson git bash-completion)
+source=(https://www.freedesktop.org/software/ModemManager/ModemManager-$pkgver.tar.xz)
+
+build() {
+	cd ModemManager-$pkgver
+
+	./configure --prefix=/usr		\
+		--sysconfdir=/etc		\
+		--localstatedir=/var		\
+		--disable-maintainer-mode	\
+		--without-mbim			\
+		--without-qmi			\
+		--with-systemd-journal        \
+		--with-systemd-suspend-resume
+
+	make
+}
+
+package() {
+	cd ModemManager-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

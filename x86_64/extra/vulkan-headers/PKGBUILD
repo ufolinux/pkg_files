@@ -1,0 +1,25 @@
+pkgname=vulkan-headers
+pkgver=1.3.240
+pkgrel=1
+arch=('x86_64')
+makedepends=('cmake' 'git')
+source=(https://github.com/KhronosGroup/Vulkan-Headers/archive/v${pkgver}.tar.gz)
+
+build() {
+	cd Vulkan-Headers-$pkgver
+
+	rm -rf build && mkdir -p build && cd build
+
+	cmake				\
+	-DCMAKE_INSTALL_PREFIX=/usr	\
+	-DCMAKE_BUILD_TYPE=Release	\
+	..
+
+	make
+}
+
+package() {
+	cd Vulkan-Headers-$pkgver/build
+
+	make DESTDIR=$pkgdir install
+}

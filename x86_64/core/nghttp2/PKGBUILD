@@ -1,0 +1,45 @@
+pkgname=nghttp2
+pkgver=1.46.0
+pkgrel=1
+arch=('x86_64')
+depends=(openssl libev zlib libxml2 jansson c-ares)
+makedepends=(systemd python3 python3-pip)
+options=(!emptydirs)
+source=(https://github.com/nghttp2/nghttp2/releases/download/v$pkgver/nghttp2-$pkgver.tar.xz)
+backup=(
+	etc/nghttpx/nghttpx.conf
+	etc/logrotate.d/nghttpx
+)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	autoreconf -i
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure	\
+	--prefix=/usr	\
+	--disable-examples
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR="$pkgdir" install
+
+#	make -C lib DESTDIR="$pkgdir" uninstall
+
+	install -Dm644 contrib/nghttpx.service "$pkgdir/usr/lib/systemd/system/nghttpx.service"
+	install -Dm644 contrib/nghttpx-logrotate "$pkgdir/etc/logrotate.d/nghttpx"
+
+	# Install .pc files
+	install -D src/libnghttp2_asio.pc "$pkgdir/usr/lib/pkgconfig/libnghttp2_asio.pc"
+	install -D lib/libnghttp2.pc "$pkgdir/usr/lib/pkgconfig/libnghttp2.pc"
+
+	install -Dm644 nghttpx.conf.sample "$pkgdir/etc/nghttpx/nghttpx.conf"
+}

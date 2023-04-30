@@ -1,0 +1,30 @@
+pkgname=scim
+pkgver=1.4.18
+pkgrel=1
+arch=('x86_64')
+depends=(gtk2+ gtk3+)
+makedepends=(intltool gtk3+)
+source=($pkgname-$pkgver.tar.gz::https://github.com/scim-im/scim/archive/$pkgver.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	./bootstrap
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr		\
+	--sysconfdir=/etc	\
+	--with-gtk-version=2
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR="${pkgdir}" install
+}

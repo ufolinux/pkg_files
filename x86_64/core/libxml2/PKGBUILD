@@ -1,0 +1,48 @@
+pkgname=libxml2
+pkgver=2.9.12
+pkgrel=5
+arch=('x86_64')
+depends=(icu readline zlib ncurses xz)
+install=libxml2.install
+makedepends=(python3)
+source=(http://xmlsoft.org/sources/$pkgname-$pkgver.tar.gz
+	libxml2-2.9.8-python3-unicode-errors.patch
+	no-fuzz.diff)
+
+prepare() {
+	mkdir -p build
+
+	cd $pkgname-$pkgver
+
+	# https://src.fedoraproject.org/rpms/libxml2/tree/rawhide
+	patch -p1 -i ../libxml2-2.9.8-python3-unicode-errors.patch
+
+	# Do not run fuzzing tests
+	patch -p1 -i ../no-fuzz.diff
+
+	autoreconf -fiv
+}
+
+build() {
+	cd build
+
+	./../$pkgname-$pkgver/configure \
+	--prefix=/usr    \
+	--with-history   \
+	--with-icu \
+	--with-threads \
+	--with-python=/usr/bin/python3
+
+	make
+
+	find doc -type f -exec chmod -c 0644 {} +
+}
+
+package() {
+        cd build
+
+	make DESTDIR=$pkgdir install
+
+	python -m compileall -d /usr/lib "$pkgdir/usr/lib"
+	python -O -m compileall -d /usr/lib "$pkgdir/usr/lib"
+}

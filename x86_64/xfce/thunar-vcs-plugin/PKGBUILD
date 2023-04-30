@@ -1,0 +1,23 @@
+pkgname=thunar-vcs-plugin
+pkgver=0.2.0
+xver=0.2
+pkgrel=1
+arch=('x86_64')
+depends=(thunar gtk+ glib2 exo libxfce4util git)
+source=(https://archive.xfce.org/src/thunar-plugins/$pkgname/$xver/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr		\
+	--sysconfdir=/etc
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

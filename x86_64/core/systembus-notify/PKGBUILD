@@ -1,0 +1,20 @@
+pkgname=systembus-notify
+pkgver=1.1
+pkgrel=1
+arch=('x86_64')
+depends=(systemd glibc)
+makedepends=(gcc)
+source=(https://github.com/rfjakob/$pkgname/archive/v$pkgver/$pkgname-$pkgver.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	make
+}
+
+package() {
+    cd $pkgname-$pkgver
+
+    install -Dm755 -t "$pkgdir/usr/bin/" systembus-notify
+    install -Dm644 -t "$pkgdir/etc/xdg/autostart/" systembus-notify.desktop
+}

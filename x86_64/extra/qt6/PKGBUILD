@@ -1,0 +1,85 @@
+pkgname=qt6
+pkgver=6.3.1
+rver=6.3
+pkgrel=1
+arch=('x86_64')
+depends=(xorg-server xwayland alsa-lib cups glib2 harfbuzz icu libjpeg libpng
+	libtiff libwebp libxkbcommon mesa pcre2 sqlite3 wayland xcb-util-image xcb-util-keysyms
+	xcb-util-renderutil xcb-util-wm libinput pciutils pulseaudio bluez libglvnd fontconfig)
+makedepends=(extra-cmake-modules perl xinput)
+source=(
+	# Main single tarball
+	https://download.qt.io/official_releases/qt/6.3/6.3.1/single/qt-everywhere-src-6.3.1.tar.xz
+	# Src is cloned by prepare so things keep origin url and etc
+	# Final desktop entries
+	assistant-qt6.desktop
+	designer-qt6.desktop
+	linguist-qt6.desktop
+	qdbusviewer-qt6.desktop)
+
+prepare() {
+	cd qt-everywhere-src-$pkgver
+
+	# Lets run configure only in prepare so it wont get reconfigured later on
+	# qtdocgallery is disabled as of its errors when compiled
+	cmake -B build -G Ninja \
+	-D CMAKE_INSTALL_PREFIX=/usr \
+	-D CMAKE_BUILD_TYPE=Release \
+	-D INSTALL_BINDIR=libexec/qt6/bin \
+	-D INSTALL_PUBLICBINDIR=usr/bin \
+	-D INSTALL_LIBEXECDIR=lib/qt6 \
+	-D INSTALL_DOCDIR=share/doc/qt6 \
+	-D INSTALL_ARCHDATADIR=lib/qt6 \
+	-D INSTALL_DATADIR=share/qt6 \
+	-D INSTALL_INCLUDEDIR=include/qt6 \
+	-D INSTALL_MKSPECSDIR=lib/qt6/mkspecs \
+	-D INSTALL_EXAMPLESDIR=share/doc/qt6/examples \
+	-D QT_FEATURE_journald=ON \
+	-D QT_FEATURE_openssl_linked=ON \
+	-D QT_FEATURE_system_sqlite=ON \
+	-D QT_FEATURE_system_xcb_xinput=ON \
+	-D QT_NO_MAKE_EXAMPLES=ON \
+	-D BUILD_qtwebengine=OFF \
+	-D BUILD_qtpositioning=ON \
+	-D BUILD_qtlocation=ON \
+	-D CMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
+	-D QT_AVOID_CMAKE_ARCHIVING_API=ON
+}
+
+build() {
+	cd qt-everywhere-src-$pkgver
+
+	ninja -C build
+}
+
+package() {
+	cd qt-everywhere-src-$pkgver
+
+	mkdir -p $pkgdir/usr
+	DESTDIR=$pkgdir INSTALL_ROOT=$pkgdir ninja -C build install
+
+	# Remove references to the build directory from installed library dependency (prl)
+	find $pkgdir/usr/ -name \*.prl \
+		-exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d' {} \;
+
+	# Install private headers
+	install -d -m755 "$pkgdir"/usr/include/qt6/qtxcb-private
+	cp -r qtbase/src/plugins/platforms/xcb/*.h "$pkgdir"/usr/include/qt6/qtxcb-private/
+
+	# Install images and create the menu entries for installed applications.
+	install -v -dm755 $pkgdir/usr/share/pixmaps/
+	install -v -Dm644 qttools/src/assistant/assistant/images/assistant-128.png \
+		$pkgdir/usr/share/pixmaps/assistant-qt6.png
+	install -v -Dm644 qttools/src/designer/src/designer/images/designer.png \
+		$pkgdir/usr/share/pixmaps/designer-qt6.png
+	install -v -Dm644 qttools/src/linguist/linguist/images/icons/linguist-128-32.png \
+		$pkgdir/usr/share/pixmaps/linguist-qt6.png
+	install -v -Dm644 qttools/src/qdbus/qdbusviewer/images/qdbusviewer-128.png \
+		$pkgdir/usr/share/pixmaps/qdbusviewer-qt6.png
+	install -dm755 $pkgdir/usr/share/applications
+
+	cp $srcdir/assistant-qt6.desktop $pkgdir/usr/share/applications/
+	cp $srcdir/designer-qt6.desktop $pkgdir/usr/share/applications/
+	cp $srcdir/linguist-qt6.desktop $pkgdir/usr/share/applications/
+	cp $srcdir/qdbusviewer-qt6.desktop $pkgdir/usr/share/applications/
+}

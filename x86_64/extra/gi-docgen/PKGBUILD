@@ -1,0 +1,26 @@
+pkgname=gi-docgen
+pkgver=2022.1
+pkgrel=1
+arch=(x86_64)
+depends=(python3)
+makedepends=(git)
+commitid=37b04455ff58cb2ec3f58917d0737c435344f2fb
+source=(git+https://gitlab.gnome.org/GNOME/gi-docgen.git#commit=$commitid)
+
+prepare() {
+	pip3 install setuptools
+
+	pip3 install jinja2 markdown markupsafe pygments toml typogrify
+}
+
+build() {
+	cd $pkgname
+
+	python setup.py build
+}
+
+package() {
+	cd $pkgname
+
+	python setup.py install --root="$pkgdir" --optimize=1 --skip-build
+}

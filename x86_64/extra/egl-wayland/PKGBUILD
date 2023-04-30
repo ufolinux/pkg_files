@@ -1,0 +1,21 @@
+pkgname=egl-wayland
+pkgver=1.1.9
+pkgrel=1
+arch=(x86_64)
+depends=(wayland eglexternalplatform)
+makedepends=(meson git wayland-protocols)
+commitid=582b2d345abaa0e313cf16c902e602084ea59551  # master
+source=("git+https://github.com/NVIDIA/egl-wayland.git#commit=$commitid"
+        10_nvidia_wayland.json)
+
+build() {
+    meson $pkgname build --prefix=/usr
+
+    meson compile -C build
+}
+
+package() {
+    meson install -C build --destdir "$pkgdir"
+
+    install -Dt "$pkgdir/usr/share/egl/egl_external_platform.d" -m644 10_nvidia_wayland.json
+}

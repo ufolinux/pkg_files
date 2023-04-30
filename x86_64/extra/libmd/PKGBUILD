@@ -1,0 +1,21 @@
+pkgname=libmd
+pkgver=1.0.4
+pkgrel=1
+arch=('x86_64')
+depends=(glibc)
+makedepends=(glibc gcc)
+source=(https://libbsd.freedesktop.org/releases/$pkgname-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure --prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

@@ -1,0 +1,37 @@
+pkgname=gcr
+pkgver=3.40.0
+pkgrel=1
+arch=('x86_64')
+depends=(glib2 libgcrypt p11-kit gtk+ gobject-introspection gnupg)
+makedepends=(gtk-doc valgrind libxslt)
+source=(https://download.gnome.org/sources/gcr/3.40/$pkgname-$pkgver.tar.xz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	sed -i 's:"/desktop:"/org:' schema/*.xml
+
+	sed -e '208 s/@BASENAME@/gcr-viewer.desktop/'		\
+		-e '231 s/@BASENAME@/gcr-prompter.desktop/'	\
+		-i ui/meson.build
+
+	mkdir -p build
+}
+
+build() {
+	cd $pkgname-$pkgver/build
+
+	meson			\
+	--prefix=/usr		\
+	--buildtype=release	\
+	-D gtk_doc=false	\
+	..
+
+	ninja
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+
+	DESTDIR=$pkgdir ninja install
+}

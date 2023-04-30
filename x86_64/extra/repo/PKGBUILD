@@ -1,0 +1,14 @@
+pkgname=repo
+pkgver=2.31
+pkgrel=1
+arch=(x86_64)
+depends=(python3 openssh)
+makedepends=(wget)
+source=(https://storage.googleapis.com/git-repo-downloads/repo)
+
+package() {
+	mkdir -p $pkgdir/usr/bin
+
+	cp repo $pkgdir/usr/bin/
+	chmod +x $pkgdir/usr/bin/repo
+}

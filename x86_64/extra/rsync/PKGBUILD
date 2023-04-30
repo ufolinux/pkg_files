@@ -1,0 +1,53 @@
+pkgname=rsync
+pkgver=3.2.3
+pkgrel=1
+pkgdesc='A fast and versatile file copying tool for remote and local files'
+arch=('x86_64')
+depends=('acl' 'lz4' 'openssl' 'perl' 'popt' 'zlib' 'zstd')
+makedepends=('git')
+backup=(etc/rsyncd.conf
+        etc/xinetd.d/rsync)
+_tag='1a2d16c0bd161481cbf0acc06dceb1ce788f0d09' # git rev-parse v${pkgver}
+source=("git+https://github.com/WayneD/rsync#tag=${_tag}"
+	rsyncd.conf)
+prepare() {
+	cd "$srcdir/rsync"
+
+	# rsync-ssl: Verify the hostname in the certificate when using openssl.
+	git cherry-pick -n c3f7414c450faaf6a8281cc4a4403529aeb7d859
+
+	# Force HAVE_LCHMOD off for Linux (for now).
+	# Work around glibc's lchmod() issue a better way.
+	git cherry-pick -n \
+		85b8dc8abaca96fc3ea7421e09101b6ac41b6718 \
+		9dd62525f3b98d692e031f22c02be8f775966503
+
+	# Add test and fix regression for --delay-updates (#192) (#204)
+	git cherry-pick -n efc81c93a9fca45ba08119145a2d282f477f01b4
+}
+
+build() {
+	cd "$srcdir/rsync"
+
+	./configure		\
+	--prefix=/usr		\
+	--disable-debug		\
+	--with-included-popt=no \
+	--with-included-zlib=no	\
+	--disable-md2man	\
+	--disable-xxhash
+
+	make
+}
+
+package() {
+	cd "$srcdir/rsync"
+
+	make DESTDIR="$pkgdir" install
+	install -Dm0644 ../rsyncd.conf "$pkgdir/etc/rsyncd.conf"
+	install -Dm0644 packaging/lsb/rsync.xinetd "$pkgdir/etc/xinetd.d/rsync"
+	install -Dm0644 packaging/systemd/rsync.service "$pkgdir/usr/lib/systemd/system/rsyncd.service"
+	install -Dm0644 packaging/systemd/rsync.socket "$pkgdir/usr/lib/systemd/system/rsyncd.socket"
+	install -Dm0644 packaging/systemd/rsync@.service "$pkgdir/usr/lib/systemd/system/rsyncd@.service"
+	install -Dm0755 support/rrsync "$pkgdir/usr/lib/rsync/rrsync"
+}

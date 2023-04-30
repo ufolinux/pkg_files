@@ -1,0 +1,19 @@
+pkgname=mpc
+pkgver=1.2.1
+pkgrel=1
+arch=('x86_64')
+depends=(mpfr)
+source=(https://ftp.gnu.org/gnu/mpc/mpc-$pkgver.tar.gz)
+
+build() {
+        cd mpc-$pkgver
+
+        ./configure --prefix=/usr
+
+        make
+}
+
+package() {
+        cd $pkgname-$pkgver
+        make DESTDIR=$pkgdir install
+}

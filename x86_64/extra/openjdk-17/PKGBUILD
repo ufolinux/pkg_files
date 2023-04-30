@@ -1,0 +1,77 @@
+pkgname=openjdk-17
+rname=jdk17u-dev-jdk
+pkgver=17.0.7
+ever=0
+pkgrel=1
+arch=('x86_64')
+depends=('alsa-lib' 'cpio' 'cups' 'unzip' 'elfutils' 'libpng'
+	'harfbuzz' 'freetype2' 'libjpeg' 'which' 'zip' 'xorg-server'
+	'lcms' 'elfutils' 'giflib' 'harfbuzz')
+makedepends=('git' 'openjdk-17')
+options=(!lto)
+source=(https://github.com/openjdk/jdk17u-dev/archive/refs/tags/jdk-$pkgver+$ever.tar.gz
+	freedesktop-java.desktop
+	freedesktop-jconsole.desktop
+	freedesktop-jshell.desktop)
+install=install_jdk.sh
+
+prepare() {
+	cd $rname-$pkgver-$ever
+}
+
+build() {
+	cd $rname-$pkgver-$ever
+	#unset JAVA_HOME
+
+	bash configure \
+	--with-stdc++lib=dynamic \
+	--with-lcms=system \
+	--with-libjpeg=system \
+	--with-giflib=system \
+	--with-libpng=system\
+	--with-libpng=system \
+	--with-zlib=system \
+	--with-harfbuzz=system \
+    --with-jvm-features=zgc \
+    --with-version-build="12" \
+    --enable-unlimited-crypto \
+	--disable-warnings-as-errors \
+	--prefix=/usr
+
+	make images
+
+	# https://bugs.openjdk.java.net/browse/JDK-8173610
+	find "../${_imgdir}" -iname '*.so' -exec chmod +x {} \;
+}
+
+package() {
+	cd $rname-$pkgver-$ever
+
+	install -vdm755 $pkgdir/opt/jdk-17
+	cp -Rv build/*/images/jdk/* $pkgdir/opt/jdk-17
+
+	# Remove .debuginfo from bins
+	rm $pkgdir/opt/jdk-17/bin/*.debuginfo
+
+	chown -R root:root $pkgdir/opt/jdk-17
+	for s in 16 24 32 48; do
+		install -vDm644 src/java.desktop/unix/classes/sun/awt/X11/java-icon${s}.png \
+		$pkgdir/usr/share/icons/hicolor/${s}x${s}/apps/java.png
+	done
+
+	mkdir -pv $pkgdir/usr/share/applications
+
+	# Icons
+	for s in 16 24 32 48; do
+		install -Dm 644 \
+			"${srcdir}/$rname-$pkgver-$ever/src/java.desktop/unix/classes/sun/awt/X11/java-icon${s}.png" \
+			"${pkgdir}/usr/share/icons/hicolor/${s}x${s}/apps/${pkgbase}.png"
+	done
+
+	# Desktop files
+	for f in jconsole java jshell; do
+		install -Dm 644 \
+			"${srcdir}/freedesktop-${f}.desktop" \
+			"${pkgdir}/usr/share/applications/${f}-${pkgbase}.desktop"
+	done
+}

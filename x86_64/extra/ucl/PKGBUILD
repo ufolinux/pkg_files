@@ -1,0 +1,21 @@
+pkgname=ucl
+pkgver=1.03
+pkgrel=1
+arch=('x86_64')
+depends=('glibc')
+source=("https://www.oberhumer.com/opensource/$pkgname/download/$pkgname-$pkgver.tar.gz")
+
+build() {
+	cd "$pkgname-$pkgver"
+	export CFLAGS+=" -std=gnu90 -fPIC"
+
+	./configure --prefix=/usr --enable-shared --disable-static
+
+	make
+}
+
+package() {
+	cd "$pkgname-$pkgver"
+
+	make DESTDIR="$pkgdir" install
+}

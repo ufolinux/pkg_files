@@ -1,0 +1,20 @@
+pkgname=sxhkd
+pkgver=0.6.2
+pkgrel=1
+arch=('x86_64')
+depends=(xcb-util-keysyms)
+makedepends=(git xcb-util)
+source=(git+https://github.com/baskerville/sxhkd#commit=fe241b0d2d70c9c483b23cf3cd14f1383f0953a2)
+
+build() {
+	cd $pkgname
+
+	CFLAGS+=" -fcommon"
+	make PREFIX=/usr
+}
+
+package() {
+	cd $pkgname
+
+	make PREFIX=/usr DESTDIR=$pkgdir install
+}

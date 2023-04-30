@@ -1,0 +1,88 @@
+pkgname=filesystem
+pkgver=1
+pkgrel=8
+arch=('x86_64')
+backup=(etc/dircolors.sh
+        etc/extrapaths.sh
+        etc/fstab
+        etc/hostname
+        etc/hosts
+        etc/i18n.sh
+        etc/inputrc
+        etc/profile
+        etc/profile.skel
+        etc/readline.sh
+        etc/resolv.conf
+        etc/shells
+        etc/umask.sh
+        etc/usb.conf
+        etc/passwd
+        etc/group
+        etc/issue)
+source=(dircolors.sh
+	extrapaths.sh
+	fstab
+	hostname
+	hosts
+	i18n.sh
+	inputrc
+	profile
+	profile.skel
+	readline.sh
+	resolv.conf
+	shells
+	umask.sh
+	usb.conf
+	passwd
+	group
+	issue)
+
+build() {
+	echo "Nothing here to do..."
+}
+
+package() {
+	mkdir -pv $pkgdir/{bin,boot,etc/{opt,sysconfig},home,lib/firmware,mnt,opt}
+	mkdir -pv $pkgdir/{media/{floppy,cdrom},sbin,srv,var}
+	install -dv -m 0750 $pkgdir/root
+	install -dv -m 1777 $pkgdir/tmp /var/tmp
+	mkdir -pv $pkgdir/usr/{,local/}{bin,include,lib,sbin,src}
+	ln -sf lib $pkgdir/usr/lib64
+	mkdir -pv $pkgdir/usr/{,local/}share/{color,dict,doc,info,locale,man}
+	mkdir -v  $pkgdir/usr/{,local/}share/{misc,terminfo,zoneinfo}
+	mkdir -v  $pkgdir/usr/libexec
+	mkdir -pv $pkgdir/usr/{,local/}share/man/man{1..8}
+	mkdir -v  $pkgdir/usr/lib/pkgconfig
+	
+	mkdir -v $pkgdir/var/{log,mail,spool}
+	ln -sv /run $pkgdir/var/run
+	ln -sv /run/lock $pkgdir/var/lock
+	mkdir -pv $pkgdir/var/{opt,cache,lib/{color,misc,locate},local}
+
+	install --directory --mode=0755 --owner=root --group=root $pkgdir/etc/profile.d
+	install --directory --mode=0755 --owner=root --group=root $pkgdir/etc/bash_completion.d
+	dircolors -p > $pkgdir/etc/dircolors
+
+	install -dm0755 -d $pkgdir/etc/modprobe.d
+	install -m0644 usb.conf $pkgdir/etc/modprobe.d
+
+	# profile.d
+	install -d $pkgdir/etc/profile.d
+	for i in *.sh; do
+		install -m0755 $i $pkgdir/etc/profile.d
+	done
+
+	# skel
+	install -d $pkgdir/etc/skel
+	for s in *.skel; do
+		install -m0644 $s $pkgdir/etc/skel/.${s/.skel/}
+	done
+
+	# /etc
+	install -d $pkgdir/etc
+	for p in profile shells resolv.conf inputrc fstab hostname hosts passwd group issue; do
+		install -m0644 $p $pkgdir/etc
+	done
+
+	ln -s /proc/self/mounts $pkgdir/etc/mtab
+}

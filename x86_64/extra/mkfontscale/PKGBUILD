@@ -1,0 +1,20 @@
+pkgname=mkfontscale
+pkgver=1.2.1
+pkgrel=1
+arch=('x86_64')
+depends=(freetype2 xorgproto util-macros)
+source=(https://xorg.freedesktop.org/archive/individual/app/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure --prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

@@ -1,0 +1,19 @@
+pkgname=libuv
+pkgver=1.42.0
+pkgrel=1
+arch=('x86_64')
+source=(https://dist.libuv.org/dist/v$pkgver/$pkgname-v$pkgver.tar.gz)
+
+build() {
+        cd $pkgname-v$pkgver
+	
+	./autogen.sh
+	
+	./configure --prefix=/usr
+        make
+}
+
+package() {
+	cd $pkgname-v$pkgver
+	make DESTDIR=$pkgdir install
+}

@@ -1,0 +1,44 @@
+pkgname=python2
+pkgver=2.7.18
+pkgrel=1
+arch=('x86_64')
+depends=('sqlite3' 'expat' 'libffi')
+source=(https://www.python.org/ftp/python/$pkgver/Python-${pkgver}${extraver}.tar.xz
+	Python-2.7.18-security_fixes-1.patch)
+
+prepare() {
+	cd Python-${pkgver}${extraver}
+
+#	patch -Np1 -i ../Python-2.7.18-security_fixes-1.patch
+
+	rm -rf Modules/expat
+	rm -rf Modules/_ctypes/{darwin,libffi}
+	rm -rf Modules/_decimal/libmpdec
+}
+
+build() {
+        cd Python-${pkgver}${extraver}
+
+        ./configure					\
+		--prefix=/usr				\
+		--enable-shared				\
+		--with-system-expat			\
+		--with-system-ffi			\
+		--with-system-expat			\
+		--with-system-libmpdec			\
+		--enable-loadable-sqlite-extensions	\
+		--without-ensurepip			\
+		--with-tzpath=/usr/shared/zoneinfo	\
+
+        make
+}
+
+package() {
+        cd Python-${pkgver}${extraver}
+
+	sed -i 's/^all:.*$/all: build_all/' Makefile
+
+        make DESTDIR=$pkgdir install
+	rm $pkgdir/usr/bin/2to3
+	rm $pkgdir/usr/bin/python
+}

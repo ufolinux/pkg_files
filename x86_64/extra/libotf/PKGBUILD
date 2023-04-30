@@ -1,0 +1,30 @@
+pkgname=libotf
+pkgver=0.9.16
+pkgrel=1
+pkgdesc='OpenType Font library'
+arch=('x86_64')
+depends=('freetype2' 'libxaw')
+source=("https://download.savannah.gnu.org/releases/m17n/${pkgname}-${pkgver}.tar.gz"
+        'replace-freetype-config.patch')
+
+prepare() {
+	cd "${pkgname}-${pkgver}"
+
+	patch -p1 -i ${srcdir}/replace-freetype-config.patch
+}
+
+build() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+
+	autoreconf -i
+
+	./configure --prefix=/usr
+
+	make
+}
+
+package() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+
+	make DESTDIR="${pkgdir}" install
+}

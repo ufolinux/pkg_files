@@ -1,0 +1,35 @@
+pkgname=qpdf
+pkgver=10.6.3
+pkgrel=1
+arch=('x86_64')
+makedepends=('libjpeg' 'zlib' 'gnutls' 'python3-pip')
+source=(https://github.com/qpdf/qpdf/releases/download/release-${pkgname}-${pkgver}/${pkgname}-${pkgver}.tar.gz)
+
+prepare() {
+	pip3 install sphinx latex
+}
+
+build() {
+    cd ${pkgname}-${pkgver}
+    ./configure --prefix=/usr \
+    --disable-static \
+    --enable-crypto-gnutls \
+    --disable-crypto-openssl \
+    --disable-implicit-crypto \
+    --enable-show-failed-test-output \
+    --disable-doc-maintenance \
+    --disable-html-doc \
+    --disable-pdf-doc \
+    --disable-oss-fuzz
+
+    make doc-dist DOC_DEST=doc all
+}
+
+package_qpdf() {
+    cd ${pkgname}-${pkgver}
+
+    make DESTDIR="${pkgdir}/" install
+
+    install -Dm644 completions/bash/qpdf "${pkgdir}/usr/share/bash-completion/completions/qpdf"
+    install -Dm644 completions/zsh/_qpdf "${pkgdir}/usr/share/zsh/site-functions/_qpdf"
+}

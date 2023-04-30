@@ -1,0 +1,86 @@
+pkgname=lib32-mesa
+rpkgname=mesa
+pkgver=22.3.4
+pkgrel=1
+arch=('x86_64')
+depends=('glibc' 'lib32-libdrm' 'lib32-llvm' 'lib32-libglvnd' 'lib32-libx11' 'lib32-wayland'
+	'lib32-libxml2' 'lib32-libva' 'lib32-expat' 'lib32-cairo' 'lib32-elfutils' 'lib32-libxshmfence'
+	'lib32-libxxf86vm' 'lib32-vdpau' 'lib32-vulkan-icd-loader' 'lib32-lm-sensors' 'lib32-clang'
+	'lib32-libomxil-bellagio' 'lib32-polly' 'lib32-libxrandr' 'lib32-libunwind' 'libclc'
+	'lib32-libepoxy' 'lib32-gtk3+' 'lib32-opencl-icd-loader')
+source=(https://mesa.freedesktop.org/archive/mesa-$pkgver.tar.xz)
+makedepends=('directx-headers' 'vulkan-headers' 'opencl-headers' 'python3-pip' 'clang' 'cmake' 'byacc' 'bison' 'glslang' 'lib32-directx-headers' 'lib32-polly')
+
+prepare() {
+	cd mesa-$pkgver
+
+	pip install setuptools
+	echo "[!]: Installing mako with pip"
+	pip install mako
+	sed '1s/python/&3/' -i bin/symbols-check.py
+
+	rm -rf ../build
+}
+
+build() {
+	mkdir -p build
+
+	cd build
+
+	export CC="clang -m32"
+	export CXX="clang++ -m32"
+	export PKG_CONFIG="i686-pc-linux-gnu-pkg-config"
+
+	cat >crossfile.ini <<END
+[binaries]
+llvm-config = '/usr/bin/llvm-config32'
+END
+
+	meson \
+	--native-file crossfile.ini \
+	--prefix=/usr \
+	--libdir=/usr/lib32 \
+	--buildtype=release \
+	-D b_lto=true \
+	-D b_ndebug=true \
+	-D platforms=x11,wayland \
+	-D gallium-drivers=r300,r600,radeonsi,nouveau,virgl,svga,swrast,i915,iris,crocus,zink,d3d12 \
+	-D vulkan-drivers=amd,intel,intel_hasvk,swrast \
+	-D vulkan-layers=device-select,intel-nullhw,overlay \
+	-D dri3=enabled \
+	-D egl=enabled \
+	-D gallium-extra-hud=true \
+    -D gallium-nine=true \
+    -D gallium-omx=bellagio \
+    -D gallium-opencl=icd \
+    -D gallium-va=enabled \
+    -D gallium-vdpau=enabled \
+    -D gallium-xa=enabled \
+    -D gallium-rusticl=false \
+    -D rust_std=2021 \
+	-D gbm=enabled \
+	-D gles1=enabled \
+	-D gles2=enabled \
+	-D glvnd=true \
+	-D glx=dri \
+	-D libunwind=enabled \
+	-D llvm=enabled \
+	-D lmsensors=enabled \
+	-D osmesa=true \
+	-D tools=all \
+	-D shared-glapi=enabled \
+	-D microsoft-clc=disabled \
+	-D video-codecs=vc1dec,h264dec,h264enc,h265dec,h265enc \
+	-D valgrind=disabled \
+	../mesa-$pkgver
+
+	ninja
+}
+
+package() {
+	cd build
+	DESTDIR=$pkgdir ninja install
+
+	rm -rf $pkgdir/etc
+	rm -rf $pkgdir/usr/{bin,etc,share,include,sbin,libexec}
+}

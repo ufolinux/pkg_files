@@ -1,0 +1,22 @@
+pkgname=gparted
+pkgver=1.3.1
+pkgrel=1
+arch=('x86_64')
+depends=(gtkmm parted)
+source=(https://downloads.sourceforge.net/gparted/gparted-$pkgver.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr		\
+	--disable-doc
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

@@ -1,0 +1,19 @@
+pkgname=ttf-droid
+pkgver=20121017
+pkgrel=1
+arch=(x86_64)
+source=(https://sources.archlinux.org/other/community/$pkgname/$pkgname-$pkgver.tar.xz
+	65-droid-kufi.conf
+	65-droid-sans.conf
+	65-droid-sans-mono.conf
+	65-droid-serif.conf)
+
+package() {
+	install -Dt "$pkgdir/usr/share/fonts/${pkgname#ttf-}" -m644 \
+   	google-droid-fonts-$pkgver/*.ttf
+
+	local fcdir="$pkgdir/usr/share/fontconfig"
+	install -Dt "$fcdir/conf.avail" -m644 *.conf
+	mkdir -p "$fcdir/conf.default"
+	ln -srt "$fcdir/conf.default" "$fcdir"/conf.avail/*
+}

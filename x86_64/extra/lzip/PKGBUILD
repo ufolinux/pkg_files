@@ -1,0 +1,23 @@
+pkgname=lrzip
+pkgver=0.641
+pkgrel=1
+pkgdesc='Multi-threaded compression with rzip/lzma, lzo, and zpaq'
+url='https://github.com/ckolivas/lrzip'
+arch=('x86_64')
+depends=('lzo')
+makedepends=('git')
+source=("git+https://github.com/ckolivas/lrzip#tag=v$pkgver")
+
+build() {
+	cd "$pkgname"
+
+	CFLAGS="$CFLAGS -fomit-frame-pointer"
+	CXXFLAGS="$CXXFLAGS -fomit-frame-pointer"
+
+	./autogen.sh --prefix=/usr "$flags"
+	make
+}
+
+package() {
+	make -C "$pkgname" DESTDIR="$pkgdir" install-strip
+}

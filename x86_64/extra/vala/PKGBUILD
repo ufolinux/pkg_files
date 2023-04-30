@@ -1,0 +1,18 @@
+pkgname=vala
+pkgver=0.54
+pkgrel=1
+arch=('x86_64')
+depends=(glib2 gcc)
+makedepends=(git)
+source=(https://download-fallback.gnome.org/sources/vala/$pkgver/vala-$pkgver.4.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver.4
+	./configure --prefix=/usr --enable-vapigen --disable-valadoc
+	make CFLAGS=-w LDFLAGS=-w CXXFLAGS=-w
+}
+
+package() {
+	cd $pkgname-$pkgver.4
+	make DESTDIR=$pkgdir install
+}

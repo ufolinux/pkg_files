@@ -1,0 +1,30 @@
+pkgname=faudio
+pkgver=22.12
+pkgrel=1
+arch=('x86_64')
+depends=(gstreamer sdl2)
+makedepends=(cmake ninja)
+source=($pkgname-$pkgver.tar.gz::https://github.com/FNA-XNA/FAudio/archive/$pkgver.tar.gz)
+
+prepare() {
+        mkdir -p build
+        cd build
+
+        cmake ../*-$pkgver -G Ninja \
+        -D CMAKE_INSTALL_PREFIX=/usr \
+        -D CMAKE_BUILD_TYPE=Release \
+        -D CMAKE_INSTALL_LIBDIR=lib \
+        -D GSTREAMER=ON 
+}
+ 
+build() {    
+        cd build         
+
+        ninja
+}
+ 
+package() {
+        cd build   
+
+        DESTDIR=$pkgdir ninja install
+}

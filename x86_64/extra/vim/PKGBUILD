@@ -1,0 +1,48 @@
+pkgname=vim
+pkgver=8.2.4106
+pkgrel=1
+arch=('x86_64')
+source=(https://github.com/vim/vim/archive/v$pkgver.tar.gz)
+
+build() {
+        cd vim-$pkgver
+
+        echo '#define SYS_VIMRC_FILE "/etc/vimrc"' >> src/feature.h
+
+        ./configure --prefix=/usr --enable-multibyte --disable-gui
+        make
+}
+
+package() {
+        cd vim-$pkgver
+
+        make DESTDIR=$pkgdir install
+
+        mv $pkgdir/usr/share/man/man1 ../../man1
+        rm -r $pkgdir/usr/share/man/*
+        mv ../../man1 $pkgdir/usr/share/man/man1
+
+        # no desktop files and icons
+        rm -r $pkgdir/usr/share/{applications,icons}
+
+        ln -sv vim $pkgdir/usr/bin/vi
+
+	mkdir -pv $pkgdir/etc
+cat > $pkgdir/etc/vimrc << "EOF"
+" Begin /etc/vimrc
+
+" Ensure defaults are set before customizing settings, not after
+source $VIMRUNTIME/defaults.vim
+let skip_defaults_vim=1
+
+set nocompatible
+set backspace=2
+set mouse=
+syntax on
+if (&term == "xterm") || (&term == "putty")
+  set background=dark
+endif
+
+" End /etc/vimrc
+EOF
+}

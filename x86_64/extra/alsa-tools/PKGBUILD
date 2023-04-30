@@ -1,0 +1,40 @@
+pkgname=alsa-tools
+pkgver=1.2.5
+pkgrel=1
+arch=('x86_64')
+depends=(alsa-lib gtk2+ gtk+ fltk)
+source=(https://alsa-project.org/files/pub/tools/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	# remove a tool that needs Qt2 or 3 and two unneed files
+	# https://linuxfromscratch.org/blfs/view/systemd/multimedia/alsa-tools.html
+	rm -rf qlo10k1 Makefile gitcompile
+	
+	c_dirs=(as10k1 hdajackretask hdspconf hwmixvolume seq/sbiload pcxhrloader usx2yloader echomixer hdajacksensetest hdsploader ld10k1 rmedigicontrol sscape_ctl vxloader envy24control hda-verb hdspmixer mixartloader sb16_csp us428control)
+
+	shopt -s globstar
+	for d in ${c_dirs[@]} ; do
+		cd "$d"
+		echo " "
+		pwd
+		./configure --prefix=/usr
+		make
+		cd $srcdir/$pkgname-$pkgver
+	done
+
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	c_dirs=(as10k1 hdajackretask hdspconf hwmixvolume seq/sbiload pcxhrloader usx2yloader echomixer hdajacksensetest hdsploader ld10k1 rmedigicontrol sscape_ctl vxloader envy24control hda-verb hdspmixer mixartloader sb16_csp us428control)
+
+	shopt -s globstar
+	for d in ${c_dirs[@]} ; do
+		cd "$d"
+		make DESTDIR=$pkgdir install
+		cd $srcdir/$pkgname-$pkgver
+	done
+}

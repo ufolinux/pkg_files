@@ -1,0 +1,32 @@
+pkgname=thunar
+pkgver=4.18.2
+xver=4.18
+pkgrel=5
+arch=('x86_64')
+depends=(exo hicolor-icon-theme libgudev thunar-volman xfce4-panel gvfs pcre libexif)
+source=(https://archive.xfce.org/src/xfce/$pkgname/$xver/$pkgname-$pkgver.tar.bz2)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr		\
+	--sysconfdir=/etc	\
+	--libexecdir=/usr/lib/xfce4 \
+	--enable-gudev		\
+	--enable-pcre		\
+	--enable-notifications
+
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

@@ -1,0 +1,44 @@
+pkgname=apr
+pkgver=1.7.0
+pkgrel=1
+arch=(x86_64)
+depends=(util-linux)
+makedepends=(python3)
+source=(https://dlcdn.apache.org/apr/apr-$pkgver.tar.bz2
+	https://github.com/archlinux/svntogit-packages/raw/packages/apr/trunk/fix-apr.pc.patch
+	https://github.com/archlinux/svntogit-packages/raw/packages/apr/trunk/fix_apr-config.patch
+	https://github.com/archlinux/svntogit-packages/raw/packages/apr/trunk/omit_extra_libs.patch
+	https://github.com/archlinux/svntogit-packages/raw/packages/apr/trunk/ship_find_apr.m4.patch
+	fix_autoconf_270.patch::https://github.com/apache/apr/commit/0a763c5e500f4304b7c534fae0fad430d64982e8.patch)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	patch -Np1 -i ../fix_apr-config.patch
+	patch -Np1 -i ../ship_find_apr.m4.patch
+	patch -Np1 -i ../fix-apr.pc.patch
+	patch -Np1 -i ../omit_extra_libs.patch
+	patch -Np1 -i ../fix_autoconf_270.patch # FS#71783
+
+	./buildconf
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure \
+	--prefix=/usr \
+	--includedir=/usr/include/apr-1 \
+	--with-installbuilddir=/usr/share/apr-1/build \
+	--enable-nonportable-atomics \
+	--with-devrandom=/dev/urandom
+
+	make
+
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

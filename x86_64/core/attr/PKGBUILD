@@ -1,0 +1,23 @@
+pkgname=attr
+pkgver=2.5.1
+arch=('x86_64')
+pkgrel=4
+depends=(glibc)
+makedepends=(grep gawk file)
+source=(https://download.savannah.gnu.org/releases/$pkgname/$pkgname-$pkgver.tar.gz)
+
+build() {
+        cd $pkgname-$pkgver
+
+        ./configure \
+        --prefix=/usr \
+        --bindir=/bin \
+        --sysconfdir=/etc
+        make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+        make DESTDIR=$pkgdir install
+}

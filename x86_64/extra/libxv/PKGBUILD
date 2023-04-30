@@ -1,0 +1,21 @@
+pkgname=libxv
+pkgver=1.0.11
+pkgrel=1
+arch=('x86_64')
+depends=(libxext)
+makedepends=(xorgproto)
+source=(https://xorg.freedesktop.org/releases/individual/lib/libXv-${pkgver}.tar.bz2)
+
+build() {
+	cd libXv-${pkgver}
+
+	./configure --prefix=/usr
+
+	make
+}
+
+package() {
+	cd libXv-${pkgver}
+
+	make DESTDIR="${pkgdir}" install
+}

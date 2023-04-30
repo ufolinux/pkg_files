@@ -1,0 +1,27 @@
+pkgname=woff2
+pkgver=1.0.2
+pkgrel=1
+arch=(x86_64)
+depends=(brotli)
+makedepends=(git cmake)
+commitid=1bccf208bca986e53a647dfe4811322adb06ecf8  # v1.0.2
+source=("git+https://github.com/google/woff2#commit=$commitid")
+
+prepare() {
+	cd $pkgname
+
+	# Install binaries
+	sed -i 's/NOT BUILD_SHARED_LIBS/TRUE/' CMakeLists.txt
+}
+
+build() {
+	cmake -H$pkgname -Bbuild \
+	-DCMAKE_INSTALL_PREFIX=/usr \
+	-DCMAKE_INSTALL_LIBDIR=/usr/lib
+
+	cmake --build build
+}
+
+package() {
+	DESTDIR="$pkgdir" cmake --build build --target install
+}

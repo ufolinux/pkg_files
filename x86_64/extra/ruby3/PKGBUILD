@@ -1,0 +1,19 @@
+pkgname=ruby3
+pkgver=3.0.3
+pkgrel=1
+arch=('x86_64')
+source=(https://cache.ruby-lang.org/pub/ruby/3.0/ruby-$pkgver.tar.gz)
+
+build() {
+        cd ruby-$pkgver
+
+	./configure --prefix=/usr       \
+	            --enable-shared	\
+		    --docdir=/usr/shared/doc/ruby3
+        make
+}
+
+package() {
+	cd ruby-$pkgver
+	make DESTDIR=$pkgdir install
+}

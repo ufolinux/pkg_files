@@ -1,0 +1,14 @@
+post_upgrade() {
+    post_install
+}
+
+post_install() {
+    echo " "
+    echo "[ NOTICE ]: EarlyOOM is enabled by default on ufo!"
+    echo "[ NOTICE ]: To disable it use 'systemctl disable earlyoom'"
+    systemctl enable earlyoom
+    sleep 1
+    systemctl start earlyoom
+
+    echo " "
+}

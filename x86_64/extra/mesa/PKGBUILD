@@ -1,0 +1,88 @@
+pkgname=mesa
+pkgver=22.3.4
+pkgrel=1
+arch=('x86_64')
+depends=('libxcb' 'fontconfig' 'libdrm' 'libx11' 'libxext' 'libxfixes' 'libxshmfence' 'libxrender'
+	'wayland' 'wayland-protocols' 'vulkan-icd-loader' 'libomxil-bellagio' 'libclc' 'libglvnd'
+	'valgrind' 'libunwind' 'opencl-icd-loader' 'libpciaccess' 'libxxf86vm'
+	'vdpau' 'glslang' 'libva' 'llvm' 'libxvmc' 'lm-sensors' 'spirv-llvm-translator'
+	'libepoxy' 'gtk3+')
+makedepends=('directx-headers' 'vulkan-headers' 'opencl-headers' 'python3-pip' 'clang' 'cmake' 'byacc'
+	'bison' 'rust' 'cbindgen' 'rust-bindgen')
+source=(https://mesa.freedesktop.org/archive/$pkgname-$pkgver.tar.xz
+	https://archive.mesa3d.org/demos/8.5.0/mesa-demos-8.5.0.tar.bz2
+	https://github.com/archlinux/svntogit-packages/raw/packages/mesa-demos/trunk/meson-demos_data_dir.patch)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	# TODO add our own python3-mako pkg so pip wont be used
+	#echo "[!]: Installing mako with pip"
+	pip3 install mako
+
+	sed '1s/python/&3/' -i bin/symbols-check.py
+
+	cd $srcdir/mesa-demos-8.5.0
+	patch -Np1 -i $srcdir/meson-demos_data_dir.patch
+}
+
+build() {
+	mkdir -p build build2 && cd build
+	echo "MESA"
+	meson \
+	--prefix=/usr \
+	--buildtype=release \
+	-D b_lto=true \
+	-D b_ndebug=true \
+	-D platforms=x11,wayland \
+	-D gallium-drivers=r300,r600,radeonsi,nouveau,virgl,svga,swrast,i915,iris,crocus,zink,d3d12 \
+	-D vulkan-drivers=amd,intel,intel_hasvk,swrast \
+	-D vulkan-layers=device-select,intel-nullhw,overlay \
+	-D dri3=enabled \
+	-D egl=enabled \
+	-D gallium-extra-hud=true \
+    -D gallium-nine=true \
+    -D gallium-omx=bellagio \
+    -D gallium-opencl=icd \
+    -D gallium-va=enabled \
+    -D gallium-vdpau=enabled \
+    -D gallium-xa=enabled \
+    -D gallium-rusticl=true \
+    -D rust_std=2021 \
+	-D gbm=enabled \
+	-D gles1=enabled \
+	-D gles2=enabled \
+	-D glvnd=true \
+	-D glx=dri \
+	-D libunwind=enabled \
+	-D llvm=enabled \
+	-D lmsensors=enabled \
+	-D osmesa=true \
+	-D tools=all \
+	-D shared-glapi=enabled \
+	-D microsoft-clc=disabled \
+	-D video-codecs=vc1dec,h264dec,h264enc,h265dec,h265enc \
+	-D valgrind=enabled \
+	../$pkgname-$pkgver/
+
+	ninja -j5
+
+	cd ../build2
+	echo "MESA-DEMOS"
+	meson \
+	--prefix=/usr \
+	--buildtype=release \
+	-D with-system-data-files=true \
+	../mesa-demos-8.5.0
+
+	ninja -j5
+}
+
+package() {
+	cd build
+	DESTDIR=$pkgdir ninja install
+
+	cd ../build2
+	DESTDIR=$pkgdir ninja install
+	install -m 0755 src/egl/opengl/{eglgears_wayland,eglgears_x11,eglkms,egltri_wayland,egltri_x11,peglgears,xeglgears,xeglthreads} "${pkgdir}/usr/bin/"
+}

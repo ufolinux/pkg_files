@@ -1,0 +1,29 @@
+pkgname=
+pkgver=
+pkgrel=1
+arch=('x86_64')
+depends=()
+makedepends=()
+source=()
+
+prepare() {
+	cd -$pkgver
+
+	
+}
+
+build() {
+	cd -$pkgver
+
+	export CC="gcc -m32"
+	export CXX="g++ -m32"
+	export PKG_CONFIG_PATH="/usr/lib32/pkgconfig"
+
+	
+}
+
+package() {
+	cd -$pkgver
+
+	
+}

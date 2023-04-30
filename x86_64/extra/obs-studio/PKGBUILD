@@ -1,0 +1,29 @@
+pkgname=obs-studio
+pkgver=28.1.2
+pkgrel=1
+arch=(x86_64)
+depends=(ffmpeg jansson libxinerama libxkbcommon pciutils qt6 qt5
+	curl jack2 pipewire libxcomposite vlc)
+makedepends=(cmake python3)
+source=(https://github.com/jp9000/obs-studio/archive/$pkgver.tar.gz)
+
+prepare() {
+	mkdir -p build
+}
+
+build() {
+	cd build
+
+	cmake \
+	-D CMAKE_INSTALL_PREFIX="/usr" \
+	-D ENABLE_VLC=ON \
+	../$pkgname-$pkgver
+
+	ninja
+}
+
+package() {
+	cd build
+
+	DESTDIR=$pkgdir ninja install
+}

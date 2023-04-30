@@ -1,0 +1,19 @@
+pkgname=libxfixes
+pkgver=6.0.0
+pkgrel=1
+arch=('x86_64')
+depends=('libx11')
+makedepends=('util-macros' 'xorgproto' 'libx11')
+source=(https://xorg.freedesktop.org/releases/individual/lib/libXfixes-$pkgver.tar.bz2)
+
+build() {
+	cd libXfixes-$pkgver
+
+	./configure --prefix=/usr --sysconfdir=/etc
+}
+
+package() {
+	cd libXfixes-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

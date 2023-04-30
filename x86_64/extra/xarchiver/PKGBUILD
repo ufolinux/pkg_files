@@ -1,0 +1,26 @@
+pkgname=xarchiver
+pkgver=0.5.4.17
+pkgrel=2
+arch=('x86_64')
+depends=(gtk+ cpio lzo p7zip unrar unzip zip xorg-server)
+makedepends=(base-devel)
+source=(https://github.com/ib/xarchiver/archive/$pkgver/$pkgname-$pkgver.tar.gz
+	xarchiver.appdata.xml)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr		\
+	--libexecdir=/usr/lib/xfce4
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+
+	install -Dm644 ../$pkgname.appdata.xml "$pkgdir/usr/share/metainfo/$pkgname.appdata.xml"
+}

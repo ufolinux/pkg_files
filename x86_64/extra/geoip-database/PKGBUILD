@@ -1,0 +1,25 @@
+pkgname=geoip-database
+pkgver=20220910
+pkgrel=1
+arch=(x86_64)
+makedepends=(util-linux)
+url=https://mailfud.org/geoip-legacy/
+src_base=https://mailfud.org/geoip-legacy
+# Latest update: 10 September 2022
+source=(GeoIP-$pkgver.dat.gz::$src_base/GeoIP.dat.gz
+        GeoIPv6-$pkgver.dat.gz::$src_base/GeoIPv6.dat.gz
+        GeoIPCity-$pkgver.dat.gz::$src_base/GeoIPCity.dat.gz
+        GeoIPCityv6-$pkgver.dat.gz::$src_base/GeoIPCityv6.dat.gz
+        GeoIPASNum-$pkgver.dat.gz::$src_base/GeoIPASNum.dat.gz
+        GeoIPASNumv6-$pkgver.dat.gz::$src_base/GeoIPASNumv6.dat.gz)
+
+prepare() {
+	rename -v -- "-$pkgver" '' *.dat
+}
+
+package() {
+	install -d "$pkgdir/usr/share/GeoIP"
+	install -m644 -t "$pkgdir/usr/share/GeoIP" GeoIP{,v6}.dat
+
+	install -m644 -t "$pkgdir/usr/share/GeoIP" GeoIPCity{,v6}.dat GeoIPASNum{,v6}.dat
+}

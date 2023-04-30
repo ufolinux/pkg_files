@@ -1,0 +1,21 @@
+pkgname=xfce4-settings
+pkgver=4.18.1
+xver=4.18
+pkgrel=2
+arch=('x86_64')
+depends=(exo garcon gnome-icon-theme lxde-icon-theme)
+source=(https://archive.xfce.org/src/xfce/$pkgname/$xver/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure --prefix=/usr --sysconfdir=/etc
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

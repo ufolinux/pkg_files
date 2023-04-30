@@ -1,0 +1,26 @@
+pkgname=xinput
+pkgver=1.6.3
+pkgrel=1
+arch=(x86_64)
+depends=(libx11 libxi xrandr libxinerama)
+makedepends=(util-macros xorgproto libxfixes)
+source=(https://xorg.freedesktop.org/archive/individual/app/$pkgname-$pkgver.tar.bz2)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	./configure \
+	--prefix=/usr
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

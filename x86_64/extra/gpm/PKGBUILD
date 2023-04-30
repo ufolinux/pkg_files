@@ -1,0 +1,38 @@
+pkgname=gpm
+pkgver=1.20.7
+pkgrel=2
+arch=('x86_64')
+depends=(bash procps-ng)
+source=(https://www.nico.schottelius.org/software/gpm/archives/$pkgname-$pkgver.tar.bz2
+	gpm-1.20.7-consolidated-1.patch)
+
+build() {
+	cd $pkgname-$pkgver
+
+	patch -Np1 -i ../gpm-1.20.7-consolidated-1.patch
+	
+	./autogen.sh
+	./configure --prefix=/usr --sysconfdir=/etc
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+
+	ln -sfv libgpm.so.2.1.0 $pkgdir/usr/lib/libgpm.so
+        install -v -m644 conf/gpm-root.conf $pkgdir/etc
+	mkdir -p $pkgdir/usr/lib/systemd/system/
+	cp -f ../../gpm.service $pkgdir/usr/lib/systemd/system/gpm.service
+
+	mkdir -p $pkgdir/etc/sysconfig
+	cat > $pkgdir/etc/sysconfig/mouse << "EOF"
+# Begin /etc/sysconfig/mouse
+
+MDEVICE="/dev/input/mice"
+PROTOCOL="imps2"
+GPMOPTS=""
+
+# End /etc/sysconfig/mouse
+EOF
+}

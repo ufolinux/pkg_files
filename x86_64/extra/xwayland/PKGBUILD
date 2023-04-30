@@ -1,0 +1,52 @@
+pkgname=xwayland
+pkgver=22.1.7
+pkgrel=1
+arch=('x86_64')
+depends=('nettle' 'libepoxy' 'systemd' 'libxfont2' 
+	'pixman' 'xorg-server' 'libxcvt' 'egl-wayland')
+makedepends=('meson' 'xorgproto' 'libxtrans' 'libxkbfile' 'dbus'
+	'font-util' 'wayland' 'wayland-protocols'
+	'libdrm' 'mesa' 'systemd'
+)
+source=(https://x.org/pub/individual/xserver/$pkgname-$pkgver.tar.xz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	#echo "[!]: Patching render-gcc12.patch"
+	#patch -Np1 -i $srcdir/render-gcc12.patch
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	mkdir -p build && cd build
+
+	meson		\
+	--prefix=/usr		\
+	--localstatedir=/var	\
+	-D ipv6=true \
+	-D xvfb=false \
+	-D xdmcp=false \
+	-D xcsecurity=true \
+	-D dri3=true \
+	-D xwayland_eglstream=true \
+	-D glamor=true \
+	-D xkb_dir=/usr/share/X11/xkb \
+	-D xkb_output_dir=/var/lib/xkb \
+	..
+
+	meson configure . > configuration
+
+	ninja
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+	DESTDIR=$pkgdir ninja install
+	install -m644 -Dt "${pkgdir}"/usr/lib/pkgconfig hw/xwayland/xwayland.pc
+
+	# Already owned by xorg-server
+	rm -f $pkgdir/usr/lib/xorg/protocol.txt
+	rm -f $pkgdir/usr/share/man/man1/Xserver.*
+}

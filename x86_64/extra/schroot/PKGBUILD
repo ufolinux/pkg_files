@@ -1,0 +1,66 @@
+pkgname=schroot
+pkgver=1.6.10
+pkgrel=1
+depends=('linux-pam' 'boost' 'e2fsprogs')
+makedepends=('boost' 'cppunit')
+arch=('x86_64')
+backup=('etc/schroot/schroot.conf'
+	'etc/schroot/arch32/config'
+	'etc/schroot/arch32/copyfiles'
+	'etc/schroot/arch32/mount'
+	'etc/schroot/arch32/nssdatabases')
+source=("http://http.debian.net/debian/pool/main/s/$pkgname/${pkgname}_${pkgver}.orig.tar.xz"
+	"http://http.debian.net/debian/pool/main/s/schroot/schroot_$pkgver-3+deb9u1.debian.tar.xz"
+	"https://src.fedoraproject.org/rpms/schroot/raw/rawhide/f/schroot-gcc8-assert-fix.patch"
+	'arch32-example'
+	'arch32-config'
+	'arch32-copyfiles'
+	'arch32-mount'
+	'arch32-nssdatabases'
+	'pam.d.schroot.patch'
+	'schroot-cppunit.patch')
+
+prepare() {
+	cd ${pkgname}-${pkgver}
+
+	cat "$srcdir"/debian/patches/series | while read p; do
+		patch -p1 -i "$srcdir"/debian/patches/$p
+	done
+
+	# fix configure with cppunit 1.4
+	patch -p1 -i ../schroot-cppunit.patch
+	# https://bugs.archlinux.org/task/73481
+	patch -p1 -i ../schroot-gcc8-assert-fix.patch
+	./bootstrap
+}
+
+build() {
+	cd ${pkgname}-${pkgver}
+
+	export CFLAGS="$CFLAGS -ffat-lto-objects"
+	export CXXFLAGS="$CXXFLAGS -ffat-lto-objects"
+	export LDFLAGS="${LDFLAGS//-Wl,--as-needed}"
+
+	./configure \
+		--prefix=/usr \
+		--libexecdir=/usr/lib \
+		--sysconfdir=/etc \
+		--localstatedir=/var \
+		--enable-dchroot \
+		--with-bash-completion-dir=/usr/share/bash-completion/completions/
+
+	make
+}
+
+package() {
+	cd ${pkgname}-${pkgver}
+
+	make DESTDIR="$pkgdir" install
+
+	install -dm 755 "$pkgdir"/etc/schroot/arch32
+	install -m 644 "$srcdir"/arch32-{config,mount,copyfiles,nssdatabases} "$pkgdir"/etc/schroot/arch32
+	rename 'arch32-' '' "$pkgdir"/etc/schroot/arch32/*
+	install -m 644 "$srcdir"/arch32-example "$pkgdir"/etc/schroot/chroot.d/arch32.conf.example
+
+	patch -i "$srcdir"/pam.d.schroot.patch "$pkgdir"/etc/pam.d/schroot
+}

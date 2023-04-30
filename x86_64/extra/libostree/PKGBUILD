@@ -1,0 +1,35 @@
+pkgname=libostree
+pkgver=2022.7
+pkgrel=1
+arch=(x86_64)
+depends=(glibc curl avahi dracut libsodium openssl
+    libsoup fuse2 xz zlib)
+makedepends=(autoconf automake make python3 gpgme
+    gtk-doc libarchive libxslt systemd gobject-introspection
+    bison python3-pygments)
+source=(https://github.com/ostreedev/ostree/releases/download/v2022.7/libostree-2022.7.tar.xz)
+
+prepare() {
+    cd $pkgname-$pkgver
+
+    ./configure \
+    --prefix=/usr \
+    --enable-experimental-api \
+    --with-curl \
+    --with-dracut \
+    --enable-gtk-doc \
+    --with-openssl \
+    --with-soup
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+    make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+    make DESTDIR=$pkgdir install
+}

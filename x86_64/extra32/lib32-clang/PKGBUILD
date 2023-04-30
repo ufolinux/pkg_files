@@ -1,0 +1,61 @@
+pkgname=lib32-clang
+rname=clang
+pkgver=13.0.1
+pkgrel=1
+pkgdesc="C language family frontend for LLVM (32-bit)"
+arch=('x86_64')
+url="https://clang.llvm.org/"
+depends=('lib32-llvm')
+makedepends=('lib32-llvm' 'cmake' 'ninja' 'python3')
+psource=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
+source=($psource/$rname-$pkgver.src.tar.xz
+	$psource/$rname-tools-extra-$pkgver.src.tar.xz
+	$psource/llvm-$pkgver.src.tar.xz
+	01.patch
+	02.patch
+	03.patch)
+
+prepare() {
+	cd "$srcdir/clang-$pkgver.src"
+	mkdir -p build
+
+	mv $srcdir/clang-tools-extra-$pkgver.src tools/extra
+
+	patch -Np2 -i ../01.patch
+	patch -Np2 -i ../02.patch
+	patch -Np2 -i ../03.patch
+
+	2to3 -wn --no-diffs \
+	tools/extra/clang-include-fixer/find-all-symbols/tool/run-find-all-symbols.py
+}
+
+build() {
+	cd "$srcdir/clang-$pkgver.src/build"
+
+	export PKG_CONFIG_PATH="/usr/lib32/pkgconfig"
+
+	cmake \
+	-G Ninja \
+	-DCMAKE_BUILD_TYPE=Release \
+	-DCMAKE_INSTALL_PREFIX=/usr \
+	-DLLVM_LIBDIR_SUFFIX=32 \
+	-DCMAKE_C_FLAGS:STRING=-m32 \
+	-DCMAKE_CXX_FLAGS:STRING=-m32 \
+	-DLLVM_CONFIG="/usr/bin/llvm-config32" \
+	-DLLVM_LINK_LLVM_DYLIB=ON \
+	-DCLANG_LINK_CLANG_DYLIB=ON \
+	-DLLVM_ENABLE_RTTI=ON \
+	-DLLVM_BUILD_TESTS=OFF \
+	-DLLVM_INCLUDE_DOCS=OFF \
+	-DLLVM_MAIN_SRC_DIR="$srcdir/llvm-$pkgver.src" \
+	..
+
+	ninja
+}
+
+package() {
+	cd "$srcdir/clang-$pkgver.src/build"
+
+	DESTDIR="$pkgdir" ninja install
+	rm -rf "$pkgdir"/usr/{bin,include,libexec,share}
+}

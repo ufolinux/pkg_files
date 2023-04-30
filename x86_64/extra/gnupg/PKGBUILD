@@ -1,0 +1,45 @@
+pkgname=gnupg
+pkgver=2.2.32
+pkgrel=1
+pkgdesc='Complete and free implementation of the OpenPGP standard'
+url='https://www.gnupg.org/'
+license=('GPL')
+arch=('x86_64')
+depends=('npth' 'libgpg-error' 'libgcrypt' 'libksba' 'libassuan')
+source=("https://gnupg.org/ftp/gcrypt/${pkgname}/${pkgname}-${pkgver}.tar.bz2"
+	'drop-import-clean.patch'
+	'avoid-beta-warning.patch')
+
+install=gnupg.install
+
+prepare() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+	patch -p1 -i ../avoid-beta-warning.patch
+	patch -p1 -i ../drop-import-clean.patch
+
+	# improve reproducibility
+	rm doc/gnupg.info*
+
+	./autogen.sh
+}
+
+build() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+	./configure \
+		--prefix=/usr \
+		--sysconfdir=/etc \
+		--sbindir=/usr/bin \
+		--libexecdir=/usr/lib/gnupg \
+		--enable-maintainer-mode \
+
+	make
+}
+
+package() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+	make DESTDIR="${pkgdir}" install
+	ln -s gpg "${pkgdir}"/usr/bin/gpg2
+	ln -s gpgv "${pkgdir}"/usr/bin/gpgv2
+
+	install -Dm 644 doc/examples/systemd-user/*.* -t "${pkgdir}/usr/lib/systemd/user"
+}

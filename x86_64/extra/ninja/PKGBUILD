@@ -1,0 +1,29 @@
+pkgname=ninja
+pkgver=1.10.2
+pkgrel=3
+arch=('x86_64')
+depends=('python3')
+source=(https://ftp.osuosl.org/pub/lfs/lfs-packages/11.0/ninja-$pkgver.tar.gz)
+
+build() {
+        cd $pkgname-$pkgver
+
+        sed -i '/int Guess/a \
+	int   j = 0;\
+	char* jobs = getenv( "NINJAJOBS" );\
+	if ( jobs != NULL ) j = atoi( jobs );\
+	if ( j > 0 ) return j;\
+	' src/ninja.cc
+	
+	python3 configure.py --bootstrap
+	
+}
+
+package() {
+        cd $pkgname-$pkgver
+
+	mkdir -p $pkgdir/bin $pkgdir/share/bash-completion/completions $pkgdir/usr/share/zsh/site-functions
+	install -vm755 ninja $pkgdir/bin/
+	install -vDm644 misc/bash-completion $pkgdir/usr/share/bash-completion/completions/ninja
+	install -vDm644 misc/zsh-completion  $pkgdir/usr/share/zsh/site-functions/_ninja
+}

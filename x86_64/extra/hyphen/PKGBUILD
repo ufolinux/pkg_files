@@ -1,0 +1,22 @@
+pkgname=hyphen
+pkgver=2.8.8
+pkgrel=1
+arch=('x86_64')
+depends=(glibc)
+makedepends=(perl)
+source=(https://downloads.sourceforge.net/hunspell/${pkgname}-${pkgver}.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

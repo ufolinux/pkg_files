@@ -1,0 +1,67 @@
+pkgname=sane
+pkgver=1.1.1
+pkgrel=1
+arch=(x86_64)
+depends=(cairo glibc libgphoto2 libnl libpng libxml2 openssl)
+makedepends=(autoconf-archive curl glib2 libjpeg libtiff libusb)
+source=("https://gitlab.com/sane-project/backends/-/archive/${pkgver}/backends-${pkgver}.tar.gz"
+        "66-${pkgname}d.rules"
+        "${pkgname}.sysusers"
+        "${pkgname}d.service"
+        "${pkgname}d.socket")
+
+prepare() {
+	cd backends-$pkgver
+
+	echo "${pkgver}" > .tarball-version
+	echo "${pkgver}" > .version
+
+	autoreconf -fvi
+}
+
+build() {
+	cd backends-$pkgver
+
+	./configure --prefix=/usr \
+	--disable-locking \
+	--disable-rpath \
+	--enable-pthread \
+	--localstatedir=/var \
+	--sbindir=/usr/bin \
+	--sysconfdir=/etc \
+	--with-libcurl \
+	--with-pic \
+	--with-systemd \
+	--with-usb
+
+	make
+}
+
+package() {
+	cd backends-$pkgver
+
+	make DESTDIR="${pkgdir}" install
+
+	# generate udev udev+hwdb
+	install -vdm 755 "${pkgdir}/usr/lib/udev/rules.d/"
+	tools/sane-desc -m udev+hwdb -s doc/descriptions/ > "${pkgdir}/usr/lib/udev/rules.d/65-${pkgname}.rules"
+	tools/sane-desc -m udev+hwdb -s doc/descriptions-external/ >> "${pkgdir}/usr/lib/udev/rules.d/65-${pkgname}.rules"
+
+	# generate udev hwdb
+	install -vdm 755 "${pkgdir}/usr/lib/udev/hwdb.d/"
+	tools/sane-desc -m hwdb -s doc/descriptions/ > "${pkgdir}/usr/lib/udev/hwdb.d/20-${pkgname}.hwdb"
+
+	# NOTE: an empty new line is required between the two .desc collections
+	printf "\n" >> "${pkgdir}/usr/lib/udev/hwdb.d/20-${pkgname}.hwdb"
+	tools/sane-desc -m hwdb -s doc/descriptions-external/ >> "${pkgdir}/usr/lib/udev/hwdb.d/20-${pkgname}.hwdb"
+
+	# systemd integration
+	install -vDm 644 "../${pkgname}d.socket" \
+		-t "${pkgdir}/usr/lib/systemd/system/"
+	install -vDm 644 "../${pkgname}d.service" \
+		"${pkgdir}/usr/lib/systemd/system/${pkgname}d@.service"
+	install -vDm 644 "../66-${pkgname}d.rules" "${pkgdir}/usr/lib/udev/rules.d/"
+
+	# sysusers.d
+	install -vDm 644 "../${pkgname}.sysusers" "${pkgdir}/usr/lib/sysusers.d/${pkgname}.conf"
+}

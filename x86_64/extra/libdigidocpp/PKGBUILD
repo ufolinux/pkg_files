@@ -1,0 +1,25 @@
+pkgname=libdigidocpp
+pkgver=3.14.10
+pkgrel=1
+arch=(x86_64)
+depends=(xmlsec xml-security-c openssl zlib xerces-c xalan-c xsd swig openjdk-17)
+makedepends=(vim cmake make)
+source=(https://github.com/open-eid/libdigidocpp/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	cmake -B build -G Ninja \
+	-D CMAKE_INSTALL_PREFIX=/usr \
+	-D JAVA_AWT_LIBRARY=/opt/jdk-17/lib/ \
+    -D JAVA_JVM_LIBRARY=/opt/jdk-17/lib/ \
+    -D JAVA_INCLUDE_PATH=/opt/jdk-17/include/
+
+	ninja -C build
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	DESTDIR=$pkgdir ninja -C build install
+}

@@ -1,0 +1,17 @@
+pkgname=util-macros
+pkgver=1.19.3
+pkgrel=1
+arch=('x86_64')
+source=(https://x.org/pub/individual/util/$pkgname-$pkgver.tar.bz2)
+
+build() {
+        cd $pkgname-$pkgver
+
+	./configure --prefix=/usr
+        make
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+}

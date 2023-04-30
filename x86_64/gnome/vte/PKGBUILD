@@ -1,0 +1,26 @@
+pkgname=vte
+pkgver=0.66.2
+pkgrel=1
+arch=('x86_64')
+depends=(gtk+ libxml2 pcre2 icu vala gobject-introspection gnutls fribidi)
+source=(https://gitlab.gnome.org/GNOME/$pkgname/-/archive/$pkgver/$pkgver-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver*
+
+	mkdir -p build && cd build
+
+	meson			\
+	--prefix=/usr		\
+	--buildtype=release	\
+	-D fribidi=false	\
+	-D gnutls=true
+
+	ninja
+}
+
+package() {
+	cd $pkgname-$pkgver*/build
+
+	DESTDIR=$pkgdir ninja install
+}

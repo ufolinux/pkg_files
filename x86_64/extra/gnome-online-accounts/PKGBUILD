@@ -1,0 +1,22 @@
+pkgname=gnome-online-accounts
+pkgver=3.40.1
+pkgrel=1
+arch=('x86_64')
+depends=(gcr json-glib rest webkit2gtk gobject-introspection)
+makedepends=(vala)
+source=(https://download.gnome.org/sources/gnome-online-accounts/3.40/gnome-online-accounts-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

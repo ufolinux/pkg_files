@@ -1,0 +1,34 @@
+pkgname=htop
+pkgver=3.1.2
+pkgrel=1
+arch=('x86_64')
+depends=(libcap libnl ncurses)
+makedepends=(git lm-sensors)
+source=(git+https://github.com/htop-dev/htop.git)
+
+prepare() {
+	cd $pkgname
+
+	autoreconf -fi
+}
+
+build() {
+	cd $pkgname
+
+	./configure		\
+	--prefix=/usr		\
+	--sysconfdir=/etc	\
+	--enable-cgroup		\
+	--enable-delayacct	\
+	--enable-openvz		\
+	--enable-unicode	\
+	--enable-vserver
+
+	make
+}
+
+package() {
+	cd $pkgname
+
+	make DESTDIR=$pkgdir install
+}

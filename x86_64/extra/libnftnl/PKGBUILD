@@ -1,0 +1,22 @@
+pkgname=libnftnl
+pkgver=1.2.1
+pkgrel=1
+arch=('x86_64')
+depends=(libmnl)
+makedepends=(gcc)
+source=(https://netfilter.org/projects/libnftnl/files/libnftnl-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure	\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

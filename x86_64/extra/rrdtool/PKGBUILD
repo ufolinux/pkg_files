@@ -1,0 +1,35 @@
+pkgname=rrdtool
+pkgver=1.7.2
+pkgrel=1
+arch=(x86_64)
+depends=(pango libxml2)
+makedepends=(intltool ruby3 tcl systemd python3)
+options=('!emptydirs' '!makeflags')
+source=(https://oss.oetiker.ch/rrdtool/pub/rrdtool-${pkgver}.tar.gz)
+
+prepare() {
+	cd ${pkgname}-${pkgver}
+
+	# fix FS#28521 make ruby install to vendor_ruby instead of site_ruby
+	sed -e 's/$(RUBY) ${abs_srcdir}\/ruby\/extconf.rb/& --vendor/' -i bindings/Makefile.am
+
+	# https://github.com/oetiker/rrdtool-1.x/issues/1135
+	autoreconf -vi
+}
+
+build() {
+	cd ${pkgname}-${pkgver}
+
+	./configure --prefix=/usr --localstatedir=/var --disable-rpath \
+	--enable-perl --enable-perl-site-install --with-perl-options='INSTALLDIRS=vendor' \
+	--enable-ruby --enable-ruby-site-install --enable-python \
+	--enable-tcl --disable-libwrap
+
+	make
+}
+
+package() {
+	cd ${pkgname}-${pkgver}
+
+	make DESTDIR="${pkgdir}" includedir=/usr/include install
+}

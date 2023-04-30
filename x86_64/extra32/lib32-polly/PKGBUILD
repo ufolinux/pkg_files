@@ -1,0 +1,57 @@
+pkgname=lib32-polly
+rname=polly
+pkgver=13.0.0
+pkgrel=1
+pkgdesc="High-level loop and data-locality optimizer and optimization infrastructure for LLVM"
+arch=('x86_64')
+url="https://polly.llvm.org/"
+makedepends=('llvm' 'cmake' 'ninja' 'lib32-llvm' 'lib32-clang')
+_source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
+source=($_source_base/$rname-$pkgver.src.tar.xz
+	add-missing-loadPolly.patch
+	$_source_base/llvm-$pkgver.src.tar.xz)
+
+prepare() {
+	cd "$srcdir/$rname-$pkgver.src"
+	mkdir build
+
+	patch -Np2 -i ../add-missing-loadPolly.patch
+}
+
+build() {
+	cd "$srcdir/$rname-$pkgver.src/build"
+
+	CFLAGS+=' -ffat-lto-objects'
+	CXXFLAGS+=' -ffat-lto-objects'
+
+	export CC="gcc -m32"
+	export CXX="g++ -m32"
+	export PKG_CONFIG="i686-pc-linux-gnu-pkg-config"
+
+	cmake .. -G Ninja \
+	-DCMAKE_BUILD_TYPE=Release \
+	-DCMAKE_INSTALL_PREFIX=/usr \
+	-DLLVM_LIBDIR_SUFFIX=32 \
+	-DCMAKE_C_FLAGS:STRING=-m32 \
+	-DCMAKE_CXX_FLAGS:STRING=-m32 \
+	-DLLVM_TARGET_ARCH:STRING=i686 \
+	-DLLVM_HOST_TRIPLE=$CHOST \
+	-DLLVM_DEFAULT_TARGETS_TRIPLE="i686-pc-linux-gnu" \
+	-DLLVM_LINK_LLVM_DYLIB=ON \
+	-DLLVM_BUILD_TESTS=OFF \
+	-DLLVM_BUILD_DOCS=OFF \
+	-DLLVM_ENABLE_SPHINX=OFF \
+	-DSPHINX_WARNINGS_AS_ERRORS=OFF \
+	-DLLVM_EXTERNAL_LIT=/usr/bin/lit \
+	-DLLVM_BUILD_MAIN_SRC_DIR="$srcdir/llvm-$pkgver.src"
+
+	ninja
+}
+
+package() {
+	cd "$srcdir/$rname-$pkgver.src/build"
+
+	DESTDIR="$pkgdir" ninja install
+
+	rm -rf $pkgdir/usr/{bin.sbin,include,share}
+}

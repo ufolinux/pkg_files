@@ -1,0 +1,66 @@
+pkgname=qt5-webengine
+pkgver=5.15.4
+pkgrel=1
+arch=('x86_64')
+depends=(qt5 nodejs nss pciutils llvm clang bison ffmpeg minizip double-conversion)
+makedepends=(extra-cmake-modules python3-pip python2-pip python2-setuptools)
+commitid_engine=0d4ca9cfb0d6e538172005e1c4b0b3a021b1c18c # 5.15.4
+commitid_engine_chromium=9353f70aaebce920bd5644e658bae594f2736ea1 # 5.14.2 + 83.0.4103.122
+commitid_chromium=7683bd0d07dd39ebcd2bdfab0948d86dc31caea1 #
+url=https://invent.kde.org/qt/qt/
+source=(
+	# QT_webengine
+	git+https://code.qt.io/qt/qtwebengine.git#commit=$commitid_engine
+
+	# Chromium_engine
+	git+https://code.qt.io/qt/qtwebengine-chromium.git#branch=87-based
+
+	# Catapult with native python3 support
+	git+https://chromium.googlesource.com/catapult#commit=$commitid_chromium
+
+	# Patches
+	#qt5-webengine-python3.patch
+	qt5-webengine-chromium-python3.patch
+	#qt5-webengine-ffmpeg5.patch
+	qt5-webengine-pipewire-0.3.patch
+	qt5-webengine-gcc12.patch)
+prepare() {
+	cd qtwebengine
+
+	mkdir -p build
+
+	cp -rf $srcdir/qtwebengine-chromium/* $srcdir/qtwebengine/src/3rdparty/
+
+	cd $srcdir/qtwebengine
+	patch -p1 -i "$srcdir"/qt5-webengine-python3.patch # Fix build with Python 3
+	patch -p1 -d src/3rdparty -i "$srcdir"/qt5-webengine-chromium-python3.patch
+
+	#patch -p1 -d src/3rdparty -i "$srcdir"/qt5-webengine-ffmpeg5.patch # Fix build with ffmpeg 5
+	patch -p1 -d src/3rdparty -i "$srcdir"/qt5-webengine-pipewire-0.3.patch # Port to pipewire 0.3
+	patch -p1 -d src/3rdparty -i "$srcdir"/qt5-webengine-gcc12.patch # Fix build with GCC 12
+
+	rm -rf src/3rdparty/chromium/third_party/catapult
+	cp -rf $srcdir/catapult src/3rdparty/chromium/third_party
+}
+
+build() {
+	mkdir -p qtwebengine/build
+	cd qtwebengine/build
+
+	qmake ../ \
+	CONFIG+=force_debug_info \
+	EXTRA_GN="use_lld=true is_clang=true clang_use_chrome_plugins=false"  -- \
+	-proprietary-codecs \
+	-system-ffmpeg \
+	-webp \
+	-spellchecker \
+	-webengine-icu
+
+	make
+}
+
+package() {
+	cd qtwebengine/build
+
+	make INSTALL_ROOT="$pkgdir" install
+}

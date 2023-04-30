@@ -1,0 +1,38 @@
+pkgname=os-prober
+pkgver=1.81
+pkgrel=1
+arch=(x86_64)
+depends=(bash)
+makedepends=(bash make)
+source=(https://deb.debian.org/debian/pool/main/o/${pkgname}/${pkgname}_${pkgver}.tar.xz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	sed -i -e "s:/lib/ld\*\.so\*:/lib*/ld*.so*:g" os-probes/mounted/common/90linux-distro
+
+	rm -f Makefile
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	make newns
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	install -Dm 755 os-prober linux-boot-prober -t "${pkgdir}/usr/bin"
+	install -Dm 755 newns -t "${pkgdir}/usr/lib/os-prober"
+	install -Dm 755 common.sh -t "${pkgdir}/usr/share/os-prober"
+
+	for dir in os-probes os-probes/mounted os-probes/init linux-boot-probes linux-boot-probes/mounted; do
+		install -dm 755 "${pkgdir}/usr/lib/${dir}"
+		install -m 755 -t "${pkgdir}/usr/lib/${dir}" "${dir}"/common/*
+		[[ -d "${dir}"/x86 ]] && cp -r "${dir}"/x86/* "${pkgdir}/usr/lib/${dir}"
+	done
+
+	install -Dm 755 os-probes/mounted/powerpc/20macosx "${pkgdir}"/usr/lib/os-probes/mounted/20macosx
+	install -dm 755 "${pkgdir}"/var/lib/os-prober
+}

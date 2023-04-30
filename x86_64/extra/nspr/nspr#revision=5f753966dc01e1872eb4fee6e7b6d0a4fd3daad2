@@ -1,0 +1,520 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">
+<head>
+<link rel="icon" href="/static/2e3b1288bbd5/hgicon.png" type="image/png" />
+<meta name="robots" content="index, nofollow"/>
+<link rel="stylesheet" href="/static/2e3b1288bbd5/style-gitweb.css" type="text/css" />
+
+<style type="text/css">
+div.feed {
+  float: right;
+}
+a img {
+  border-width: 0px;
+}
+div.log_link {
+  width: 80px;
+  background-color: white;
+}
+
+div.log_body {
+  padding-left: 96px;
+}
+</style>
+<script type="text/javascript" src="/static/2e3b1288bbd5/mercurial.js"></script>
+
+<meta property="og:image" content="/static/2e3b1288bbd5/moz-logo-bw-rgb.svg"/>
+<meta property="og:type" content="website"/>
+
+<title>nspr: Summary</title>
+<link rel="alternate" type="application/atom+xml"
+   href="/projects/nspr/atom-log" title="Atom feed for nspr"/>
+<link rel="alternate" type="application/rss+xml"
+   href="/projects/nspr/rss-log" title="RSS feed for nspr"/>
+
+<meta property="og:title" content="nspr summary" />
+<meta property="og:url" content="/projects/nspr/summary" />
+<meta property="og:description" content="A summary of repository state for nspr" />
+
+</head>
+<body>
+
+<div class="page_header">
+    <div class="logo">
+        <a href="https://developer.mozilla.org/en/docs/Mercurial">
+            <img src="/static/2e3b1288bbd5/moz-logo-bw-rgb.svg" alt="mercurial" />
+        </a>
+    </div>
+    <a href="/">Mercurial</a> &gt; <a href="/projects">projects</a> &gt; <a href="/projects/nspr">nspr</a>  / summary
+</div>
+
+<div class="page_nav">
+<div>
+summary |
+<a href="/projects/nspr/shortlog">shortlog</a> |
+<a href="/projects/nspr/log">changelog</a> |
+<a href="/projects/nspr/pushloghtml">pushlog</a> |
+<a href="/projects/nspr/graph">graph</a> |
+<a href="/projects/nspr/tags">tags</a> |
+<a href="/projects/nspr/bookmarks">bookmarks</a> |
+<a href="/projects/nspr/branches">branches</a> |
+<a href="/projects/nspr/file">files</a> | <a href="/projects/nspr/archive/tip.zip">zip</a>  |
+<a href="/projects/nspr/help">help</a>
+</div>
+
+<div class="search">
+<form id="searchform" action="/projects/nspr/log">
+
+<input name="rev" type="text" value="" size="40" />
+<div id="hint">Find changesets by keywords (author, files, the commit message), revision
+number or hash, or <a href="/projects/nspr/help/revsets">revset expression</a>.</div>
+</form>
+</div>
+</div>
+
+<div class="title">&nbsp;</div>
+<table cellspacing="0">
+<!--<tr><td>description</td><td>unknown</td></tr>
+<tr><td>owner</td><td>&#117;&#110;&#107;&#110;&#111;&#119;&#110;</td></tr>-->
+<tr><td>last change</td><td class="date age">Fri, 17 Dec 2021 16:34:41 +0100</td></tr>
+</table>
+
+<div><a  class="title" href="/projects/nspr/shortlog">changes</a></div>
+<table cellspacing="0">
+
+<tr class="parity0">
+<td class="link">
+<a href="/projects/nspr/rev/005070e9849523de6c647dd15dd8a709db0f3b7d">diff</a><br/>
+<a href="/projects/nspr/file/005070e9849523de6c647dd15dd8a709db0f3b7d">browse</a>
+</td>
+<td>005070e9849523de6c647dd15dd8a709db0f3b7d<br/><i class="age">2021-12-17 16:34 +0100</i></td>
+<td>
+<strong><cite>Kai Engert</cite> - set version number to 4.34 beta</strong>
+<span class="logtags"><span class="branchtag" title="default">default</span> <span class="tagtag" title="tip">tip</span> </span>
+</td>
+</tr>
+<tr class="parity1">
+<td class="link">
+<a href="/projects/nspr/rev/bfc07b2a6f342812226393c0fea38182f803588b">diff</a><br/>
+<a href="/projects/nspr/file/bfc07b2a6f342812226393c0fea38182f803588b">browse</a>
+</td>
+<td>bfc07b2a6f342812226393c0fea38182f803588b<br/><i class="age">2021-12-17 16:31 +0100</i></td>
+<td>
+<strong><cite>Kai Engert</cite> - create 4.33 branch</strong>
+<span class="logtags"><span class="branchtag" title="NSPR_4_33_BRANCH">NSPR_4_33_BRANCH</span> </span>
+</td>
+</tr>
+<tr class="parity0">
+<td class="link">
+<a href="/projects/nspr/rev/e5bf61f1bbf7d2ce59d3bbda3c9a755cd962f9b9">diff</a><br/>
+<a href="/projects/nspr/file/e5bf61f1bbf7d2ce59d3bbda3c9a755cd962f9b9">browse</a>
+</td>
+<td>e5bf61f1bbf7d2ce59d3bbda3c9a755cd962f9b9<br/><i class="age">2021-12-17 16:30 +0100</i></td>
+<td>
+<strong><cite>Kai Engert</cite> - Added tag NSPR_4_33_RTM for changeset 5f753966dc01</strong>
+<span class="logtags"></span>
+</td>
+</tr>
+<tr class="parity1">
+<td class="link">
+<a href="/projects/nspr/rev/5f753966dc01e1872eb4fee6e7b6d0a4fd3daad2">diff</a><br/>
+<a href="/projects/nspr/file/5f753966dc01e1872eb4fee6e7b6d0a4fd3daad2">browse</a>
+</td>
+<td>5f753966dc01e1872eb4fee6e7b6d0a4fd3daad2<br/><i class="age">2021-12-17 16:29 +0100</i></td>
+<td>
+<strong><cite>Kai Engert</cite> - Set version number to 4.33 final</strong>
+<span class="logtags"><span class="tagtag" title="NSPR_4_33_RTM">NSPR_4_33_RTM</span> </span>
+</td>
+</tr>
+<tr class="parity0">
+<td class="link">
+<a href="/projects/nspr/rev/a980bf6b8a23fddd9a1f6a945906a09ee2f23332">diff</a><br/>
+<a href="/projects/nspr/file/a980bf6b8a23fddd9a1f6a945906a09ee2f23332">browse</a>
+</td>
+<td>a980bf6b8a23fddd9a1f6a945906a09ee2f23332<br/><i class="age">2021-12-03 10:41 +0100</i></td>
+<td>
+<strong><cite>Kai Engert</cite> - Added tag NSPR_4_33_BETA1 for changeset 1938a740809a</strong>
+<span class="logtags"></span>
+</td>
+</tr>
+<tr class="parity1">
+<td class="link">
+<a href="/projects/nspr/rev/1938a740809af91496443321b60ca0ab68c4b67b">diff</a><br/>
+<a href="/projects/nspr/file/1938a740809af91496443321b60ca0ab68c4b67b">browse</a>
+</td>
+<td>1938a740809af91496443321b60ca0ab68c4b67b<br/><i class="age">2021-11-30 22:08 +0000</i></td>
+<td>
+<strong><cite>Mike Hommey</cite> - <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1299823">Bug 1299823</a> - Rename PR_X* symbols, remove unused ones. r=kaie</strong>
+<span class="logtags"><span class="tagtag" title="NSPR_4_33_BETA1">NSPR_4_33_BETA1</span> </span>
+</td>
+</tr>
+<tr class="parity0">
+<td class="link">
+<a href="/projects/nspr/rev/ad483a8764daa3937b8e9af8f5cfddabcabb0f8a">diff</a><br/>
+<a href="/projects/nspr/file/ad483a8764daa3937b8e9af8f5cfddabcabb0f8a">browse</a>
+</td>
+<td>ad483a8764daa3937b8e9af8f5cfddabcabb0f8a<br/><i class="age">2021-11-30 21:49 +0000</i></td>
+<td>
+<strong><cite>Mike Hommey</cite> - <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1742269">Bug 1742269</a> - Remove ${srcdir} from AC_CONFIG_AUX_DIR. r=kaie</strong>
+<span class="logtags"></span>
+</td>
+</tr>
+<tr class="parity1">
+<td class="link">
+<a href="/projects/nspr/rev/1f6ed953a3cb9241b1f5eab0b0b7142bf8841867">diff</a><br/>
+<a href="/projects/nspr/file/1f6ed953a3cb9241b1f5eab0b0b7142bf8841867">browse</a>
+</td>
+<td>1f6ed953a3cb9241b1f5eab0b0b7142bf8841867<br/><i class="age">2021-06-30 23:48 +0200</i></td>
+<td>
+<strong><cite>Kai Engert</cite> - set version number to 4.33 beta</strong>
+<span class="logtags"></span>
+</td>
+</tr>
+<tr class="parity0">
+<td class="link">
+<a href="/projects/nspr/rev/88af362950b244ceefbd092917552a0a61814585">diff</a><br/>
+<a href="/projects/nspr/file/88af362950b244ceefbd092917552a0a61814585">browse</a>
+</td>
+<td>88af362950b244ceefbd092917552a0a61814585<br/><i class="age">2021-06-30 23:44 +0200</i></td>
+<td>
+<strong><cite>Kai Engert</cite> - create 4.32 branch</strong>
+<span class="logtags"><span class="branchtag" title="NSPR_4_32_BRANCH">NSPR_4_32_BRANCH</span> </span>
+</td>
+</tr>
+<tr class="parity1">
+<td class="link">
+<a href="/projects/nspr/rev/3d5a081cece03dcf30563e88efc95af0327de41e">diff</a><br/>
+<a href="/projects/nspr/file/3d5a081cece03dcf30563e88efc95af0327de41e">browse</a>
+</td>
+<td>3d5a081cece03dcf30563e88efc95af0327de41e<br/><i class="age">2021-06-30 23:43 +0200</i></td>
+<td>
+<strong><cite>Kai Engert</cite> - Added tag NSPR_4_32_RTM for changeset 40050f21eeed</strong>
+<span class="logtags"></span>
+</td>
+</tr>
+<tr class="parity0">
+<td class="link">
+<a href="/projects/nspr/rev/40050f21eeeddfdc919f42f7552fcbf472f7b9e4">diff</a><br/>
+<a href="/projects/nspr/file/40050f21eeeddfdc919f42f7552fcbf472f7b9e4">browse</a>
+</td>
+<td>40050f21eeeddfdc919f42f7552fcbf472f7b9e4<br/><i class="age">2021-06-30 23:43 +0200</i></td>
+<td>
+<strong><cite>Kai Engert</cite> - set version number to 4.32 final</strong>
+<span class="logtags"><span class="tagtag" title="NSPR_4_32_RTM">NSPR_4_32_RTM</span> </span>
+</td>
+</tr>
+<tr class="parity1">
+<td class="link">
+<a href="/projects/nspr/rev/853873739c495abedfa2d786a357044bad4ef100">diff</a><br/>
+<a href="/projects/nspr/file/853873739c495abedfa2d786a357044bad4ef100">browse</a>
+</td>
+<td>853873739c495abedfa2d786a357044bad4ef100<br/><i class="age">2021-06-10 11:01 +0200</i></td>
+<td>
+<strong><cite>Kai Engert</cite> - Added tag NSPR_4_32_BETA1 for changeset 70665131062b</strong>
+<span class="logtags"></span>
+</td>
+</tr>
+<tr class="parity0">
+<td class="link">
+<a href="/projects/nspr/rev/70665131062b4d420a9e9c1a6f2003eed551706e">diff</a><br/>
+<a href="/projects/nspr/file/70665131062b4d420a9e9c1a6f2003eed551706e">browse</a>
+</td>
+<td>70665131062b4d420a9e9c1a6f2003eed551706e<br/><i class="age">2021-06-10 08:47 +0000</i></td>
+<td>
+<strong><cite>Kai Engert</cite> - <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1643866">Bug 1643866</a> - Use a larger buffer for internal calls to PR_GetHostByName. r=glandium</strong>
+<span class="logtags"><span class="tagtag" title="NSPR_4_32_BETA1">NSPR_4_32_BETA1</span> </span>
+</td>
+</tr>
+<tr class="parity1">
+<td class="link">
+<a href="/projects/nspr/rev/095f3884815779bf330a6eb6ff0aacb9bdfa9b42">diff</a><br/>
+<a href="/projects/nspr/file/095f3884815779bf330a6eb6ff0aacb9bdfa9b42">browse</a>
+</td>
+<td>095f3884815779bf330a6eb6ff0aacb9bdfa9b42<br/><i class="age">2021-06-09 16:21 +0000</i></td>
+<td>
+<strong><cite>Dragana Damjanovic</cite> - <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1713681">Bug 1713681</a> - Add set/getsockopt for the don't-fragment option. r=kaie,bwc,valentin</strong>
+<span class="logtags"></span>
+</td>
+</tr>
+<tr class="parity0">
+<td class="link">
+<a href="/projects/nspr/rev/222ed68c24b0eac4f4757516473c4179be05db10">diff</a><br/>
+<a href="/projects/nspr/file/222ed68c24b0eac4f4757516473c4179be05db10">browse</a>
+</td>
+<td>222ed68c24b0eac4f4757516473c4179be05db10<br/><i class="age">2021-05-26 18:11 +0200</i></td>
+<td>
+<strong><cite>Kai Engert</cite> - set version number to 4.32 beta</strong>
+<span class="logtags"></span>
+</td>
+</tr>
+<tr class="parity1">
+<td class="link">
+<a href="/projects/nspr/rev/236b38fcb623bad132b2ecbe0036842b36fb7830">diff</a><br/>
+<a href="/projects/nspr/file/236b38fcb623bad132b2ecbe0036842b36fb7830">browse</a>
+</td>
+<td>236b38fcb623bad132b2ecbe0036842b36fb7830<br/><i class="age">2021-05-26 18:08 +0200</i></td>
+<td>
+<strong><cite>Kai Engert</cite> - create 4.31 branch</strong>
+<span class="logtags"><span class="branchtag" title="NSPR_4_31_BRANCH">NSPR_4_31_BRANCH</span> </span>
+</td>
+</tr>
+<tr class="parity0">
+<td class="link">
+<a href="/projects/nspr/rev/9c6263931b0165597be79931d67bd51c6a84f7a8">diff</a><br/>
+<a href="/projects/nspr/file/9c6263931b0165597be79931d67bd51c6a84f7a8">browse</a>
+</td>
+<td>9c6263931b0165597be79931d67bd51c6a84f7a8<br/><i class="age">2021-05-26 18:07 +0200</i></td>
+<td>
+<strong><cite>Kai Engert</cite> - Added tag NSPR_4_31_RTM for changeset 0d82c2ba909b</strong>
+<span class="logtags"></span>
+</td>
+</tr>
+<tr class="parity1">
+<td class="link">
+<a href="/projects/nspr/rev/0d82c2ba909bc34ab7ecfce64097816ac217aa31">diff</a><br/>
+<a href="/projects/nspr/file/0d82c2ba909bc34ab7ecfce64097816ac217aa31">browse</a>
+</td>
+<td>0d82c2ba909bc34ab7ecfce64097816ac217aa31<br/><i class="age">2021-05-26 18:06 +0200</i></td>
+<td>
+<strong><cite>Kai Engert</cite> - Set version number to 4.31 final</strong>
+<span class="logtags"><span class="tagtag" title="NSPR_4_31_RTM">NSPR_4_31_RTM</span> </span>
+</td>
+</tr>
+<tr class="parity0">
+<td class="link">
+<a href="/projects/nspr/rev/afc10f9c13090d041f66bc6472af19375e723a6a">diff</a><br/>
+<a href="/projects/nspr/file/afc10f9c13090d041f66bc6472af19375e723a6a">browse</a>
+</td>
+<td>afc10f9c13090d041f66bc6472af19375e723a6a<br/><i class="age">2021-04-28 01:35 +0200</i></td>
+<td>
+<strong><cite>Kai Engert</cite> - Added tag NSPR_4_31_BETA1 for changeset 565813a2e07b</strong>
+<span class="logtags"></span>
+</td>
+</tr>
+<tr class="parity1">
+<td class="link">
+<a href="/projects/nspr/rev/565813a2e07b8d442cae57645f9e497d8f64f216">diff</a><br/>
+<a href="/projects/nspr/file/565813a2e07b8d442cae57645f9e497d8f64f216">browse</a>
+</td>
+<td>565813a2e07b8d442cae57645f9e497d8f64f216<br/><i class="age">2021-04-27 20:39 +0200</i></td>
+<td>
+<strong><cite>Dana Keeler</cite> - <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1686138">Bug 1686138</a> - Lock access to PRCallOnceType members in PR_CallOnce* for thread safety. r=kaie</strong>
+<span class="logtags"><span class="tagtag" title="NSPR_4_31_BETA1">NSPR_4_31_BETA1</span> </span>
+</td>
+</tr>
+<tr class="light"><td colspan="4"><a class="list" href="/projects/nspr/shortlog">...</a></td></tr>
+</table>
+
+<div><a class="title" href="/projects/nspr/tags">tags</a></div>
+<table cellspacing="0">
+
+<tr class="parity0">
+<td class="age"><i class="age">Fri, 17 Dec 2021 16:29:39 +0100</i></td>
+<td><a class="list" href="/projects/nspr/rev/NSPR_4_33_RTM"><b>NSPR_4_33_RTM</b></a></td>
+<td class="link">
+<a href="/projects/nspr/rev/5f753966dc01e1872eb4fee6e7b6d0a4fd3daad2">changeset</a> |
+<a href="/projects/nspr/log/5f753966dc01e1872eb4fee6e7b6d0a4fd3daad2">changelog</a> |
+<a href="/projects/nspr/file/5f753966dc01e1872eb4fee6e7b6d0a4fd3daad2">files</a>
+</td>
+</tr>
+<tr class="parity1">
+<td class="age"><i class="age">Tue, 30 Nov 2021 22:08:11 +0000</i></td>
+<td><a class="list" href="/projects/nspr/rev/NSPR_4_33_BETA1"><b>NSPR_4_33_BETA1</b></a></td>
+<td class="link">
+<a href="/projects/nspr/rev/1938a740809af91496443321b60ca0ab68c4b67b">changeset</a> |
+<a href="/projects/nspr/log/1938a740809af91496443321b60ca0ab68c4b67b">changelog</a> |
+<a href="/projects/nspr/file/1938a740809af91496443321b60ca0ab68c4b67b">files</a>
+</td>
+</tr>
+<tr class="parity0">
+<td class="age"><i class="age">Wed, 30 Jun 2021 23:43:23 +0200</i></td>
+<td><a class="list" href="/projects/nspr/rev/NSPR_4_32_RTM"><b>NSPR_4_32_RTM</b></a></td>
+<td class="link">
+<a href="/projects/nspr/rev/40050f21eeeddfdc919f42f7552fcbf472f7b9e4">changeset</a> |
+<a href="/projects/nspr/log/40050f21eeeddfdc919f42f7552fcbf472f7b9e4">changelog</a> |
+<a href="/projects/nspr/file/40050f21eeeddfdc919f42f7552fcbf472f7b9e4">files</a>
+</td>
+</tr>
+<tr class="parity1">
+<td class="age"><i class="age">Thu, 10 Jun 2021 08:47:49 +0000</i></td>
+<td><a class="list" href="/projects/nspr/rev/NSPR_4_32_BETA1"><b>NSPR_4_32_BETA1</b></a></td>
+<td class="link">
+<a href="/projects/nspr/rev/70665131062b4d420a9e9c1a6f2003eed551706e">changeset</a> |
+<a href="/projects/nspr/log/70665131062b4d420a9e9c1a6f2003eed551706e">changelog</a> |
+<a href="/projects/nspr/file/70665131062b4d420a9e9c1a6f2003eed551706e">files</a>
+</td>
+</tr>
+<tr class="parity0">
+<td class="age"><i class="age">Wed, 26 May 2021 18:06:44 +0200</i></td>
+<td><a class="list" href="/projects/nspr/rev/NSPR_4_31_RTM"><b>NSPR_4_31_RTM</b></a></td>
+<td class="link">
+<a href="/projects/nspr/rev/0d82c2ba909bc34ab7ecfce64097816ac217aa31">changeset</a> |
+<a href="/projects/nspr/log/0d82c2ba909bc34ab7ecfce64097816ac217aa31">changelog</a> |
+<a href="/projects/nspr/file/0d82c2ba909bc34ab7ecfce64097816ac217aa31">files</a>
+</td>
+</tr>
+<tr class="parity1">
+<td class="age"><i class="age">Tue, 27 Apr 2021 20:39:04 +0200</i></td>
+<td><a class="list" href="/projects/nspr/rev/NSPR_4_31_BETA1"><b>NSPR_4_31_BETA1</b></a></td>
+<td class="link">
+<a href="/projects/nspr/rev/565813a2e07b8d442cae57645f9e497d8f64f216">changeset</a> |
+<a href="/projects/nspr/log/565813a2e07b8d442cae57645f9e497d8f64f216">changelog</a> |
+<a href="/projects/nspr/file/565813a2e07b8d442cae57645f9e497d8f64f216">files</a>
+</td>
+</tr>
+<tr class="parity0">
+<td class="age"><i class="age">Tue, 16 Mar 2021 15:53:01 +0100</i></td>
+<td><a class="list" href="/projects/nspr/rev/NSPR_4_30_RTM"><b>NSPR_4_30_RTM</b></a></td>
+<td class="link">
+<a href="/projects/nspr/rev/023a0ccfcb5c2745bd1d4864cc5f259784c958c6">changeset</a> |
+<a href="/projects/nspr/log/023a0ccfcb5c2745bd1d4864cc5f259784c958c6">changelog</a> |
+<a href="/projects/nspr/file/023a0ccfcb5c2745bd1d4864cc5f259784c958c6">files</a>
+</td>
+</tr>
+<tr class="parity1">
+<td class="age"><i class="age">Wed, 24 Feb 2021 19:50:59 +0100</i></td>
+<td><a class="list" href="/projects/nspr/rev/NSPR_4_30_BETA1"><b>NSPR_4_30_BETA1</b></a></td>
+<td class="link">
+<a href="/projects/nspr/rev/cbbfa71c7e4a155e62732a817f3a3d5c3d9647a9">changeset</a> |
+<a href="/projects/nspr/log/cbbfa71c7e4a155e62732a817f3a3d5c3d9647a9">changelog</a> |
+<a href="/projects/nspr/file/cbbfa71c7e4a155e62732a817f3a3d5c3d9647a9">files</a>
+</td>
+</tr>
+<tr class="parity0">
+<td class="age"><i class="age">Thu, 17 Sep 2020 17:06:03 +0200</i></td>
+<td><a class="list" href="/projects/nspr/rev/NSPR_4_30_BETA0"><b>NSPR_4_30_BETA0</b></a></td>
+<td class="link">
+<a href="/projects/nspr/rev/25bdf3f300c0f3603c9c1f757ac9b258f50789a8">changeset</a> |
+<a href="/projects/nspr/log/25bdf3f300c0f3603c9c1f757ac9b258f50789a8">changelog</a> |
+<a href="/projects/nspr/file/25bdf3f300c0f3603c9c1f757ac9b258f50789a8">files</a>
+</td>
+</tr>
+<tr class="parity1">
+<td class="age"><i class="age">Thu, 17 Sep 2020 17:01:34 +0200</i></td>
+<td><a class="list" href="/projects/nspr/rev/NSPR_4_29_RTM"><b>NSPR_4_29_RTM</b></a></td>
+<td class="link">
+<a href="/projects/nspr/rev/a717c2ade3c3c227e713d3cc7b916d7bc0726d3b">changeset</a> |
+<a href="/projects/nspr/log/a717c2ade3c3c227e713d3cc7b916d7bc0726d3b">changelog</a> |
+<a href="/projects/nspr/file/a717c2ade3c3c227e713d3cc7b916d7bc0726d3b">files</a>
+</td>
+</tr>
+<tr class="light"><td colspan="3"><a class="list" href="/projects/nspr/tags">...</a></td></tr>
+</table>
+
+<div><a class="title" href="/projects/nspr/bookmarks">bookmarks</a></div>
+<table cellspacing="0">
+
+<tr class="light"><td colspan="3"><a class="list" href="/projects/nspr/bookmarks">...</a></td></tr>
+</table>
+
+<div><a class="title" href="/projects/nspr/branches">branches</a></div>
+<table cellspacing="0">
+
+<tr class="parity0">
+<td class="age"><i class="age">Fri, 17 Dec 2021 16:34:41 +0100</i></td>
+<td class="open"><a class="list" href="/projects/nspr/shortlog/default"><b>default</b></a></td>
+<td class="link">
+<a href="/projects/nspr/changeset/005070e9849523de6c647dd15dd8a709db0f3b7d">changeset</a> |
+<a href="/projects/nspr/log/005070e9849523de6c647dd15dd8a709db0f3b7d">changelog</a> |
+<a href="/projects/nspr/file/005070e9849523de6c647dd15dd8a709db0f3b7d">files</a>
+</td>
+</tr>
+<tr class="parity1">
+<td class="age"><i class="age">Fri, 17 Dec 2021 16:31:21 +0100</i></td>
+<td class="open"><a class="list" href="/projects/nspr/shortlog/NSPR_4_33_BRANCH"><b>NSPR_4_33_BRANCH</b></a></td>
+<td class="link">
+<a href="/projects/nspr/changeset/bfc07b2a6f342812226393c0fea38182f803588b">changeset</a> |
+<a href="/projects/nspr/log/bfc07b2a6f342812226393c0fea38182f803588b">changelog</a> |
+<a href="/projects/nspr/file/bfc07b2a6f342812226393c0fea38182f803588b">files</a>
+</td>
+</tr>
+<tr class="parity0">
+<td class="age"><i class="age">Wed, 30 Jun 2021 23:44:58 +0200</i></td>
+<td class="open"><a class="list" href="/projects/nspr/shortlog/NSPR_4_32_BRANCH"><b>NSPR_4_32_BRANCH</b></a></td>
+<td class="link">
+<a href="/projects/nspr/changeset/88af362950b244ceefbd092917552a0a61814585">changeset</a> |
+<a href="/projects/nspr/log/88af362950b244ceefbd092917552a0a61814585">changelog</a> |
+<a href="/projects/nspr/file/88af362950b244ceefbd092917552a0a61814585">files</a>
+</td>
+</tr>
+<tr class="parity1">
+<td class="age"><i class="age">Wed, 26 May 2021 18:08:24 +0200</i></td>
+<td class="open"><a class="list" href="/projects/nspr/shortlog/NSPR_4_31_BRANCH"><b>NSPR_4_31_BRANCH</b></a></td>
+<td class="link">
+<a href="/projects/nspr/changeset/236b38fcb623bad132b2ecbe0036842b36fb7830">changeset</a> |
+<a href="/projects/nspr/log/236b38fcb623bad132b2ecbe0036842b36fb7830">changelog</a> |
+<a href="/projects/nspr/file/236b38fcb623bad132b2ecbe0036842b36fb7830">files</a>
+</td>
+</tr>
+<tr class="parity0">
+<td class="age"><i class="age">Tue, 16 Mar 2021 15:54:49 +0100</i></td>
+<td class="open"><a class="list" href="/projects/nspr/shortlog/NSPR_4_30_BRANCH"><b>NSPR_4_30_BRANCH</b></a></td>
+<td class="link">
+<a href="/projects/nspr/changeset/bf6cd25996aff2cfdb590b132deb9638b97ba872">changeset</a> |
+<a href="/projects/nspr/log/bf6cd25996aff2cfdb590b132deb9638b97ba872">changelog</a> |
+<a href="/projects/nspr/file/bf6cd25996aff2cfdb590b132deb9638b97ba872">files</a>
+</td>
+</tr>
+<tr class="parity1">
+<td class="age"><i class="age">Thu, 17 Sep 2020 17:03:30 +0200</i></td>
+<td class="open"><a class="list" href="/projects/nspr/shortlog/NSPR_4_29_BRANCH"><b>NSPR_4_29_BRANCH</b></a></td>
+<td class="link">
+<a href="/projects/nspr/changeset/7f717ba2ebf56c7d052561f5b934f4d2042a37a9">changeset</a> |
+<a href="/projects/nspr/log/7f717ba2ebf56c7d052561f5b934f4d2042a37a9">changelog</a> |
+<a href="/projects/nspr/file/7f717ba2ebf56c7d052561f5b934f4d2042a37a9">files</a>
+</td>
+</tr>
+<tr class="parity0">
+<td class="age"><i class="age">Fri, 21 Aug 2020 01:05:03 +0200</i></td>
+<td class="open"><a class="list" href="/projects/nspr/shortlog/NSPR_4_28_BRANCH"><b>NSPR_4_28_BRANCH</b></a></td>
+<td class="link">
+<a href="/projects/nspr/changeset/756c18bb796e7cfe3add1b91a9780941a5ff161e">changeset</a> |
+<a href="/projects/nspr/log/756c18bb796e7cfe3add1b91a9780941a5ff161e">changelog</a> |
+<a href="/projects/nspr/file/756c18bb796e7cfe3add1b91a9780941a5ff161e">files</a>
+</td>
+</tr>
+<tr class="parity1">
+<td class="age"><i class="age">Thu, 23 Jul 2020 20:10:12 +0200</i></td>
+<td class="open"><a class="list" href="/projects/nspr/shortlog/NSPR_4_25_BRANCH"><b>NSPR_4_25_BRANCH</b></a></td>
+<td class="link">
+<a href="/projects/nspr/changeset/0f3d68d560164a1c51d8aa9b48f976b0537339be">changeset</a> |
+<a href="/projects/nspr/log/0f3d68d560164a1c51d8aa9b48f976b0537339be">changelog</a> |
+<a href="/projects/nspr/file/0f3d68d560164a1c51d8aa9b48f976b0537339be">files</a>
+</td>
+</tr>
+<tr class="parity0">
+<td class="age"><i class="age">Thu, 23 Jul 2020 20:09:16 +0200</i></td>
+<td class="open"><a class="list" href="/projects/nspr/shortlog/NSPR_4_21_BRANCH"><b>NSPR_4_21_BRANCH</b></a></td>
+<td class="link">
+<a href="/projects/nspr/changeset/a41f86831b28ba0e278c7b0641c8f1833ad0fa3b">changeset</a> |
+<a href="/projects/nspr/log/a41f86831b28ba0e278c7b0641c8f1833ad0fa3b">changelog</a> |
+<a href="/projects/nspr/file/a41f86831b28ba0e278c7b0641c8f1833ad0fa3b">files</a>
+</td>
+</tr>
+<tr class="parity1">
+<td class="age"><i class="age">Thu, 23 Jul 2020 15:58:32 +0200</i></td>
+<td class="open"><a class="list" href="/projects/nspr/shortlog/NSPR_4_27_BRANCH"><b>NSPR_4_27_BRANCH</b></a></td>
+<td class="link">
+<a href="/projects/nspr/changeset/09eb3516cbdb24ad841452d4178f6e638bebca9c">changeset</a> |
+<a href="/projects/nspr/log/09eb3516cbdb24ad841452d4178f6e638bebca9c">changelog</a> |
+<a href="/projects/nspr/file/09eb3516cbdb24ad841452d4178f6e638bebca9c">files</a>
+</td>
+</tr>
+<tr class="light">
+  <td colspan="3"><a class="list" href="/projects/nspr/branches">...</a></td>
+</tr>
+</table>
+<div class="page_footer">
+<div class="page_footer_text">nspr</div>
+<div class="page_footer_text" style="padding-left: 10px">Deployed from <a href="https://hg.mozilla.org/hgcustom/version-control-tools/rev/2e3b1288bbd5">2e3b1288bbd5</a> at 2021-12-01T16:16:38Z.</div>
+<div class="rss_logo">
+<a href="/projects/nspr/rss-log">RSS</a>
+<a href="/projects/nspr/atom-log">Atom</a>
+</div>
+<br />
+
+</div>
+</body>
+</html>
+

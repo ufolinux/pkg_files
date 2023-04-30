@@ -1,0 +1,37 @@
+pkgname=kdsoap-ws-discovery-client
+pkgver=2.0.0
+pkgrel=1
+arch=('x86_64')
+depends=(qt5)
+makedepends=(cmake extra-cmake-modules)
+commitid=dcefb65c88e76f1f9eda8b0318006e93d15a0e1e
+durl=https://gitlab.com/caspermeijn/$pkgname/-/archive
+source=($durl/$commitid/$pkgname-$commitid.tar.gz)
+
+prepare() {
+	cd $pkgname-$commitid
+
+	mkdir -p build
+}
+
+build() {
+	cd $pkgname-$commitid/build
+
+	cmake				\
+	-D CMAKE_INSTALL_PREFIX=/usr	\
+	-D CMAKE_BUILD_TYPE=None	\
+	-Wno-dev ..
+
+	make -j7
+}
+
+package() {
+	cd $pkgname-$commitid/build
+
+	make DESTDIR=$pkgdir install
+
+	# Hacky way but its how i deal with it for now
+	mkdir -p $pkgdir/usr/lib64 && mkdir -p $pkgdir/usr/lib && touch $pkgdir/usr/lib64/ignore
+	cp -rf $pkgdir/usr/lib64/* $pkgdir/usr/lib/
+	rm -rf $pkgdir/usr/lib64 $pkgdir/usr/lib/ignore
+}

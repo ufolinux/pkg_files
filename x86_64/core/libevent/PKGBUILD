@@ -1,0 +1,18 @@
+pkgname=libevent
+pkgver=2.1.12
+pkgrel=2
+arch=('x86_64')
+depends=(openssl)
+source=(https://github.com/libevent/libevent/releases/download/release-$pkgver-stable/libevent-$pkgver-stable.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver-stable
+
+	./configure --prefix=/usr
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver-stable
+	make DESTDIR=$pkgdir install
+}

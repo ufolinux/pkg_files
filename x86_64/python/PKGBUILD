@@ -1,0 +1,24 @@
+pkgname=
+rname=
+pkgver=
+pkgrel=1
+arch=(x86_64)
+depends=(python3)
+makedepends=(python3-pip)
+source=()
+
+prepare() {
+	pip3 install setuptools
+}
+
+build() {
+	cd $rname-$pkgver
+
+
+}
+
+package() {
+	cd $rname-$pkgver
+
+
+}

@@ -1,0 +1,17 @@
+pkgname=make
+pkgver=4.3
+pkgrel=1
+arch=('x86_64')
+source=(https://ftp.gnu.org/gnu/$pkgname/$pkgname-$pkgver.tar.gz)
+
+build() {
+        cd $pkgname-$pkgver
+
+        ./configure --prefix=/usr
+        make
+}
+
+package() {
+        cd $pkgname-$pkgver
+        make DESTDIR=$pkgdir install
+}

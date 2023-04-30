@@ -1,0 +1,31 @@
+pkgname=reiserfsprogs
+pkgver=3.6.27
+pkgrel=1
+arch=('x86_64')
+depends=(util-linux)
+makedepends=(gcc)
+source=(https://www.kernel.org/pub/linux/kernel/people/jeffm/reiserfsprogs/v${pkgver}/${pkgname}-${pkgver}.tar.xz
+	reiserfsprogs-3.6.27-loff_t.patch)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	patch -Np1 -i ../reiserfsprogs-3.6.27-loff_t.patch
+
+	autoreconf -fi
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure	\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

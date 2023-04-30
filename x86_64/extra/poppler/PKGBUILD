@@ -1,0 +1,40 @@
+pkgname=poppler
+pkgver=22.08.0
+pkgrel=1
+arch=('x86_64')
+depends=(fontconfig openjpeg)
+makedepends=(cmake)
+source=(https://poppler.freedesktop.org/$pkgname-$pkgver.tar.xz
+	https://poppler.freedesktop.org/$pkgname-data-0.4.11.tar.gz)
+
+prepare() {
+	# poppler
+	cd $pkgname-$pkgver
+	mkdir -p build
+	
+	# poppler-data
+	cd ../$pkgname-data-0.4.11
+	mkdir -p build
+}
+
+build() {
+	cd $pkgname-$pkgver/build
+
+	cmake \
+	-D CMAKE_BUILD_TYPE=Release \
+	-D CMAKE_INSTALL_PREFIX=/usr \
+	-D TESTDATADIR=$PWD/testfiles \
+	-D ENABLE_UNSTABLE_API_ABI_HEADERS=ON \
+	..
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+	make DESTDIR=$pkgdir install
+
+	# poppler-data
+	cd $srcdir/$pkgname-data-0.4.11
+	make prefix=$pkgdir install
+}

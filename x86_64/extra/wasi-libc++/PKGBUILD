@@ -1,0 +1,93 @@
+pkgname=wasi-libc++
+pkgver=13.0.0
+pkgrel=1
+arch=('x86_64')
+url='https://libcxx.llvm.org/'
+makedepends=('cmake' 'ninja' 'python3' 'llvm' 'clang' 'wasi-libc' 'wasi-compiler-rt')
+source=("https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver/llvm-$pkgver.src.tar.xz"
+	"https://github.com/llvm/llvm-project/releases/download/llvmorg-${pkgver}/libcxx-${pkgver}.src.tar.xz"
+	"https://github.com/llvm/llvm-project/releases/download/llvmorg-${pkgver}/libcxxabi-${pkgver}.src.tar.xz"
+	WASI.cmake
+	wasi-toolchain.cmake)
+options=('staticlibs')
+
+prepare() {
+	# Platform files have been copied from here https://github.com/WebAssembly/wasi-sdk
+	mkdir -p cmake/Platform
+	cp WASI.cmake cmake/Platform
+
+	mv libcxx-${pkgver}.src libcxx
+	mv libcxxabi-${pkgver}.src libcxxabi
+	mv llvm-${pkgver}.src llvm
+
+	sed -i 's/CREDITS.TXT/CREDITS/' libcxx/LICENSE.TXT libcxxabi/LICENSE.TXT
+}
+
+build() {
+	# Build options are derived from here https://github.com/WebAssembly/wasi-sdk/blob/main/Makefile
+
+	# Currently, wasi-sdk requires C++ code be compiled with -fno-exceptions. libc++abi is compiled, however is is currently compiled with exception-handling support disabled.
+	# https://github.com/WebAssembly/wasi-sdk/issues/52#issuecomment-530619365
+	cmake -B build-libcxx -G Ninja \
+	-DCMAKE_BUILD_TYPE=Release \
+	-DCMAKE_C_COMPILER_WORKS=ON \
+	-DCMAKE_CXX_COMPILER_WORKS=ON \
+	-DCMAKE_MODULE_PATH="${srcdir}"/cmake \
+	-DCMAKE_TOOLCHAIN_FILE="${srcdir}"/wasi-toolchain.cmake \
+	-DCMAKE_STAGING_PREFIX=/usr/share/wasi-sysroot \
+	-DLIBCXX_ENABLE_EXCEPTIONS:BOOL=OFF \
+	-DLIBCXX_ENABLE_SHARED:BOOL=OFF \
+	-DLIBCXX_ENABLE_THREADS:BOOL=OFF \
+	-DLIBCXX_HAS_PTHREAD_API:BOOL=OFF \
+	-DLIBCXX_HAS_EXTERNAL_THREAD_API:BOOL=OFF \
+	-DLIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY:BOOL=OFF \
+	-DLIBCXX_HAS_WIN32_THREAD_API:BOOL=OFF \
+	-DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY:BOOL=OFF \
+	-DLIBCXX_ENABLE_FILESYSTEM:BOOL=OFF \
+	-DLIBCXX_CXX_ABI=libcxxabi \
+	-DLIBCXX_CXX_ABI_INCLUDE_PATHS=libcxxabi/include \
+	-DLIBCXX_HAS_MUSL_LIBC:BOOL=ON \
+	-DLIBCXX_ABI_VERSION=2 \
+	-DWASI_SDK_PREFIX=/usr \
+	-DCMAKE_C_FLAGS="-fno-exceptions --sysroot=/usr/share/wasi-sysroot" \
+	-DCMAKE_CXX_FLAGS="-fno-exceptions --sysroot=/usr/share/wasi-sysroot" \
+	-DLIBCXX_LIBDIR_SUFFIX=/wasm32-wasi \
+	libcxx
+
+	cmake --build build-libcxx
+
+	cmake -B build-libcxxabi -G Ninja \
+	-DCMAKE_BUILD_TYPE=Release \
+	-DCMAKE_C_COMPILER_WORKS=ON \
+	-DCMAKE_CXX_COMPILER_WORKS=ON \
+	-DCMAKE_MODULE_PATH="${srcdir}"/cmake \
+	-DCMAKE_TOOLCHAIN_FILE="${srcdir}"/wasi-toolchain.cmake \
+	-DCMAKE_STAGING_PREFIX=/usr/share/wasi-sysroot \
+	-DLIBCXXABI_ENABLE_EXCEPTIONS:BOOL=OFF \
+	-DLIBCXXABI_ENABLE_SHARED:BOOL=OFF \
+	-DLIBCXXABI_ENABLE_THREADS:BOOL=OFF \
+	-DLIBCXXABI_HAS_PTHREAD_API:BOOL=OFF \
+	-DLIBCXXABI_HAS_EXTERNAL_THREAD_API:BOOL=OFF \
+	-DLIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY:BOOL=OFF \
+	-DLIBCXXABI_HAS_WIN32_THREAD_API:BOOL=OFF \
+	-DLIBCXXABI_SILENT_TERMINATE:BOOL=ON \
+	-DLIBCXXABI_ENABLE_PIC:BOOL=OFF \
+	-DUNIX:BOOL=ON \
+	-DCXX_SUPPORTS_CXX11=ON \
+	-DLIBCXXABI_LIBCXX_PATH=libcxx \
+	-DLIBCXXABI_LIBCXX_INCLUDES="${srcdir}"/build-libcxx/include/c++/v1 \
+	-DWASI_SDK_PREFIX=/usr \
+	-DCMAKE_C_FLAGS="-fno-exceptions --sysroot=/usr/share/wasi-sysroot" \
+	-DCMAKE_CXX_FLAGS="-fno-exceptions --sysroot=/usr/share/wasi-sysroot" \
+	-DLIBCXXABI_LIBDIR_SUFFIX=/wasm32-wasi \
+	libcxxabi
+
+	cmake --build build-libcxxabi -v
+}
+
+package() {
+
+  DESTDIR="${pkgdir}" cmake --install build-libcxx 
+
+  DESTDIR="${pkgdir}" cmake --install build-libcxxabi
+}

@@ -1,0 +1,47 @@
+pkgname=texlive
+pkgver=2022.05.07
+pkgrel=1
+arch=(x86_64)
+depends=(gcc)
+makedepends=('git' 'cairo' 'pixman' 'libpng' 'libjpeg' 'freetype2' 'icu' 'harfbuzz' 'gmp' 'mpfr' 'perl')
+commitid=c0d229e75885d8e30eb22c39aa8812651b14ccf6 # freetype 2.12.1 (trial)
+source=(git+https://github.com/Tex-Live/texlive-source.git#commit=$commitid)
+
+prepare() {
+	# Make build dir where configure will be runned in
+	mkdir -p build
+	cd build
+
+	echo "[ * ]: Running configure"
+
+	../$pkgname-source/configure \
+	--prefix=/usr \
+	--sysconfdir=/etc \
+	--disable-native-texlive-build \
+	--with-banner-add="[ UFO LINUX ]" \
+	--enable-shared \
+	--with-system-zlib \
+	--with-system-pnglib \
+	--with-system-ncurses \
+	--with-system-freetype2 \
+	--with-system-pixman \
+	--with-system-cairo \
+	--with-system-harfbuzz \
+	--with-system-icu \
+	--with-system-gmp \
+	--with-system-mpfr
+}
+
+build() {
+	cd build
+
+	echo "[ * ]: Starting make..."
+	make
+}
+
+package() {
+	cd build
+
+	echo "[ * ]: Starting destdir installation"
+	make DESTDIR=$pkgdit install
+}

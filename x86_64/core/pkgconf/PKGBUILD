@@ -1,0 +1,29 @@
+pkgname=pkgconf
+pkgver=1.8.0
+pkgrel=2
+arch=('x86_64')
+depends=(glibc bash)
+source=(http://distfiles.dereferenced.org/$pkgname/$pkgname-$pkgver.tar.xz
+	i686-pc-linux-gnu.personality
+	x86_64-pc-linux-gnu.personality)
+
+build() {
+	meson pkgconf-1.8.0 build	\
+	--prefix=/usr		\
+	--buildtype=release	\
+	-Dtests=false
+}
+
+package() {
+        meson install -C build --destdir "$pkgdir"
+
+	install -Dt "$pkgdir/usr/share/pkgconfig/personality.d" -m644 \
+		i686-pc-linux-gnu.personality \
+		x86_64-pc-linux-gnu.personality
+
+	ln -s pkgconf "$pkgdir/usr/bin/i686-pc-linux-gnu-pkg-config"
+	ln -s pkgconf "$pkgdir/usr/bin/x86_64-pc-linux-gnu-pkg-config"
+	ln -s pkgconf "$pkgdir/usr/bin/pkg-config"
+
+	ln -s pkgconf.1 "$pkgdir/usr/share/man/man1/pkg-config.1"
+}

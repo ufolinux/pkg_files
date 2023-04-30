@@ -1,0 +1,36 @@
+_pkgbasename=openssl
+pkgname=lib32-$_pkgbasename
+_ver=1.1.1m
+# use a pacman compatible version scheme
+pkgver=${_ver/[a-z]/.${_ver//[0-9.]/}}
+pkgrel=1
+pkgdesc='The Open Source toolkit for Secure Sockets Layer and Transport Layer Security (32-bit)'
+arch=('x86_64')
+url='https://www.openssl.org'
+depends=("${_pkgbasename}" "glibc" "lib32-libxcrypt")
+optdepends=('ca-certificates')
+source=("https://www.openssl.org/source/${_pkgbasename}-${_ver}.tar.gz"
+	'ca-dir.patch')
+
+build() {
+	export CC="gcc -m32"
+	export CXX="g++ -m32"
+	export PKG_CONFIG_PATH="/usr/lib32/pkgconfig"
+
+	cd "$srcdir"/$_pkgbasename-$_ver
+
+	# mark stack as non-executable: http://bugs.archlinux.org/task/12434
+	./Configure --prefix=/usr --openssldir=/etc/ssl --libdir=lib32 \
+	shared no-ssl3-method linux-elf \
+	"-Wa,--noexecstack ${CPPFLAGS} ${CFLAGS} ${LDFLAGS}"
+
+	make MAKEDEPPROG="${CC}" depend
+	make
+}
+
+package() {
+	cd "$srcdir"/$_pkgbasename-$_ver
+	make DESTDIR="$pkgdir" install
+
+	rm -rf ${pkgdir}/{usr/{include,bin},etc}
+}

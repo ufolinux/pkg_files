@@ -1,0 +1,113 @@
+pkgname=(openldap)
+pkgver=2.6.1
+pkgrel=1
+arch=('x86_64')
+depends=('e2fsprogs' 'util-linux' 'chrpath' 'unixodbc' 'libsodium' 'systemd')
+makedepends=('groff' 'libtool')
+options=('!makeflags' 'emptydirs' '!lto')
+backup=('etc/openldap/ldap.conf'
+    'etc/openldap/slapd.conf'
+    'etc/openldap/slapd.ldif')
+source=(
+https://www.openldap.org/software/download/OpenLDAP/openldap-release/${pkgname}-${pkgver}.tgz
+openldap.tmpfiles
+openldap.sysusers)
+
+# extra modules found in contrib/slapd-modules
+_extra_modules=(
+'nssov'
+'autogroup'
+'lastbind'
+'passwd/sha2'
+)
+
+prepare() {
+    cd ${pkgname}-${pkgver}
+
+    # change perms from 0644 to 0755
+    sed -i 's|-m 644 $(LIBRARY)|-m 755 $(LIBRARY)|' libraries/{liblber,libldap}/Makefile.in
+
+    # change rundir to /run/openldap
+    sed -i 's|#define LDAPI_SOCK LDAP_RUNDIR LDAP_DIRSEP "run" LDAP_DIRSEP "ldapi"|#define LDAPI_SOCK LDAP_DIRSEP "run" LDAP_DIRSEP "openldap" LDAP_DIRSEP "ldapi"|' include/ldap_defaults.h
+    sed -i 's|%LOCALSTATEDIR%/run|/run/openldap|' servers/slapd/slapd.{conf,ldif}
+    sed -i 's|-$(MKDIR) $(DESTDIR)$(localstatedir)/run|-$(MKDIR) $(DESTDIR)/run/openldap|' servers/slapd/Makefile.in
+
+    # modify upstream systemd service
+    sed -i -e "s|EnvironmentFile.*|EnvironmentFile=-/etc/conf.d/slapd|" -e "s/slapd -d 0/\0 -u ldap -g ldap/" servers/slapd/slapd.service
+
+    autoconf
+}
+
+build() {
+    cd ${pkgname}-${pkgver}
+
+    ./configure \
+    --prefix=/usr \
+    --libexecdir=/usr/lib \
+    --sysconfdir=/etc \
+    --localstatedir=/var/lib/openldap \
+    --sbindir=/usr/bin \
+    --enable-dynamic \
+    --enable-syslog \
+    --enable-ipv6 \
+    --enable-local \
+    --enable-crypt \
+    --disable-spasswd \
+    --enable-modules \
+    --enable-backends \
+    --enable-argon2 \
+    --with-argon2=libsodium \
+    --disable-wt \
+    --enable-overlays=mod \
+    --without-cyrus-sasl \
+    --with-threads
+
+    make
+
+    # build extra modules
+    for module in "${_extra_modules[@]}"; do
+        make -C "contrib/slapd-modules/$module" \
+        OPT="$CFLAGS $CPPFLAGS" \
+        prefix=/usr \
+        libexecdir=/usr/lib \
+        sysconfdir=/etc/openldap
+    done
+}
+
+package() {
+    cd ${pkgname}-${pkgver}
+
+    for dir in include libraries doc/man/man3 clients servers doc/man/man{1,5,8} ; do
+        pushd ${dir}
+        make DESTDIR="${pkgdir}" install
+        popd
+    done
+
+    install -Dm644 -t "$pkgdir/usr/share/man/man5" doc/man/man5/ldap.conf.5
+
+    # remove duplicate conf files
+    rm "${pkgdir}"/etc/openldap/*.default
+
+    # shared library versioning
+    ln -sf liblber.so "${pkgdir}"/usr/lib/liblber.so.2
+    ln -sf libldap.so "${pkgdir}"/usr/lib/libldap.so.2
+
+    # install extra modules
+    for module in "${_extra_modules[@]}"; do
+        make -C "contrib/slapd-modules/$module" \
+        prefix=/usr \
+        libexecdir=/usr/lib \
+        sysconfdir=/etc/openldap \
+        DESTDIR="$pkgdir" install
+
+        # passwd/sha2 has no man page, so skip it
+        if [ "$module" != "passwd/sha2" ]; then
+        install -m644 -t "$pkgdir/usr/share/man/man5" \
+            "contrib/slapd-modules/$module/slapo-$module.5"
+        fi
+    done
+
+    # systemd integration
+    install -Dm644 "${srcdir}"/openldap.tmpfiles "${pkgdir}"/usr/lib/tmpfiles.d/openldap.conf
+    install -Dm644 "${srcdir}"/openldap.sysusers "${pkgdir}"/usr/lib/sysusers.d/openldap.conf
+}

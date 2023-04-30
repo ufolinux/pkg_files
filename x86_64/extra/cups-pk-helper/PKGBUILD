@@ -1,0 +1,29 @@
+pkgname=cups-pk-helper
+pkgver=0.2.6
+pkgrel=2
+arch=(x86_64)
+depends=(cups polkit)
+makedepends=(intltool)
+source=(https://www.freedesktop.org/software/$pkgname/releases/$pkgname-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure \
+	--prefix=/usr \
+	--sysconfdir=/etc \
+	--libexecdir=/usr/lib/$pkgname
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+
+	# fix dbus policy location - --with-dbusdir doens't work
+	install -dm755 $pkgdir/usr/share/dbus-1/system.d
+	mv $pkgdir/etc/dbus-1/system.d/* $pkgdir/usr/share/dbus-1/system.d
+	rm -rf $pkgdir/etc/dbus-1
+}

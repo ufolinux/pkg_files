@@ -1,0 +1,24 @@
+pkgname=python3-wcag-contrast-ratio
+rname=wcag-contrast-ratio
+pkgver=0.9
+pkgrel=1
+arch=(x86_64)
+depends=(python3)
+makedepends=(python3-pip)
+source=(https://github.com/gsnedders/wcag-contrast-ratio/archive/$pkgver/python-$rname-$pkgver.tar.gz)
+
+prepare() {
+	pip3 install setuptools
+}
+
+build() {
+	cd $rname-$pkgver
+
+	python3 setup.py build
+}
+
+package() {
+	cd $rname-$pkgver
+
+	python3 setup.py install --root=$pkgdir --optimize=1 --skip-build
+}

@@ -1,0 +1,17 @@
+pkgname=libsm
+pkgver=1.2.3
+pkgrel=1
+arch=('x86_64')
+makedepends=(libxtrans util-macros xorgproto)
+source=(https://xorg.freedesktop.org/releases/individual/lib/libSM-$pkgver.tar.bz2)
+
+build() {
+	cd libSM-$pkgver
+	./configure --prefix=/usr --libdir=/usr/lib --sysconfdir=/etc
+	make
+}
+
+package() {
+	cd libSM-$pkgver
+	make DESTDIR=$pkgdir install
+}

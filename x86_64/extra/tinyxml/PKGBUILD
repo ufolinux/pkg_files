@@ -1,0 +1,45 @@
+pkgname=tinyxml
+pkgver=2.6.2
+pkgrel=1
+arch=(x86_64)
+makedepends=(setconf)
+source=("https://downloads.sourceforge.net/$pkgname/${pkgname}_${pkgver//./_}.tar.gz"
+        entity.patch
+        $pkgname-2.5.3-stl.patch
+        $pkgname.pc)
+
+prepare() {
+    cd $pkgname
+
+    # Fix entity encoding
+    patch -p0 -i "$srcdir/entity.patch"
+
+    # Make TINYXML_USE_STL permanently defined in tinyxml.h
+    patch -p1 -i "$srcdir/$pkgname-2.5.3-stl.patch"
+
+    # Fix Makefile
+    setconf Makefile TINYXML_USE_STL YES
+    setconf Makefile RELEASE_CFLAGS "$CXXFLAGS -fPIC"
+}
+
+build() {
+    cd $pkgname
+
+    make
+
+    g++ -fPIC $CXXFLAGS $LDFLAGS -shared -o "lib$pkgname.so.0.$pkgver" \
+      -Wl,-soname,"lib$pkgname.so.0" $(ls *.o | grep -v xmltest)
+}
+
+package() {
+    cd $pkgname
+
+    install -d -m 0755 "$pkgdir"/usr/{lib,include}
+    install -m 0755 "lib$pkgname.so.0.$pkgver" "$pkgdir"/usr/lib/
+    install -m 0644 $pkgname.h tinystr.h "$pkgdir"/usr/include
+    install -Dm644 "$srcdir/$pkgname.pc" "$pkgdir/usr/lib/pkgconfig/$pkgname.pc"
+
+    cd "$pkgdir/usr/lib"
+    ln -s "lib${pkgname}.so.0.$pkgver" lib$pkgname.so.0
+    ln -s "lib${pkgname}.so.0.$pkgver" lib$pkgname.so
+}

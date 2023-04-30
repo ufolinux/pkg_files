@@ -1,0 +1,28 @@
+pkgname=python3-requests
+rname=requests
+pkgver=2.27.1
+pkgrel=1
+arch=(x86_64)
+depends=(python3)
+makedepends=(python3-pip)
+source=(https://github.com/psf/requests/archive/v$pkgver/$pkgname-$pkgver.tar.gz
+	cacerts.patch)
+
+prepare() {
+	pip3 install setuptools
+
+	cd $rname-$pkgver
+	patch -p0 -i ../cacerts.patch
+}
+
+build() {
+	cd $rname-$pkgver
+
+	python3 setup.py build
+}
+
+package() {
+	cd $rname-$pkgver
+
+	python3 setup.py install --skip-build -O1 --root=$pkgdir
+}

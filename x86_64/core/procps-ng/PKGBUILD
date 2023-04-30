@@ -1,0 +1,25 @@
+pkgname=procps-ng
+pkgver=3.3.17
+pkgrel=1
+arch=('x86_64')
+depends=(glibc ncurses systemd)
+source=(https://sourceforge.net/projects/procps-ng/files/Production/$pkgname-$pkgver.tar.xz)
+
+build() {
+        cd procps-$pkgver
+
+        ./configure --prefix=/usr \
+                    --exec-prefix= \
+                    --libdir=/usr/lib \
+                    --disable-kill
+        make
+}
+
+package() {
+        cd procps-$pkgver
+        make DESTDIR=$pkgdir install
+
+        mkdir -pv $pkgdir/lib
+        mv -v $pkgdir/usr/lib/libprocps.so.* $pkgdir/lib
+        ln -sfv ../../lib/$(readlink $pkgdir/usr/lib/libprocps.so) $pkgdir/usr/lib/libprocps.so
+}

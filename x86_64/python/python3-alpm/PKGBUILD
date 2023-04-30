@@ -1,0 +1,21 @@
+pkgname=python3-alpm
+pkgver=0.10.6
+pkgrel=1
+arch=('x86_64')
+replace=(python-alpm)
+makedepends=('git' 'python3-pip' 'python-pkgconfig')
+depends=('python3' 'bottle')
+source=("git+https://gitlab.archlinux.org/archlinux/pyalpm.git#tag=$pkgver")
+
+build() {
+	pip3 install setuptools
+
+	cd pyalpm
+	python setup.py build
+}
+
+package() {
+	cd pyalpm
+
+	python setup.py install --root=${pkgdir}
+}

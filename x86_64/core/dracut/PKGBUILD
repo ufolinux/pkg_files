@@ -1,0 +1,21 @@
+pkgname=dracut
+pkgver=056
+pkgrel=1
+arch=('x86_64')
+depends=(cpio sed bash coreutils lvm2 filesystem findutils grep gzip kmod pkgconf
+	procps-ng binutils sed systemd util-linux xz)
+source=(https://kernel.org/pub/linux/utils/boot/$pkgname/$pkgname-$pkgver.tar.gz)
+
+build() {
+        cd $pkgname-$pkgver
+
+	./configure --prefix=/usr         \
+	            --bindir=/bin         \
+	            --libexecdir=/usr/lib
+        make
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+}

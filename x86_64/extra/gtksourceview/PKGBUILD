@@ -1,0 +1,25 @@
+pkgname=gtksourceview
+pkgver=4.8.2
+pkgrel=1
+arch=('x86_64')
+depends=('gtk+' 'gobject-introspection' 'libxml2')
+source=(https://download.gnome.org/sources/$pkgname/4.8/$pkgname-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	mkdir build && cd build
+
+	meson			\
+	--prefix=/usr		\
+	--buildtype=release	\
+	..
+
+	ninja
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+
+	DESTDIR=$pkgdir ninja install
+}

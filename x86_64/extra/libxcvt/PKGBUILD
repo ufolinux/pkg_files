@@ -1,0 +1,19 @@
+pkgname=libxcvt
+pkgver=0.1.1
+pkgrel=1
+arch=('x86_64')
+makedepends=('meson')
+source=(https://xorg.freedesktop.org/archive/individual/lib/$pkgname-$pkgver.tar.xz)
+
+build() {
+        cd $pkgname-$pkgver
+	mkdir -p build && cd build
+
+	meson --prefix=/usr ..
+	meson compile
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+	DESTDIR=$pkgdir meson install
+}

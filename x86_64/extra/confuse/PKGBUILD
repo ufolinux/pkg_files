@@ -1,0 +1,22 @@
+pkgname=confuse
+pkgver=3.3
+pkgrel=1
+arch=('x86_64')
+depends=(glibc)
+source=(https://github.com/libconfuse/libconfuse/releases/download/v${pkgver}/${pkgname}-${pkgver}.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr		\
+	--enable-shared
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

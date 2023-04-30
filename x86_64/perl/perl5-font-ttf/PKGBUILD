@@ -1,0 +1,26 @@
+pkgname=perl5-font-ttf
+rname=Font-TTF
+pkgver=1.06
+pkgrel=1
+arch=('x86_64')
+depends=(perl perl5-io-string)
+makedepends=(make gcc)
+source=(https://cpan.metacpan.org/authors/id/B/BH/BHALLISSY/$rname-$pkgver.tar.gz)
+
+prepare() {
+	cd $rname-$pkgver
+
+	perl Makefile.PL
+}
+
+build() {
+	cd $rname-$pkgver
+
+	make
+}
+
+package() {
+	cd $rname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

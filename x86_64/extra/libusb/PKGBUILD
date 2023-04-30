@@ -1,0 +1,25 @@
+pkgname=libusb
+pkgver=1.0.24
+pkgrel=1
+arch=('x86_64')
+depends=(glibc)
+makedepends=(systemd)
+source=(https://github.com/$pkgname/$pkgname/releases/download/v$pkgver/$pkgname-$pkgver.tar.bz2
+	$pkgname-1.0.24-descriptor_parsing.patch)
+
+prepare() {
+	cd $pkgname-$pkgver
+	patch -Np1 -i ../$pkgname-1.0.24-descriptor_parsing.patch
+	autoreconf -vfi
+}
+
+build() {
+	cd $pkgname-$pkgver
+	./configure --prefix=/usr
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+}

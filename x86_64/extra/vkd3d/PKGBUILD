@@ -1,0 +1,24 @@
+pkgname=vkd3d
+pkgver=1.6
+pkgrel=1
+arch=(x86_64)
+depends=(glslang vulkan-icd-loader)
+makedepends=(vulkan-headers xcb-util-keysyms xorgproto bison
+	spirv-llvm-translator)
+source=(https://dl.winehq.org/vkd3d/source/vkd3d-1.6.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure \
+	--prefix=/usr \
+	--with-spirv-tools
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

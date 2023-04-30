@@ -1,0 +1,19 @@
+pkgname=libxshmfence
+pkgver=1.3
+pkgrel=1
+arch=('x86_64')
+depends=('libx11' 'glibc')
+makedepends=('util-macros' 'xorgproto' 'libx11')
+source=(https://xorg.freedesktop.org/releases/individual/lib/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure --prefix=/usr --sysconfdir=/etc
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

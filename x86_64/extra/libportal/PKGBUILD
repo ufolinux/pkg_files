@@ -1,0 +1,23 @@
+pkgname=libportal
+pkgver=0.6
+pkgrel=1
+arch=(x86_64)
+depends=(glib2 gobject-introspection gtk2+ gtk3+ gtk4+ qt5)
+makedepends=(meson gi-docgen vala gobject-introspection)
+source=(https://github.com/flatpak/libportal/releases/download/$pkgver/libportal-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	meson build \
+	--prefix=/usr \
+	-D docs=false
+
+	ninja -C build
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	DESTDIR=$pkgdir ninja install -C build
+}

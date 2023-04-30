@@ -1,0 +1,32 @@
+pkgname=cdrtools
+pkgver=3.02a09 
+pkgrel=2
+arch=('x86_64')
+depends=(alsa-lib acl libcap)
+makedepends=(base-devel)
+source=(https://downloads.sourceforge.net/cdrtools/cdrtools-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-3.02
+
+	export GMAKE_NOWARN=true
+	make -j1 INS_BASE=/usr DEFINSUSR=root DEFINSGRP=root VERSION_OS="_Ufo-Linux"
+}
+
+package() {
+	cd $pkgname-3.02
+
+	export GMAKE_NOWARN=true
+	make DESTDIR=$pkgdir INS_BASE=/usr MANSUFF_LIB=3cdr DEFINSUSR=root DEFINSGRP=root install
+
+	# legacy compatibility
+	cd "$pkgdir"/usr/bin
+	ln -s mkisofs genisoimage
+	ln -s readcd readom
+	ln -s cdrecord wodim
+	ln -s cdda2wav icedax
+
+	# autoload 'sg' module needed by cdrecord
+	install -d -m755 "$pkgdir"/usr/lib/modules-load.d/
+	echo sg > "$pkgdir"/usr/lib/modules-load.d/cdrecord.conf
+}

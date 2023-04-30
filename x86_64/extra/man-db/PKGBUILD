@@ -1,0 +1,25 @@
+pkgname=man-db
+pkgver=2.9.4
+pkgrel=1
+arch=('x86_64')
+source=(https://savannah.nongnu.org/download/man-db/$pkgname-$pkgver.tar.xz)
+
+build() {
+        cd $pkgname-$pkgver
+
+        ./configure --prefix=/usr \
+                    --sysconfdir=/etc \
+                    --disable-setuid \
+                    --enable-cache-owner=bin \
+                    --with-browser=/usr/bin/lynx \
+                    --with-vgrind=/usr/bin/vgrind \
+                    --with-grap=/usr/bin/grap \
+                    --with-systemdtmpfilesdir= \
+                    --with-systemdsystemunitdir=
+        make
+}
+
+package() {
+        cd $pkgname-$pkgver
+        make DESTDIR=$pkgdir install
+}

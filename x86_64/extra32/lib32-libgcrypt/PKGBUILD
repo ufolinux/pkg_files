@@ -1,0 +1,37 @@
+_pkgbasename=libgcrypt
+pkgname=lib32-$_pkgbasename
+pkgver=1.9.4
+pkgrel=1
+arch=(x86_64)
+depends=('lib32-libgpg-error' $_pkgbasename)
+source=(https://gnupg.org/ftp/gcrypt/${_pkgbasename}/${_pkgbasename}-${pkgver}.tar.bz2)
+
+prepare() {
+	cd ${_pkgbasename}-${pkgver}
+
+	# Use 32-bit assembler
+	sed 's:i586\*-\*-\*:x86_64-*-*:' -i mpi/config.links
+	sed 's:x86_64-\*-\*:ignore:;s:i?86-\*-\*:x86_64-*-*:' -i configure.ac
+
+	autoreconf -i
+}
+
+build() {
+	export CC="gcc -m32"
+	export CXX="g++ -m32"
+	export PKG_CONFIG_PATH="/usr/lib32/pkgconfig"
+
+	cd ${_pkgbasename}-${pkgver}
+
+	./configure --prefix=/usr --disable-padlock-support \
+	--libdir=/usr/lib32 --enable-shared
+
+	make
+}
+
+package() {
+	cd ${_pkgbasename}-${pkgver}
+
+	make DESTDIR="${pkgdir}" install
+	rm -rf "${pkgdir}"/usr/{include,share,bin,sbin}
+}

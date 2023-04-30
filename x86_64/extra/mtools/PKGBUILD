@@ -1,0 +1,24 @@
+pkgname=mtools
+pkgver=4.0.37
+pkgrel=1
+arch=('x86_64')
+depends=(glibc bash)
+source=(ftp://ftp.gnu.org/gnu/mtools/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure \
+		--prefix=/usr \
+		--sysconfdir=/etc \
+		--disable-floppyd
+
+	make
+	sed -i Makefile -e 's|install-scripts install-info|install-scripts|'
+}
+
+package() {
+        cd $pkgname-$pkgver
+	make -j1 prefix=$pkgdir/usr install
+}
+

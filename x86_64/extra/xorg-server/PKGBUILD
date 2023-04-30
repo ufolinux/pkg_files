@@ -1,0 +1,58 @@
+pkgname=xorg-server
+pkgver=21.1.6
+pkgrel=1
+arch=('x86_64')
+depends=(libmd pixman libx11 mesa libxtrans libxkbfile
+	libxfont2 libpciaccess libxv libxcvt libxmu libxrender
+	libxi libxaw libxtst libxres xorg-xkbcomp util-macros xmessage
+	font-util libepoxy xcb-util xcb-util-image xcb-util-renderutil
+	xcb-util-wm xcb-util-keysyms libxshmfence libunwind systemd libbsd
+	acpid)
+makedepends=(xorgproto meson git)
+source=(https://x.org/archive/individual/xserver/$pkgname-$pkgver.tar.xz
+	xvfb-run
+	0002-xephyr_Dont_check_for_SeatId_anymore.patch)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	# Patch all diff's that havce been chosen from MR
+
+	echo "[!]: 0002-xephyr_Dont_check_for_SeatId_anymore.patch"
+	patch -Np1 -i $srcdir/0002-xephyr_Dont_check_for_SeatId_anymore.patch
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	mkdir -p build && cd build
+
+	meson		\
+	--prefix=/usr	\
+	-D ipv6=true \
+	-D xvfb=true \
+	-D xnest=true \
+	-D xcsecurity=true \
+	-D xorg=true \
+	-D xephyr=true \
+	-D glamor=true \
+	-D udev=true \
+	-D dtrace=false \
+	-D systemd_logind=true \
+	-D suid_wrapper=true \
+	-D xkb_dir=/usr/share/X11/xkb \
+	-D xkb_output_dir=/var/lib/xkb \
+	..
+
+	meson configure . > configuration
+
+	ninja
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+	DESTDIR=$pkgdir ninja install
+	mkdir -p $pkgdir/etc/X11/xorg.conf.d
+
+	install -m755 "${srcdir}/xvfb-run" "${pkgdir}/usr/bin/"
+}

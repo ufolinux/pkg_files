@@ -1,0 +1,21 @@
+pkgname=libpng
+pkgver=1.6.37
+pkgrel=1
+arch=('x86_64')
+depends=(zlib bash)
+source=(https://downloads.sourceforge.net/$pkgname/$pkgname-$pkgver.tar.xz
+        https://downloads.sourceforge.net/project/apng/libpng/libpng16/$pkgname-$pkgver-apng.patch.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	gzip -cd $SRC/$pkgname-$pkgver-apng.patch.gz | patch -p0
+
+        LIBS=-lpthread ./configure --prefix=/usr
+        make
+}
+
+package() {
+	cd $pkgname-$pkgver
+        make DESTDIR=$pkgdir install
+}

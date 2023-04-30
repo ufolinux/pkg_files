@@ -1,0 +1,103 @@
+pkgname=containers-common
+pkgver=0.47.1
+pkgrel=1
+image_pkgver=5.19.0
+podman_pkgver=3.4.4
+skopeo_pkgver=1.5.2
+storage_pkgver=1.38.1
+arch=('x86_64')
+makedepends=(go-md2man)
+backup=(etc/containers/containers.conf
+	etc/containers/mounts.conf
+	etc/containers/policy.json
+	etc/containers/registries.conf
+	etc/containers/seccomp.json
+	etc/containers/storage.conf)
+source=(common-${pkgver}.tar.gz::https://github.com/containers/common/archive/v${pkgver}.tar.gz
+	image-${image_pkgver}.tar.gz::https://github.com/containers/image/archive/v${image_pkgver}.tar.gz
+	podman-${podman_pkgver}.tar.gz::https://github.com/containers/podman/archive/v${podman_pkgver}.tar.gz
+	skopeo-${skopeo_pkgver}.tar.gz::https://github.com/containers/skopeo/archive/v${skopeo_pkgver}.tar.gz
+	storage-${storage_pkgver}.tar.gz::https://github.com/containers/storage/archive/v${storage_pkgver}.tar.gz
+	mounts.conf)
+
+prepare() {
+	sed -r 's/(GOMD2MAN = ).*/\1 go-md2man/' -i "storage-${storage_pkgver}/docs/Makefile"
+}
+
+build() {
+	(
+	cd "common-${pkgver}/docs"
+	for _man_page in *.md; do
+	go-md2man -in "$_man_page" -out "${_man_page//.md}"
+	done
+	)
+	(
+	cd "image-${image_pkgver}/docs"
+	mkdir -vp man5
+	mv -v *.5.md man5/
+	for _man_page in *.md; do
+		go-md2man -in "$_man_page" -out "${_man_page//.md}.1"
+	done
+	for _man_page in man5/*.md; do
+		go-md2man -in "$_man_page" -out "${_man_page//.md}"
+	done
+	)
+	(
+	cd "podman-${podman_pkgver}"
+	go-md2man -in pkg/hooks/docs/oci-hooks.5.md \
+	-out oci-hooks.5
+	)
+	(
+	cd "storage-${storage_pkgver}"
+	make -C docs
+	)
+}
+
+package() {
+	# directories
+	install -vdm 755 "${pkgdir}/etc/containers/oci/hooks.d/"
+	install -vdm 755 "${pkgdir}/etc/containers/registries.conf.d/"
+	install -vdm 755 "${pkgdir}/usr/share/containers/oci/hooks.d/"
+	install -vdm 755 "${pkgdir}/var/lib/containers/"
+
+	# configs
+	install -vDm 644 mounts.conf -t "${pkgdir}/etc/containers/"
+
+	(
+	cd "common-${pkgver}"
+	# configs
+	install -vDm 644 pkg/config/containers.conf -t "${pkgdir}/etc/containers/"
+	install -vDm 644 pkg/config/containers.conf -t "${pkgdir}/usr/share/containers/"
+	install -vDm 644 pkg/seccomp/seccomp.json -t "${pkgdir}/etc/containers/"
+	install -vDm 644 pkg/seccomp/seccomp.json -t "${pkgdir}/usr/share/containers/"
+	# man pages
+	install -vDm 644 docs/*.5 -t "${pkgdir}/usr/share/man/man5/"
+	)
+	(
+	cd "image-${image_pkgver}"
+	# configs
+	install -vDm 644 registries.conf -t "${pkgdir}/etc/containers/"
+	# man pages
+	install -vDm 644 docs/*.1 -t "${pkgdir}/usr/share/man/man1/"
+	install -vDm 644 docs/man5/*.5 -t "${pkgdir}/usr/share/man/man5/"
+	)
+	(
+	cd "podman-${podman_pkgver}"
+	install -vDm 644 *.5 -t "${pkgdir}/usr/share/man/man5/"
+	)
+	(
+	cd "skopeo-${skopeo_pkgver}"
+	# configs
+	install -vDm 644 default-policy.json "${pkgdir}/etc/containers/policy.json"
+	install -vDm 644 default.yaml -t "${pkgdir}/etc/containers/registries.d/"
+	)
+	(
+	cd "storage-${storage_pkgver}"
+	# configs
+	install -vDm 644 storage.conf -t "${pkgdir}/etc/containers/"
+	install -vDm 644 storage.conf -t "${pkgdir}/usr/share/containers/"
+	# man pages
+	install -vDm 644 docs/*.1 -t "${pkgdir}/usr/share/man/man1/"
+	install -vDm 644 docs/*.5 -t "${pkgdir}/usr/share/man/man5/"
+	)
+}

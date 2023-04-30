@@ -1,0 +1,34 @@
+pkgname=lib32-faudio
+rname=faudio
+pkgver=22.12
+pkgrel=1
+arch=('x86_64')
+depends=(gstreamer sdl2)
+makedepends=(cmake ninja)
+source=($pkgname-$pkgver.tar.gz::https://github.com/FNA-XNA/FAudio/archive/$pkgver.tar.gz)
+
+prepare() {
+	mkdir build
+	cd build
+
+	export CC="gcc -m32 -mstackrealign"
+	export CXX="g++ -m32 -mstackrealign"
+	export PKG_CONFIG_PATH="/usr/lib32/pkgconfig"
+
+	cmake ../*-$pkgver -G Ninja \
+	-D CMAKE_INSTALL_PREFIX=/usr \
+	-D CMAKE_BUILD_TYPE=Release \
+	-D CMAKE_INSTALL_LIBDIR=lib32
+}
+
+build() {
+	cd build
+
+	ninja
+}
+
+package() {
+	cd build
+
+	DESTDIR=$pkgdir ninja install
+}

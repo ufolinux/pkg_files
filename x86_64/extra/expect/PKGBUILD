@@ -1,0 +1,21 @@
+pkgname=expect
+pkgver=5.45.4
+pkgrel=1
+pkgdesc='A tool for automating interactive applications'
+arch=(x86_64)
+depends=(tcl)
+source=(https://downloads.sourceforge.net/project/expect/Expect/$pkgver/expect${pkgver}.tar.gz)
+
+build() {
+    cd expect${pkgver}
+
+    ./configure --prefix=/usr --mandir=/usr/share/man
+
+    make
+}
+
+package() {
+    cd expect${pkgver}
+
+    make DESTDIR="$pkgdir" install
+}

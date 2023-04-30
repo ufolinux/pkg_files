@@ -1,0 +1,16 @@
+pkgname=unicode-cldr
+pkgver=38.0
+pkgrel=1
+arch=('x86_64')
+source=("https://unicode.org/Public/cldr/${pkgver%.*}/cldr-common-$pkgver.zip")
+
+shopt -s extglob
+
+package() {
+  cd common
+  install -dm755 "$pkgdir"/usr/share/unicode/cldr/common
+  cp -r annotations "$pkgdir"/usr/share/unicode/cldr/common/
+  cp -r !(annotations) "$pkgdir"/usr/share/unicode/cldr/common/
+
+  install -Dm644 ../unicode-license.txt -t "$pkgdir"/usr/share/licenses/$pkgname/
+}

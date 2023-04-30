@@ -1,0 +1,43 @@
+pkgname=libpaper
+pkgver=1.1.28
+pkgrel=1
+arch=(x86_64)
+depends=(bash run-parts)
+makedepends=(gcc make)
+source=(http://ftp.de.debian.org/debian/pool/main/libp/$pkgname/${pkgname}_$pkgver.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	autoreconf -fi
+
+	./configure \
+	--prefix=/usr
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	make -j2
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR="$pkgdir" install
+
+	# add systemwide default papersize read by many office applications
+	install -dm 755 "$pkgdir"/etc
+	echo '# Simply write the paper name. See papersize(5) for possible values' > "$pkgdir"/etc/papersize
+
+	# add libpaper.d directory other packages can use to store files
+	install -dm 755 "$pkgdir"/etc/libpaper.d
+
+	# add localisation
+	pushd debian/po
+	for i in `ls *.po`; do
+		install -dm 755 "${pkgdir}"/usr/share/locale/${i%.po}/LC_MESSAGES/;
+		msgfmt $i -o "${pkgdir}"/usr/share/locale/${i%.po}/LC_MESSAGES/${pkgname}.mo;
+	done
+	popd
+}

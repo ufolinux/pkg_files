@@ -1,0 +1,26 @@
+pkgname=fuse2
+pkgver=2.9.9
+pkgrel=2
+arch=('x86_64')
+depends=(glibc)
+source=(https://github.com/libfuse/libfuse/releases/download/fuse-$pkgver/fuse-$pkgver.tar.gz)
+
+build() {
+	cd fuse-$pkgver
+
+	./configure	\
+	--prefix=/usr    \
+	INIT_D_PATH=/tmp/init.d
+
+        make
+}
+
+package() {
+	cd fuse-$pkgver
+	make DESTDIR=$pkgdir install
+
+	install -d $pkgdir/lib
+	mv -v   $pkgdir/usr/lib/libfuse.so.* $pkgdir/lib
+	ln -sfv ../../lib/libfuse.so.2.9.9 $pkgdir/usr/lib/libfuse.so
+	rm -rf  $pkgdir/{tmp,dev}
+}

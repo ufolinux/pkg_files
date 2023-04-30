@@ -1,0 +1,26 @@
+pkgname=lib32-libcap
+pkgver=2.50
+pkgrel=1
+arch=('x86_64')
+depends=(libcap lib32-linux-pam)
+source=(https://www.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-$pkgver.tar.xz)
+
+build() {
+	cd libcap-$pkgver
+
+	export CC="gcc -m32"
+	export CXX="g++ -m32"
+	export PKG_CONFIG_PATH="/usr/lib32/pkgconfig"
+
+	sed -i '/install.*STALIBNAME/d' libcap/Makefile
+
+	make DYNAMIC=yes KERNEL_HEADERS='/usr/include' CC="gcc -m32" lib='lib32' prefix='/usr' sbindir='bin'
+}
+
+package() {
+	cd libcap-$pkgver
+
+	make DESTDIR="$pkgdir" RAISE_SETFCAP='no' lib='lib32' prefix='/usr' sbindir='bin' install
+
+	rm -rf "${pkgdir}/usr/"{include,share/man,bin,sbin}
+}

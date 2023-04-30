@@ -1,0 +1,22 @@
+pkgname=libbytesize
+pkgver=2.6
+pkgrel=1
+arch=('x86_64')
+depends=(pcre2)
+makedepends=(gcc)
+source=(https://github.com/storaged-project/libbytesize/releases/download/$pkgver/libbytesize-$pkgver.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure	\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

@@ -1,0 +1,30 @@
+pkgname=lib32-libxss
+pkgver=1.2.3
+pkgrel=1
+arch=('x86_64')
+depends=(libxss)
+makedepends=(util-macros)
+source=(https://xorg.freedesktop.org/releases/individual/lib/libXScrnSaver-${pkgver}.tar.bz2)
+
+build() {
+	cd libXScrnSaver-$pkgver
+
+	export CC="gcc -m32"
+	export PKG_CONFIG_PATH="/usr/lib32/pkgconfig"
+	export CFLAGS="$CFLAGS -Wno-format-truncation"
+
+	./configure		\
+	--prefix=/usr		\
+	--sysconfdir=/etc	\
+	--libdir=/usr/lib32
+
+	make
+}
+
+package() {
+	cd libXScrnSaver-$pkgver
+
+	make DESTDIR="${pkgdir}" install
+
+	rm -rf "${pkgdir}"/usr/{include,share,bin}
+}

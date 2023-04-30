@@ -1,0 +1,26 @@
+pkgname=meson
+pkgver=0.64.1
+pkgrel=1
+arch=('x86_64')
+depends=('python3')
+source=(https://github.com/mesonbuild/meson/releases/download/$pkgver/meson-$pkgver.tar.gz)
+depends=('python3' 'ninja')
+
+build() {
+        cd $pkgname-$pkgver
+
+	python3 -m ensurepip
+
+	python3 setup.py build
+        
+}
+
+package() {
+        cd $pkgname-$pkgver
+
+	python3 setup.py install --root=dest
+	ls dest*
+	cp -rv dest/* $pkgdir
+	install -vDm644 data/shell-completions/bash/meson $pkgdir/usr/share/bash-completion/completions/meson
+	install -vDm644 data/shell-completions/zsh/_meson $pkgdir/usr/share/zsh/site-functions/_meson
+}

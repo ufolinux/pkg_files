@@ -1,0 +1,96 @@
+pkgname=firefox
+pkgver=108.0.0
+fver=108.0
+pkgrel=1
+arch=('x86_64')
+depends=(dbus-glib gtk+ gtk2+ libnotify pulseaudio alsa-lib python3 sqlite3 unzip
+	zip startup-notification wireplumber icu libevent pixman libjpeg libpng xmessage double-conversion ffmpeg)
+makedepends=(autoconf cbindgen nodejs nasm yasm lld wasi-compiler-rt wasi-libc wasi-libc++ nss
+	llvm mesa rust clang nodejs autoconf2.13 imake m4 python3 python2 python3-pip)
+source=(https://archive.mozilla.org/pub/$pkgname/releases/$fver/source/$pkgname-$fver.source.tar.xz
+	mozconfig
+	firefox.desktop)
+
+prepare() {
+	mkdir -p mozbuild
+
+	cd $pkgname-$fver
+
+	echo "AIzaSyAss8ARlk1f9fNj8KbaBkhXBreclxG7JyY" > google-key
+	echo " " > mozilla-key
+
+	pip install setuptools
+}
+
+build() {
+	cd $pkgname-$fver
+
+	export CC=gcc CXX=g++
+	export MOZ_NOSPAM=1
+	export MOZBUILD_STATE_PATH="$srcdir/mozbuild"
+	export MOZ_ENABLE_FULL_SYMBOLS=1
+	export MACH_USE_SYSTEM_PYTHON=1
+
+	# LTO needs more open files
+	ulimit -n 4096
+
+	echo "Building instrumented browser..."
+	cp $srcdir/mozconfig .mozconfig
+
+	./mach configure
+
+	# Make obj dir for make
+	mkdir -p $srcdir/$pkgname-$fver/obj
+
+	./mach build -j5
+}
+
+package() {
+	cd $pkgname-$fver
+
+	DESTDIR=$pkgdir ./mach install
+
+	local vendorjs="$pkgdir/usr/lib/$pkgname/browser/defaults/preferences/vendor.js"
+	install -Dvm644 /dev/stdin "$vendorjs" <<END
+// Use LANG environment variable to choose locale
+pref("intl.locale.requested", "");
+// Don't disable extensions in the application directory
+pref("extensions.autoDisableScopes", 11);
+END
+
+	local distini="$pkgdir/usr/lib/$pkgname/distribution/distribution.ini"
+	install -Dvm644 /dev/stdin "$distini" <<END
+[Global]
+id=ufolinux
+version=2023.1
+about=Mozilla Firefox for Ufo Linux
+[Preferences]
+app.distributor=ufolinux
+app.distributor.channel=$pkgname
+app.partner.ufolinux=ufolinux
+END
+
+	mkdir -pv $pkgdir/usr/share/applications
+	mkdir -pv $pkgdir/usr/share/pixmaps
+
+	install -Dvm644 $srcdir/firefox.desktop $pkgdir/usr/share/applications/$pkgname.desktop
+
+	#
+	# ICONS
+	#
+
+	local o theme=official
+	for o in 16 22 24 32 48 64 128 256; do
+        install -Dvm644 browser/branding/$theme/default$o.png \
+            "$pkgdir/usr/share/icons/hicolor/${o}x${o}/apps/$pkgname.png"
+    done
+
+    install -Dvm644 browser/branding/$theme/content/about-logo.png \
+        "$pkgdir/usr/share/icons/hicolor/192x192/apps/$pkgname.png"
+
+    install -Dvm644 browser/branding/$theme/content/about-logo@2x.png \
+        "$pkgdir/usr/share/icons/hicolor/384x384/apps/$pkgname.png"
+
+    install -Dvm644 browser/branding/$theme/content/about-logo.svg \
+        "$pkgdir/usr/share/icons/hicolor/scalable/apps/$pkgname.svg"
+}

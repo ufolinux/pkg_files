@@ -1,0 +1,70 @@
+diff -Naur libisofs/libisofs/ecma119_tree.c libisofs/libisofs/ecma119_tree.c
+--- libisofs/libisofs/ecma119_tree.c	2021-02-07 11:23:17.000000000 +0200
++++ libisofs/libisofs/ecma119_tree.c	2022-12-04 11:53:45.238659749 +0200
+@@ -239,14 +239,7 @@
+     off_t size;
+ 
+     size = iso_stream_get_size(iso->stream);
+-    if (size > (off_t)MAX_ISO_FILE_SECTION_SIZE && img->opts->iso_level != 3) {
+-        char *ipath = iso_tree_get_node_path(ISO_NODE(iso));
+-        iso_msg_submit(img->image->id, ISO_FILE_TOO_BIG, 0,
+-                              "File \"%s\" cannot be added to image because "
+-                              "its size is 4 GiB or larger", ipath);
+-        free(ipath);
+-        return ISO_FILE_TOO_BIG;
+-    }
++
+     ret = iso_file_src_create(img, iso, src);
+     if (ret < 0) {
+         return ret;
+diff -Naur libisofs/libisofs/iso1999.c libisofs/libisofs/iso1999.c
+--- libisofs/libisofs/iso1999.c	2021-02-07 11:23:17.000000000 +0200
++++ libisofs/libisofs/iso1999.c	2022-12-04 12:03:46.958905386 +0200
+@@ -124,21 +124,9 @@
+         n->type = ISO1999_DIR;
+     } else if (iso->type == LIBISO_FILE) {
+         /* it's a file */
+-        off_t size;
+         IsoFileSrc *src;
+         IsoFile *file = (IsoFile*) iso;
+ 
+-        size = iso_stream_get_size(file->stream);
+-        if (size > (off_t)MAX_ISO_FILE_SECTION_SIZE && t->opts->iso_level != 3) {
+-            char *ipath = iso_tree_get_node_path(iso);
+-            ret = iso_msg_submit(t->image->id, ISO_FILE_TOO_BIG, 0,
+-                         "File \"%s\" can't be added to image because is "
+-                         "greater than 4GB", ipath);
+-            free(n);
+-            free(ipath);
+-            return ret;
+-        }
+-
+         ret = iso_file_src_create(t, file, &src);
+         if (ret < 0) {
+             free(n);
+diff -Naur libisofs/libisofs/joliet.c libisofs/libisofs/joliet.c
+--- libisofs/libisofs/joliet.c	2021-02-07 11:23:17.000000000 +0200
++++ libisofs/libisofs/joliet.c	2022-12-04 12:03:21.156370077 +0200
+@@ -170,22 +170,9 @@
+         joliet->type = JOLIET_DIR;
+     } else if (iso->type == LIBISO_FILE) {
+         /* it's a file */
+-        off_t size;
+         IsoFileSrc *src;
+         IsoFile *file = (IsoFile*) iso;
+ 
+-        size = iso_stream_get_size(file->stream);
+-        if (size > (off_t)MAX_ISO_FILE_SECTION_SIZE &&
+-            t->opts->iso_level != 3) {
+-            char *ipath = iso_tree_get_node_path(iso);
+-            free(joliet);
+-            ret = iso_msg_submit(t->image->id, ISO_FILE_TOO_BIG, 0,
+-                         "File \"%s\" can't be added to image because is "
+-                         "greater than 4GB", ipath);
+-            free(ipath);
+-            return ret;
+-        }
+-
+         ret = iso_file_src_create(t, file, &src);
+         if (ret < 0) {
+             free(joliet);

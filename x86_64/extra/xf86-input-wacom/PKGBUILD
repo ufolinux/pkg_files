@@ -1,0 +1,21 @@
+pkgname=xf86-input-wacom
+pkgver=0.40.0
+pkgrel=4
+arch=('x86_64')
+depends=(libevdev mtdev xorg-server libxinerama)
+source=(https://github.com/linuxwacom/$pkgname/releases/download/$pkgname-$pkgver/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+	mkdir -p $pkgdir/etc/X11/xorg.conf.d
+}

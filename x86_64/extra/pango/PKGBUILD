@@ -1,0 +1,29 @@
+pkgname=pango
+pkgver=1.50.7
+pkgrel=1
+arch=('x86_64')
+depends=(fontconfig freetype2 libxft harfbuzz fribidi glib2 cairo)
+makedepends=(gobject-introspection)
+source=(https://download.gnome.org/sources/$pkgname/1.50/$pkgname-$pkgver.tar.xz)
+
+prepare() {
+	mkdir -p $pkgname-$pkgver/build
+}
+
+build() {
+	cd $pkgname-$pkgver/build
+
+	meson			\
+	--prefix=/usr		\
+	--buildtype=release	\
+	--wrap-mode=nofallback	\
+	..
+
+	ninja
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+
+	DESTDIR=$pkgdir	ninja install
+}

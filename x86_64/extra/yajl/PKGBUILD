@@ -1,0 +1,26 @@
+pkgname=yajl
+pkgver=2.1.0
+pkgrel=1
+arch=('x86_64')
+depends=(glibc)
+makedepends=(cmake)
+source=($pkgname-$pkgver.tar.gz::https://github.com/lloyd/$pkgname/archive/$pkgver.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	cmake				\
+	-D CMAKE_INSTALL_PREFIX=/usr	\
+	-D CMAKE_BUILD_TYPE="None"	\
+	-Wno-dev			\
+	-B build			\
+	-S .
+
+	make -C build
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install -C build
+}

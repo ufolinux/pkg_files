@@ -1,0 +1,22 @@
+pkgname=check
+pkgver=0.15.2
+pkgrel=1
+arch=('x86_64')
+depends=('gawk')
+source=(git+https://github.com/libcheck/check)
+
+build() {
+	CFLAGS+=" -Wno-format-extra-args"
+
+	cmake -Hcheck -Bcmake	\
+	-D CMAKE_INSTALL_PREFIX=/usr	\
+	-D CMAKE_BUILD_TYPE=None	\
+	-D CHECK_ENABLE_TIMEOUT_TESTS=OFF \
+	-D AWK_GSUB_DBL_BSLASH="\\\\"
+
+	cmake --build cmake
+}
+
+package() {
+	DESTDIR=$pkgdir cmake --build cmake --target install
+}

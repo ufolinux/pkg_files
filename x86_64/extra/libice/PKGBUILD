@@ -1,0 +1,17 @@
+pkgname=libice
+pkgver=1.0.10
+pkgrel=1
+arch=('x86_64')
+makedepends=(libxtrans util-macros xorgproto)
+source=(https://xorg.freedesktop.org/releases/individual/lib/libICE-$pkgver.tar.bz2)
+
+build() {
+	cd libICE-$pkgver
+	./configure --prefix=/usr --libdir=/usr/lib --sysconfdir=/etc
+	make
+}
+
+package() {
+	cd libICE-$pkgver
+	make DESTDIR=$pkgdir install
+}

@@ -1,0 +1,24 @@
+pkgname=libcap
+pkgver=2.63
+pkgrel=3
+arch=('x86_64')
+depends=('glibc' 'linux-pam')
+source=(https://www.kernel.org/pub/linux/libs/security/linux-privs/libcap2/$pkgname-$pkgver.tar.xz)
+
+build() {
+        cd $pkgname-$pkgver
+
+        sed -i '/install.*STALIBNAME/d' libcap/Makefile
+
+        make
+}
+
+package() {
+	cd $pkgname-$pkgver
+        make RAISE_SETFCAP=no lib=lib prefix=/usr DESTDIR=$pkgdir install
+        chmod -v 755 $pkgdir/usr/lib/libcap.so
+
+        mkdir -p $pkgdir/lib
+        mv -v $pkgdir/usr/lib/libcap.so.* $pkgdir/lib
+        ln -sfv ../../lib/$(readlink $pkgdir/usr/lib/libcap.so) $pkgdir/usr/lib/libcap.so
+}

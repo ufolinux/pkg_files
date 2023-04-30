@@ -1,0 +1,23 @@
+pkgname=libx264
+pkgver=2022.01.26
+pkgrel=1
+arch=('x86_64')
+makedepends=(nasm)
+commitid=0bb85e8bbc85244d5c8fd300033ca32539b541b7
+source=(https://code.videolan.org/videolan/x264/-/archive/$commitid/x264-$commitid.tar.gz)
+
+build() {
+	cd x264-$commitid
+
+	./configure	\
+	--prefix=/usr	\
+	--enable-shared
+
+	make
+}
+
+package() {
+	cd x264-$commitid
+
+	make DESTDIR=$pkgdir install
+}

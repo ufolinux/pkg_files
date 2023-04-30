@@ -1,0 +1,19 @@
+pkgname=nsnake
+pkgver=3.0.0
+pkgrel=1
+arch=('x86_64')
+depends=(ncurses bash)
+makedepends=(gcc)
+source=(https://github.com/alexdantas/nSnake/archive/refs/tags/v3.0.0.tar.gz)
+
+build() {
+    cd nSnake-$pkgver
+
+    make
+}
+
+package() {
+	cd nSnake-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

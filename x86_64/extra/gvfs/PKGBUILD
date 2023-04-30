@@ -1,0 +1,42 @@
+pkgname=gvfs
+pkgver=1.50.3
+pkgrel=1
+arch=('x86_64')
+depends=(dbus fuse2 glib2 libusb libsecret libsoup gcr
+	libcdio udisks2 libmtp
+	gtk+ gtk2+)
+source=(https://download.gnome.org/sources/$pkgname/1.50/$pkgname-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	mkdir -p build && cd build
+
+	meson			\
+	--prefix=/usr		\
+	--buildtype=release	\
+	-D fuse=false		\
+	-D gphoto2=false	\
+	-D afc=false		\
+	-D bluray=false		\
+	-D gcr=false		\
+	-D udisks2=true		\
+	-D cdda=true		\
+	-D sftp=false		\
+	-D nfs=false		\
+	-D mtp=true		\
+	-D smb=false		\
+	-D tmpfilesdir=true	\
+	-D dnssd=false		\
+	-D goa=false		\
+	-D google=false		\
+	..
+
+	ninja
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+	
+	DESTDIR=$pkgdir ninja install
+}

@@ -1,0 +1,31 @@
+pkgname=libvpx
+pkgver=1.11.0
+pkgrel=1
+arch=('x86_64')
+depends=(glibc)
+makedepends=(yasm nasm which curl doxygen)
+source=(https://github.com/webmproject/libvpx/archive/v$pkgver/libvpx-$pkgver.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	sed -i 's/cp -p/cp/' build/make/Makefile
+
+	mkdir -p build
+}
+
+build() {
+	cd $pkgname-$pkgver/build
+
+	../configure	\
+	--prefix=/usr	\
+	--enable-shared
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+
+	make DESTDIR=$pkgdir install
+}

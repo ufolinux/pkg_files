@@ -1,0 +1,33 @@
+pkgname=inetutils
+pkgver=2.2
+pkgrel=1
+arch=('x86_64')
+depends=(glibc libcap readline ncurses linux-pam)
+source=(https://ftp.gnu.org/gnu/$pkgname/$pkgname-$pkgver.tar.xz)
+
+build() {
+        cd $pkgname-$pkgver
+
+        ./configure \
+                --prefix=/usr \
+                --libexecdir=/usr/sbin \
+                --localstatedir=/var \
+                --disable-logger \
+                --disable-whois \
+                --disable-rcp \
+                --disable-rexec \
+                --disable-rlogin \
+                --disable-rsh \
+                --disable-servers
+        make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+        make DESTDIR=$pkgdir install
+
+        mkdir -pv $pkgdir/{bin,sbin}
+        mv -v $pkgdir/usr/bin/{hostname,ping,ping6,traceroute} $pkgdir/bin
+        mv -v $pkgdir/usr/bin/ifconfig $pkgdir/sbin
+}

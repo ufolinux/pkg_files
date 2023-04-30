@@ -1,0 +1,22 @@
+pkgname=cabextract
+pkgver=1.9.1
+pkgrel=1
+pkgdesc="A program to extract Microsoft cabinet (.CAB) files"
+arch=('x86_64')
+source=("https://cabextract.org.uk/$pkgname-$pkgver.tar.gz")
+
+build() {
+	cd "$pkgname-$pkgver"
+
+	./configure		\
+	--prefix=/usr		\
+	--sysconfdir=/etc
+
+	make
+}
+
+package() {
+	cd "$pkgname-$pkgver"
+
+	make DESTDIR="$pkgdir" install
+}

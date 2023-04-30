@@ -1,0 +1,29 @@
+pkgname=grantlee
+pkgver=5.2.0
+pkgrel=1
+arch=(x86_64)
+depends=(qt5)
+makedepends=(cmake doxygen)
+source=(http://downloads.grantlee.org/grantlee-$pkgver.tar.gz)
+
+prepare() {
+	mkdir -p build
+}
+
+build() {
+	cd build
+
+	cmake				\
+	-D CMAKE_INSTALL_PREFIX=/usr	\
+	-D CMAKE_BUILD_TYPE=Release	\
+	-D BUILD_TESTING=OFF			\
+	-Wno-dev ../$pkgname-$pkgver
+
+	make -j7
+}
+
+package() {
+	cd build
+
+	make DESTDIR=$pkgdir install
+}

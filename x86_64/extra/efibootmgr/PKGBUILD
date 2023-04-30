@@ -1,0 +1,21 @@
+pkgname=efibootmgr
+pkgver=17
+pkgrel=1
+arch=('x86_64')
+source=(https://github.com/rhboot/efibootmgr/archive/$pkgver/$pkgname-$pkgver.tar.gz
+	efivar.patch)
+
+build() {
+	cd $pkgname-$pkgver
+
+	patch -Np1 -i $srcdir/efivar.patch
+
+	EFIDIR=/boot/efi CFLAGS="-w" make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+        install -D src/efibootmgr $pkgdir/usr/sbin/efibootmgr
+        install -D src/efibootmgr.8 $pkgdir/usr/share/man/man8/efibootmgr.8
+}

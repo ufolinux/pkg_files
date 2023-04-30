@@ -1,0 +1,26 @@
+pkgname=criu
+pkgver=3.16.1
+pkgrel=1
+arch=('x86_64')
+depends=(libbsd libnet libnl protobuf-c gnutls nftables)
+makedepends=(xmlto asciidoc)
+source=($pkgname-$pkgver.tar.gz::https://github.com/checkpoint-restore/criu/archive/v$pkgver.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make			\
+	DESTDIR=$pkgdir		\
+	PREFIX=/usr		\
+	LIBDIR=/usr/lib		\
+	LIBEXECDIR=/usr/libexec	\
+	install
+
+	rm -r $pkgdir/usr/include/compel/common/asm
+}

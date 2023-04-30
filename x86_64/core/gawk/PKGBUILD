@@ -1,0 +1,21 @@
+pkgname=gawk
+pkgver=5.1.1
+pkgrel=1
+arch=('x86_64')
+depends=(bash glibc mpfr)
+source=(https://ftp.gnu.org/gnu/$pkgname/$pkgname-$pkgver.tar.xz)
+
+build() {
+        cd $pkgname-$pkgver
+
+        # ensure some unneeded files are not installed
+        sed -i 's/extras//' Makefile.in
+
+        ./configure --prefix=/usr
+        make
+}
+
+package() {
+	cd $pkgname-$pkgver
+        make DESTDIR=$pkgdir install
+}

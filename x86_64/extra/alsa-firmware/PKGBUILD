@@ -1,0 +1,35 @@
+pkgname=alsa-firmware
+pkgver=1.2.4
+pkgrel=1
+pkgdesc="Firmware binaries for loader programs in alsa-tools and hotplug firmware loader"
+arch=('x86_64')
+depends=(alsa-tools)
+source=(https://www.alsa-project.org/files/pub/firmware/${pkgname}-${pkgver}.tar.bz2)
+
+prepare() {
+	cd "$pkgname-$pkgver"
+	autoreconf -vfi
+}
+
+build() {
+	cd "$pkgname-$pkgver"
+
+	./configure		\
+	--prefix=/usr		\
+	--enable-buildfw	\
+	-with-hotplug-dir=/usr/lib/firmware
+
+	make
+}
+
+package() {
+	cd "$pkgname-$pkgver"
+
+	make DESTDIR="$pkgdir" install
+	
+	# remove files which conflict with linux-firmware
+	rm -rf "${pkgdir}"/usr/lib/firmware/{ct{efx,speq}.bin,ess,korg,sb16,yamaha}
+
+	# remove broken symlinks (broken upstream)
+	rm -rf "${pkgdir}"/usr/lib/firmware/turtlebeach
+}

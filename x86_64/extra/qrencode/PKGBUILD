@@ -1,0 +1,24 @@
+pkgname=qrencode
+pkgver=4.1.1
+pkgrel=1
+arch=('x86_64')
+depends=(libpng)
+makedepends=(doxygen)
+source=(https://fukuchi.org/works/qrencode/qrencode-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure --prefix=/usr
+
+	make
+
+	# To make docs
+	doxygen
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

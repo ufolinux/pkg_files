@@ -1,0 +1,39 @@
+pkgname=colord
+pkgver=master
+pkgrel=1
+arch=('x86_64')
+depends=(libgudev lcms sqlite3 libgusb)
+source=(git+https://github.com/hughsie/colord)
+
+prepare() {
+	cd colord
+}
+
+spick() {
+	local p="$1" f d; shift
+	for f; do
+		d="$srcdir/$p/${f#$pkgdir/}"
+		mkdir -p "$(dirname "$d")"
+		mv "$f" "$d"
+		rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+	done
+}
+
+build() {
+	meson colord build		\
+	--prefix=/usr			\
+	-D libcolordcompat=true		\
+	-D sane=false			\
+	-D vapi=true			\
+	-D daemon_user=colord		\
+	-D docs=false
+
+	meson compile -C build
+}
+
+package() {
+	meson install -C build --destdir $pkgdir
+
+	echo 'u colord - "Color managment daemon" /var/lib/colord' |
+		install -Dm644 /dev/stdin $pkgdir/usr/lib/sysusers.d/colord.conf
+}

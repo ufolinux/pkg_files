@@ -1,0 +1,21 @@
+pkgname=libnl
+pkgver=3.5.0
+pkgrel=1
+arch=('x86_64')
+depends=(glibc)
+source=(https://github.com/thom311/libnl/releases/download/libnl${pkgver//./_}/libnl-$pkgver.tar.gz)
+
+build() {
+	ls
+	cd $pkgname-$pkgver
+
+	./configure --prefix=/usr     \
+	            --sysconfdir=/etc
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+}

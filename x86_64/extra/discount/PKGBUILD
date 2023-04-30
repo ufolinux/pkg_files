@@ -1,0 +1,28 @@
+pkgname=discount
+pkgver=2.2.7
+pkgrel=1
+arch=(x86_64)
+source=($pkgname-$pkgver.tar.gz::"https://github.com/Orc/discount/archive/v$pkgver.tar.gz"
+        discount-ldflags.patch::"https://github.com/Orc/discount/commit/55cea9c5.patch")
+
+prepare() {
+	patch -d $pkgname-$pkgver -p1 -i ../discount-ldflags.patch # Honor system ldflags
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure.sh --prefix=/usr --enable-all-features --with-fenced-code --shared
+
+	make -j1
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	# fix ldconfig call
+	sed -e 's|/sbin/ldconfig|/sbin/ldconfig -n|' -i librarian.sh
+
+	make DESTDIR="$pkgdir" install.everything
+	install -Dm644 COPYRIGHT "$pkgdir"/usr/share/licenses/$pkgname/LICENSE
+}

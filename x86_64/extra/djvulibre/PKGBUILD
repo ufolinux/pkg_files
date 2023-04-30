@@ -1,0 +1,30 @@
+pkgname=djvulibre
+pkgver=3.5.28_19.08.22_snapshot
+pkgrel=1
+arch=(x86_64)
+depends=(hicolor-icon-theme libtiff librsvg jbigkit)
+makedepends=(make)
+commitid=6a1e5ba1c9ef81c205a4b270c3f121a1e106f4fc
+source=(https://sourceforge.net/code-snapshots/git/d/dj/djvu/djvulibre-git.git/djvu-djvulibre-git-$commitid.zip)
+
+prepare() {
+	cd djvu-$pkgname-git-$commitid
+
+	autoreconf -f -i -v --warnings=all
+}
+
+build() {
+	cd djvu-$pkgname-git-$commitid
+
+	./configure \
+	--prefix=/usr
+}
+
+package() {
+	cd djvu-$pkgname-git-$commitid
+
+	make DESTDIR=$pkgdir install
+	for s in 22 32 48 64; do
+		install -Dm644 desktopfiles/prebuilt-hi${s}-djvu.png "${pkgdir}/usr/share/icons/hicolor/${s}x${s}/mimetypes/image-vnd.djvu.mime.png"
+	done
+}

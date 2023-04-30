@@ -1,0 +1,37 @@
+pkgname=ntfs-3g
+_pkgname=ntfs-3g_ntfsprogs
+pkgver=2021.8.22
+pkgrel=1
+pkgdesc='NTFS filesystem driver and utilities'
+arch=('x86_64')
+depends=('util-linux' 'fuse2')
+source=("https://tuxera.com/opensource/${_pkgname}-${pkgver}.tgz")
+
+prepare() {
+    cd ${_pkgname}-${pkgver}
+    sed 's|$(DESTDIR)/sbin|$(DESTDIR)/usr/bin|' -i {ntfsprogs,src}/Makefile.in
+}
+
+build() {
+    cd ${_pkgname}-${pkgver}
+
+    ./configure \
+    --prefix=/usr \
+    --mandir=/usr/share/man \
+    --disable-ldconfig \
+    --with-fuse=external \
+    --enable-xattr-mappings \
+    --enable-posix-acls \
+    --enable-extras \
+    --enable-crypto \
+
+    make
+}
+
+package() {
+    cd ${_pkgname}-${pkgver}
+
+    make DESTDIR="${pkgdir}" rootbindir=/usr/bin rootsbindir=/usr/bin rootlibdir=/usr/lib install
+    rm "${pkgdir}"/usr/share/man/man8/ntfsfallocate.8 # uninstalled binary
+    ln -s /usr/bin/ntfs-3g "${pkgdir}/usr/bin/mount.ntfs"
+}

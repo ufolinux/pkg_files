@@ -1,0 +1,21 @@
+pkgname=libidn2
+pkgver=2.3.2
+pkgrel=1
+arch=('x86_64')
+depends=('libunistring')
+source=(https://ftp.gnu.org/gnu/libidn/$pkgname-$pkgver.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

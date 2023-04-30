@@ -1,0 +1,37 @@
+pkgname=i3-wm
+pkgver=4.20.1
+pkgrel=1
+arch=('x86_64')
+url=https://i3wm.org
+license=('BSD')
+groups=('i3')
+depends=('libev' 'libxkbcommon' 'pango' 'startup-notification'
+         'xcb-util-cursor' 'xcb-util-keysyms' 'xcb-util-wm' 'xcb-util-xrm'
+         'yajl')
+makedepends=('meson' 'xmlto')
+backup=('etc/i3/config')
+source=("https://i3wm.org/downloads/i3-$pkgver.tar.xz"
+        '0001-Use-OVER-operator-for-drawing-text.patch')
+
+prepare() {
+	cd i3-$pkgver
+
+	# https://github.com/i3/i3/pull/2925
+	patch -Np1 -i ../0001-Use-OVER-operator-for-drawing-text.patch
+}
+
+build() {
+	cd i3-$pkgver
+
+	meson build		\
+	--prefix=/usr		\
+	--buildtype=release
+
+	ninja -C build
+}
+
+package() {
+	cd i3-$pkgver
+	DESTDIR="$pkgdir" ninja -C build install
+	install -Dm644 -t "$pkgdir"/usr/share/licenses/$pkgname LICENSE
+}

@@ -1,0 +1,10 @@
+pkgname=gnu-free-fonts
+pkgver=20120503
+pkgrel=1
+arch=(x86_64)
+url="https://www.gnu.org/software/freefont/"
+source=(https://ftp.gnu.org/gnu/freefont/freefont-otf-${pkgver}.tar.gz)
+
+package() {
+	install -Dt "$pkgdir/usr/share/fonts/${pkgname%-fonts}" -m644 freefont-$pkgver/*.otf
+}

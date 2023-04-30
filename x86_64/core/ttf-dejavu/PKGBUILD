@@ -1,0 +1,24 @@
+pkgname=ttf-dejavu
+pkgver=2.37
+pkgrel=1
+arch=('x86_64')
+makedepends=(fontforge git perl5-font-ttf)
+commitid=a0acdee6947d645b207c160ebc77cc981285c2ce
+source=(git+https://github.com/dejavu-fonts/dejavu-fonts.git#commit=$commitid)
+
+build() {
+	cd dejavu-fonts
+
+	make full-ttf
+}
+
+package() {
+	cd dejavu-fonts
+
+	install -Dt "$pkgdir/usr/share/fonts/TTF" -m644 build/*.ttf
+	install -Dt "$pkgdir/usr/share/fontconfig/conf.avail" -m644 fontconfig/*.conf
+
+	mkdir "$pkgdir/usr/share/fontconfig/conf.default"
+	ln -srt "$pkgdir/usr/share/fontconfig/conf.default" \
+		"$pkgdir"/usr/share/fontconfig/conf.avail/*
+}

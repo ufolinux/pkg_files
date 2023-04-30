@@ -1,0 +1,28 @@
+pkgname=gumbo-parser
+pkgver=0.10.1
+pkgrel=1
+arch=(x86_64)
+depends=(glibc)
+makedepends=(make)
+source=($pkgname-$pkgver.tar.gz::https://github.com/google/$pkgname/archive/v$pkgver.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	./autogen.sh
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure \
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

@@ -1,0 +1,23 @@
+pkgname=libxdamage
+pkgver=1.1.5
+pkgrel=4
+arch=('x86_64')
+depends=('libx11')
+source=(https://x.org/releases/individual/lib/libXdamage-$pkgver.tar.gz)
+
+build() {
+        cd libXdamage-$pkgver
+
+	./configure --prefix=/usr
+	make
+}
+
+check() {
+	cd libXdamage-$pkgver
+	make check
+}
+
+package() {
+	cd libXdamage-$pkgver
+	make DESTDIR=$pkgdir install
+}

@@ -1,0 +1,26 @@
+pkgname=libiscsi
+pkgver=1.19.0
+pkgrel=1
+depends=('glibc' 'popt' 'libgcrypt')
+makedepends=('git')
+arch=(x86_64)
+source=(libiscsi::git+https://github.com/sahlberg/libiscsi.git#tag=${pkgver})
+
+prepare() {
+    cd "${srcdir}/${pkgname}"
+
+    ./autogen.sh
+}
+
+build() {
+    cd "${srcdir}/${pkgname}"
+    # Disabled werror due to GCC 8 warnings: https://github.com/sahlberg/libiscsi/issues/266
+    ./configure --prefix=/usr --disable-static --libdir=/usr/lib --disable-werror
+
+    make
+}
+package () {
+    cd "${srcdir}/${pkgname}"
+
+    make DESTDIR="${pkgdir}" install
+}

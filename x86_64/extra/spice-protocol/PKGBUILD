@@ -1,0 +1,21 @@
+pkgname=spice-protocol
+pkgver=0.14.4
+pkgrel=1
+arch=(x86_64)
+makedepends=('meson')
+source=(https://gitlab.freedesktop.org/spice/spice-protocol/-/archive/v$pkgver/spice-protocol-v$pkgver.tar.gz)
+
+build() {
+    mkdir -p build
+    cd "$srcdir/$pkgname-v$pkgver"
+
+    meson ../build --prefix=/usr
+
+    ninja -v -C ../build
+}
+
+package() {
+    cd "$srcdir/$pkgname-v$pkgver"
+
+    DESTDIR="$pkgdir/" ninja -C ../build install
+}

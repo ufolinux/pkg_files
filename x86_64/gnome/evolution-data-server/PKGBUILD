@@ -1,0 +1,40 @@
+pkgname=evolution-data-server
+pkgver=3.42.4
+pkgrel=1
+arch=(x86_64)
+depends=(gcr libical libsecret nss sqlite3
+	gobject-introspection gtk3+ icu libcanberra
+	openldap)
+makedepends=(gcc)
+source=(https://download.gnome.org/sources/$pkgname/3.42/$pkgname-$pkgver.tar.xz)
+
+prepare() {
+	mkdir -p $pkgname-$pkgver/build
+}
+
+build() {
+	cd $pkgname-$pkgver/build
+
+	cmake \
+	-D MAKE_INSTALL_PREFIX=/usr \
+	-D SYSCONF_INSTALL_DIR=/etc \
+	-D ENABLE_VALA_BINDINGS=ON \
+	-D ENABLE_INSTALLED_TESTS=OFF \
+	-D ENABLE_GOOGLE=OFF \
+	-D WITH_OPENLDAP=ON \
+	-D WITH_KRB5=OFF \
+	-D ENABLE_INTROSPECTION=ON \
+	-D ENABLE_GTK_DOC=OFF \
+	-D WITH_LIBDB=OFF \
+	-D ENABLE_WEATHER=OFF \
+	-D ENABLE_GOA=OFF \
+	..
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+
+	make DESTDIR=$pkgdir install
+}

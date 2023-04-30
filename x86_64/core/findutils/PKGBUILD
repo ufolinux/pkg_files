@@ -1,0 +1,24 @@
+pkgname=findutils
+pkgver=4.9.0
+pkgrel=1
+arch=('x86_64')
+depends=(glibc bash)
+source=(https://ftp.gnu.org/gnu/$pkgname/$pkgname-$pkgver.tar.xz)
+
+build() {
+        cd $pkgname-$pkgver
+
+        ./configure \
+                --prefix=/usr \
+                --localstatedir=/var/lib/locate
+        make
+}
+
+package() {
+	cd $pkgname-$pkgver
+        make DESTDIR=$pkgdir install
+
+        mkdir -pv $pkgdir/bin
+        mv -v $pkgdir/usr/bin/find $pkgdir/bin
+        sed -i 's|find:=${BINDIR}|find:=/bin|' $pkgdir/usr/bin/updatedb
+}

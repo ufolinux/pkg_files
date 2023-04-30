@@ -1,0 +1,18 @@
+pkgname=lmdb
+pkgver=0.9.29
+pkgrel=1
+arch=('x86_64')
+depends=(glibc)
+source=(https://github.com/LMDB/lmdb/archive/LMDB_$pkgver.tar.gz)
+
+build() {
+	cd lmdb-LMDB_$pkgver/libraries/liblmdb
+
+	make
+}
+
+package() {
+	cd lmdb-LMDB_$pkgver/libraries/liblmdb
+
+	make prefix=$pkgdir/usr install
+}

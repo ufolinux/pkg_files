@@ -1,0 +1,15 @@
+pkgname=iana-etc
+pkgver=20210222
+pkgrel=1
+arch=('x86_64')
+source=(services protocols)
+
+build() {
+	echo "build"
+}
+
+package() {
+	install -d -m 755 $pkgdir/etc
+	install -m 644 services $pkgdir/etc
+	install -m 644 protocols $pkgdir/etc
+}

@@ -1,0 +1,11 @@
+diff -Naur libfilezilla-0.38.0/lib/aio/aio.cpp libfilezilla-0.38.0/lib/aio/aio.cpp
+--- libfilezilla-0.38.0/lib/aio/aio.cpp	2022-07-08 16:18:43.000000000 +0300
++++ libfilezilla-0.38.0/lib/aio/aio.cpp	2022-07-08 18:01:36.781260701 +0300
+@@ -10,6 +10,7 @@
+ #include <sys/stat.h>
+ #include <fcntl.h>
+ #include <unistd.h>
++#include <tuple>
+ #endif
+ 
+ 

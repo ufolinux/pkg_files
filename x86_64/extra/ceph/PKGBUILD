@@ -1,0 +1,85 @@
+pkgname=ceph
+pkgver=17.2.0
+pkgrel=1
+arch=('x86_64')
+depends=("zstd" 'bash' 'bc' 'boost' 'bzip2' 'c-ares' 'cmake' 'coreutils'
+    'cpio' 'curl' 'expat' 'fontconfig' 'fuse2' 'gcc' 'git' 'glibc' 'gnutls'
+    'gperf' 'inetutils' 'keyutils' 'libcap' 'snappy' 'benchmark'
+    'libedit' 'libgudev' 'libnl' 'libtool' 'util-linux'
+    'libuv' 'libxml2' 'libpciaccess' 'lz4' 'ncurses' 'python3-pip'
+    'nss' 'numactl' 'openssl' 'parted' 'pcre' 'pcre2' 'pkgconf' 'libcap-ng'
+    'procps-ng' 'sed' 'systemd' 'valgrind' 'yaml' 'yasm' 'zlib')
+makedepends=(python3-pip)
+options=('emptydirs')
+source=(https://download.ceph.com/tarballs/${pkgname}-${pkgver}.tar.gz)
+
+prepare() {
+    cd "${pkgbase}-${pkgver}"
+
+    # Install python3 needed modules ( may need more attention on cleaner dev env's )
+    pip3 install doxypypy doxyqml requests
+    pip3 install Cython pyyaml
+
+    # Configure pkg in prepare so build() only compiles the pkg
+    CPPFLAGS+=' -DBOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT'
+    export CFLAGS+=" ${CPPFLAGS} -w"
+    export CXXFLAGS+=" ${CPPFLAGS} -w"
+    export PYTHON_VERSION="$(python3 --version | awk '{print $2}')"
+    export PYTHON_INCLUDE_DIR="$(python3 -c "from sysconfig import get_path; print(get_path('include'))")"
+    export CMAKE_BUILD_TYPE='RelWithDebInfo'
+    export CMAKE_WARN_UNUSED_CLI=no
+
+    cmake \
+    -B build \
+    -D CMAKE_INSTALL_PREFIX=/usr \
+    -D CMAKE_INSTALL_SYSCONFDIR=/etc \
+    -D CEPH_SYSTEMD_ENV_DIR=/etc/default \
+    -D CMAKE_INSTALL_SYSTEMD_SERVICEDIR=/usr/lib/systemd/system \
+    -D WITH_PYTHON2=OFF \
+    -D WITH_PYTHON3="${PYTHON_VERSION}" \
+    -D WITH_BABELTRACE=OFF \
+    -D WITH_LTTNG=OFF \
+    -D WITH_OPENLDAP=ON \
+    -D WITH_RDMA=OFF \
+    -D WITH_OCF=OFF \
+    -D WITH_DPDK=OFF \
+    -D WITH_SPDK=OFF \
+    -D WITH_CEPHFS=ON \
+    -D WITH_CEPHFS_JAVA=ON \
+    -D WITH_CEPHFS_SHELL=ON \
+    -D WITH_FUSE=ON \
+    -D WITH_LEVELDB=OFF \
+    -D WITH_LZ4=ON \
+    -D WITH_XFS=ON \
+    -D WITH_MGR=ON \
+    -D WITH_MGR_DASHBOARD_FRONTEND=ON \
+    -D DASHBOARD_FRONTEND_LANGS="ALL" \
+    -D WITH_RADOSGW=OFF \
+    -D WITH_RADOSGW_FCGI_FRONTEND=OFF \
+    -D WITH_RADOSGW_BEAST_FRONTEND=OFF \
+    -D WITH_RADOSGW_BEAST_OPENSSL=OFF \
+    -D WITH_RADOSGW_AMQP_ENDPOINT=OFF \
+    -D WITH_SYSTEMD=ON \
+    -D WITH_SYSTEM_BOOST=ON \
+    -D WITH_BOOST_CONTEXT=ON \
+    -D WITH_SYSTEM_NPM=OFF \
+    -D ENABLE_SHARED=ON \
+    -D WITH_TESTS=OFF \
+    -D WITH_MANPAGE=OFF \
+    -D JAVA_AWT_LIBRARY=/opt/jdk-17/lib/ \
+    -D JAVA_JVM_LIBRARY=/opt/jdk-17/lib/ \
+    -D JAVA_INCLUDE_PATH=/opt/jdk-17/include/ \
+    -Wno-dev
+}
+
+build() {
+    cd "${pkgbase}-${pkgver}"
+
+    cmake --build build -j4
+}
+
+package() {
+    cd "${pkgbase}-${pkgver}"
+
+    make -C build DESTDIR=$pkgdir install
+}

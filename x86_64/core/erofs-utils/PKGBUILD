@@ -1,0 +1,23 @@
+pkgname=erofs-utils
+pkgver=1.4
+pkgrel=2
+arch=('x86_64')
+depends=(glibc lz4)
+makedepends=(util-linux)
+source=(https://git.kernel.org/pub/scm/linux/kernel/git/xiang/${pkgname}.git/snapshot/$pkgname-$pkgver.tar.gz)
+
+build() {
+        cd $pkgname-$pkgver
+	
+	./autogen.sh
+	./configure --prefix=/usr         \
+	            --bindir=/bin         \
+	            --sysconfdir=/etc
+
+        make
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+}

@@ -1,0 +1,33 @@
+pkgname=parted
+pkgver=3.4
+pkgrel=1
+arch=('x86_64')
+source=(https://ftp.gnu.org/gnu/$pkgname/$pkgname-$pkgver.tar.xz)
+
+build() {
+        cd $pkgname-$pkgver
+	
+	sed -i '/utsname.h/a#include <sys/sysmacros.h>' libparted/arch/linux.c
+	./configure --prefix=/usr         \
+	            --disable-static	  \
+		    --disable-device-mapper
+        make
+#	make -C doc html
+#	makeinfo --html -o doc/html doc/parted.texi
+#	makeinfo --plaintext -o doc/parted.txt doc/parted.texi
+
+#	texi2pdf -o doc/parted.pdf doc/parted.texi
+#	texi2dvi -o doc/parted.dvi doc/parted.texi
+#	dvips -o doc/parted.ps doc/parted.dvi
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+	
+#	install -v -m755 -d $pkgdir/usr/share/doc/parted-3.4/html
+#	install -v -m644 doc/html/* $pkgdir/usr/share/doc/parted-3.4/html
+#	install -v -m644 doc{FAT,API,parted,{txt,html}} $pkgdir/usr./share/doc/parted-3.4
+
+#	install -v -m644 doc/FAT doc/API doc/parted,{pdf,ps,dvi} $pkgdir/usr/share/doc/parted-3.4
+}

@@ -1,0 +1,22 @@
+pkgname=libidn
+pkgver=1.40
+pkgrel=1
+arch=(x86_64)
+depends=(glibc)
+makedepends=(make)
+source=(https://ftp.gnu.org/gnu/${pkgname}/${pkgname}-${pkgver}.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure \
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

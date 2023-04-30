@@ -1,0 +1,11 @@
+--- libisofs/eltorito.h	2022-07-02 14:14:23.906213082 +0300
++++ libisofs/eltorito.h	2022-07-02 14:14:46.158005529 +0300
+@@ -185,7 +185,7 @@
+    el_torito_set_isolinux_options() for patching (boot info table,
+    GRUB2 boot info, maybe others).
+ */
+-#define Libisofs_elto_max_patchablE      (32 * 1024 * 1024)
++#define Libisofs_elto_max_patchablE      (32 * 1024 * 3072)
+ 
+ 
+ #endif /* LIBISO_ELTORITO_H */

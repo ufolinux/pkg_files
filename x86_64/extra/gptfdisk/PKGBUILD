@@ -1,0 +1,26 @@
+pkgname=gptfdisk
+pkgver=1.0.8
+pkgrel=1
+arch=(x86_64)
+depends=(gcc popt ncurses util-linux)
+source=(https://downloads.sourceforge.net/project/$pkgname/$pkgname/$pkgver/$pkgname-$pkgver.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	sed -i '/^#include /s:ncursesw/::' gptcurses.cc
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	install -d "$pkgdir"/usr/{bin,share/{doc/gdisk,man/man8}}
+	install -t "$pkgdir/usr/bin" {,c,s}gdisk fixparts
+	install -m644 -t "$pkgdir/usr/share/man/man8" {{,c,s}gdisk,fixparts}.8
+}

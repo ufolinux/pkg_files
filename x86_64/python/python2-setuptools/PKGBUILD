@@ -1,0 +1,24 @@
+pkgname=python2-setuptools
+pkgver=44.1.1
+pkgrel=1
+arch=('x86_64')
+makedepends=('python2')
+depends=('python2')
+source=("https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz")
+export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
+
+build() {
+	cd setuptools-$pkgver
+	sed -i -e "s|^#\!.*/usr/bin/env python|#!/usr/bin/env python2|" setuptools/command/easy_install.py
+
+	python2 bootstrap.py
+	python2 setup.py build
+}
+
+package() {
+	cd setuptools-$pkgver
+
+	python2 setup.py install --prefix=/usr --root=$pkgdir --optimize=1 --skip-build
+
+	rm -f $pkgdir/usr/bin/easy_install
+}

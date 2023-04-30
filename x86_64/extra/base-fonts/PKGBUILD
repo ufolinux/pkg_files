@@ -1,0 +1,11 @@
+pkgname=base-fonts
+pkgver=2023.1
+pkgrel=1
+arch=(x86_64)
+depends=(ttf-bitstream-vera ttf-droid ttf-hack ttf-liberation
+	noto-fonts ttf-dejavu cantarell-fonts
+	font-util encodings font-alias font-adobe-utopia-type1 font-bh-ttf)
+
+package() {
+	echo "[!]: This is a metapackage"
+}

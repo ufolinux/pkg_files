@@ -1,0 +1,21 @@
+pkgname=xf86-input-libinput
+pkgver=1.1.0
+pkgrel=5
+arch=('x86_64')
+depends=(libevdev mtdev xorg-server libinput)
+source=(https://x.org/pub/individual/driver/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+	mkdir -p $pkgdir/etc/X11/xorg.conf.d
+}

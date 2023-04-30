@@ -1,0 +1,18 @@
+pkgname=bc
+pkgver=4.0.2
+pkgrel=2
+arch=('x86_64')
+depends=(readline)
+source=(https://github.com/gavinhoward/bc/archive/$pkgver/bc-$pkgver.tar.gz)
+
+build() {
+        cd $pkgname-$pkgver
+
+        PREFIX=/usr CC=gcc CFLAGS="-std=c99" ./configure.sh -G -O3
+        make
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+}

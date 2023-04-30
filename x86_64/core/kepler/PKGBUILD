@@ -1,0 +1,35 @@
+pkgname=kepler
+pkgver=2023.1
+pkgrel=1
+arch=('x86_64')
+depends=(zstd bash glibc libarchive curl gpgme libassuan)
+commitid=0fcc96b5d48aad7dc1611186aa44c074a4574586
+replaces=(pacman)
+source=(git+https://github.com/ufolinux/kepler#commit=$commitid)
+
+build() {
+	cd $pkgname
+
+	meson \
+	--prefix=/usr \
+	-D doxygen=enabled \
+	-D scriptlet-shell=/bin/bash \
+	-D ldconfig=/usr/bin/ldconfig \
+	build
+
+	ninja -C build
+}
+
+package() {
+	cd $pkgname
+	
+	mkdir -vp $pkgdir
+	export DESTDIR=$pkgdir/
+	
+	ninja -C build install
+
+	# copy our own kepler.conf that has proper server list
+	cp -f ../../kepler.conf $pkgdir/etc/kepler.conf
+	mkdir -p $pkgdir/etc/kepler.d
+	touch $pkgdir/etc/kepler.d/mirrorlist
+}

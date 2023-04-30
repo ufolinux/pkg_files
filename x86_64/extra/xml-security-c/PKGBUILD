@@ -1,0 +1,21 @@
+pkgname=xml-security-c
+pkgver=2.0.4
+pkgrel=1
+arch=('x86_64')
+depends=('libxslt' 'openssl' 'gnutls' 'nss' 'libtool')
+source=(https://dlcdn.apache.org/santuario/c-library/${pkgname}-${pkgver}.tar.gz)
+
+build() {
+    cd ${pkgname}-${pkgver}
+
+    ./configure \
+    --prefix=/usr
+
+    make
+}
+
+package() {
+    cd ${pkgname}-${pkgver}
+
+    make DESTDIR="${pkgdir}" install
+}

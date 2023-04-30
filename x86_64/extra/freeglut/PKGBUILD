@@ -1,0 +1,27 @@
+pkgname=freeglut
+pkgver=3.2.2
+pkgrel=1
+pkgdesc="Provides functionality for small OpenGL programs"
+arch=(x86_64)
+url="http://freeglut.sourceforge.net/"
+depends=(libxi libxrandr libglvnd)
+makedepends=(mesa ninja glu libxxf86vm cmake)
+source=(https://downloads.sourceforge.net/freeglut/${pkgname}-${pkgver}.tar.gz)
+
+build() {
+	CFLAGS+=' -fcommon' # https://wiki.gentoo.org/wiki/Gcc_10_porting_notes/fno_common
+
+	cmake -H$pkgname-$pkgver -Bbuild \
+	-D FREEGLUT_BUILD_STATIC_LIBS=ON \
+	-D CMAKE_INSTALL_PREFIX=/usr \
+	-D CMAKE_INSTALL_LIBDIR=lib \
+	-D CMAKE_BUILD_TYPE=release
+
+	cmake --build build
+}
+
+package() {
+	DESTDIR="$pkgdir" cmake --build build --target install
+
+	ln -sr "$pkgdir"/usr/lib/pkgconfig/{glut,freeglut}.pc
+}

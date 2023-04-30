@@ -1,0 +1,42 @@
+#!/bin/bash
+
+clean_wine() {
+	# Here we will manually rm -f some wine related things
+	# https://wiki.winehq.org/FAQ ( 4.3 + 4.4 )
+	cd ~
+
+	echo "[ * ]: Killing wineserver ( if running )"
+	# Kill wineserver ( if running )
+	if pgrep wineserver; then pkill wineserver; fi
+
+	echo "[ * ]: Removing wine made files in ~/.local"
+	# The usual
+	rm -f ~/.local/share/mime/packages/x-wine*
+	rm -f ~/.local/share/applications/wine-extension*
+	rm -f ~/.local/share/icons/hicolor/*/*/application-x-wine-extension*
+	rm -f ~/.local/share/mime/application/x-wine-extension*
+
+	# Clean leftovers
+	rm -f ~/.config/menus/applications-merged/wine*
+	rm -rf ~/.local/share/applications/wine
+	rm -f ~/.local/share/desktop-directories/wine*
+	rm -f ~/.local/share/icons/????_*.{xpm,png}
+	rm -f ~/.local/share/icons/*-x-wine-*.{xpm,png} }}}
+
+	echo "[ * ]: Removing existing wine prefix"
+	# Now wine prefix itself
+	rm -rf ~/.wine
+}
+
+echo "[ !!! ]: Make sure not to use root/sudo rights as you may break youre system with it"
+echo "[ !! ]: This will remove all wine related things in users home folder"
+echo "[ !! ]: So are you sure that you wanna do it?"
+
+while true; do
+    read -p "[ Y/N ]: Do you wish to install this program?" yn
+    case $yn in
+        [Yy]* ) clean_wine; break;;
+        [Nn]* ) echo "Exiting..."; exit;;
+        * ) echo "Please answer yes or no.";;
+    esac
+done

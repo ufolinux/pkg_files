@@ -1,0 +1,40 @@
+pkgname=valgrind
+pkgver=3.17.0
+pkgrel=1
+arch=('x86_64')
+depends=('glibc' 'perl')
+source=(https://sourceware.org/pub/valgrind/valgrind-$pkgver.tar.bz2
+	valgrind-3.7.0-respect-flags.patch)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	patch -Np1 < ../valgrind-3.7.0-respect-flags.patch
+	autoreconf -ifv
+}
+
+build() {
+	CPPFLAGS=${CPPFLAGS/-D_FORTIFY_SOURCE=2/}
+	CFLAGS=${CFLAGS/-fno-plt/}
+	CXXFLAGS=${CXXFLAGS/-fno-plt/}
+
+	cd $pkgname-$pkgver
+	./configure	\
+	--prefix=/usr	\
+	--sysconfdir=/etc \
+	--localstatedir=/var \
+	--libexecdir=/usr/lib \
+	--mandir=/usr/share/man
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+
+	if check_option 'debug' n; then
+		find $pkgdir/usr/bin -type f -executable -exec strip $STRIP_BINARIES {} + || :
+	fi
+}

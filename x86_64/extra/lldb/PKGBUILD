@@ -1,0 +1,36 @@
+pkgname=lldb
+pkgver=13.0.1
+pkgrel=1
+arch=(x86_64)
+depends=(llvm clang python3)
+makedepends=(llvm cmake ninja swig python3-pip)
+source=(https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver/$pkgname-$pkgver.src.tar.xz)
+
+prepare() {
+	mkdir -p $pkgname-$pkgver.src/build
+
+	pip3 install six
+}
+
+build() {
+	cd $pkgname-$pkgver.src/build
+
+	cmake .. -G Ninja \
+    -D CMAKE_BUILD_TYPE=Release \
+    -D CMAKE_INSTALL_PREFIX=/usr \
+    -D CMAKE_SKIP_RPATH=ON \
+    -D LLVM_LINK_LLVM_DYLIB=ON \
+    -D CLANG_LINK_CLANG_DYLIB=ON
+
+	ninja all
+}
+
+package() {
+	cd $pkgname-$pkgver.src/build
+
+	DESTDIR="$pkgdir" ninja install
+
+	python3 -m compileall "$pkgdir"
+	python3 -O -m compileall "$pkgdir"
+	python3 -OO -m compileall "$pkgdir"
+}

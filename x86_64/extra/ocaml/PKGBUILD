@@ -1,0 +1,22 @@
+pkgname=('ocaml')
+pkgver=4.13.1
+pkgrel=1
+pkgdesc="A functional language with OO extensions"
+arch=('x86_64')
+depends=('ncurses')
+source=(https://caml.inria.fr/distrib/ocaml-${pkgver%.*}/${pkgname}-${pkgver}.tar.xz)
+options=('!makeflags' '!emptydirs' 'staticlibs')
+
+build() {
+    cd "${srcdir}/${pkgname}-${pkgver}"
+
+    ./configure --prefix /usr --mandir /usr/share/man --disable-force-safe-string
+
+    make --debug=v world.opt
+}
+
+package_ocaml() {
+    cd "${srcdir}/${pkgname}-${pkgver}"
+
+    make DESTDIR="${pkgdir}" install
+}

@@ -1,0 +1,29 @@
+pkgname=libnma
+pkgver=1.8.32
+pkgrel=1
+arch=('x86_64')
+depends=(gcr gtk+ iso-codes networkmanager)
+makedepends=(vala)
+source=(https://download.gnome.org/sources/libnma/1.8/$pkgname-$pkgver.tar.xz)
+
+prepare() {
+	mkdir -p $pkgname-$pkgver/build
+}
+
+build() {
+	cd $pkgname-$pkgver/build
+
+	meson			\
+	--prefix=/usr		\
+	--buildtype=release	\
+	-D gtk_doc=false	\
+	-D mobile_broadband_provider_info=false ..
+
+	ninja
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+
+	DESTDIR=$pkgdir ninja install
+}

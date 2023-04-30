@@ -1,0 +1,26 @@
+pkgname=perl5-io-string
+rname=IO-String
+pkgver=1.08
+pkgrel=1
+arch=('x86_64')
+depends=(perl)
+makedepends=(make gcc)
+source=(https://www.cpan.org/authors/id/G/GA/GAAS/$rname-$pkgver.tar.gz)
+
+prepare() {
+	cd $rname-$pkgver
+
+	perl Makefile.PL
+}
+
+build() {
+	cd $rname-$pkgver
+
+	make
+}
+
+package() {
+	cd $rname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

@@ -1,0 +1,23 @@
+pkgname=libxft
+pkgver=2.3.4
+pkgrel=1
+arch=('x86_64')
+depends=(fontconfig libxrender)
+makedepends=(pkgconf)
+source=(https://xorg.freedesktop.org/releases/individual/lib/libXft-${pkgver}.tar.bz2)
+
+build() {
+	cd libXft-$pkgver
+
+	./configure		\
+	--prefix=/usr		\
+	--sysconfdir=/etc
+
+	make
+}
+
+package() {
+	cd libXft-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

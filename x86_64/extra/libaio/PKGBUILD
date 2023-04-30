@@ -1,0 +1,24 @@
+pkgname=libaio
+pkgver=0.3.112
+pkgrel=1
+arch=('x86_64')
+depends=(glibc)
+source=(https://ftp.debian.org/debian/pool/main/liba/libaio/libaio_$pkgver.orig.tar.xz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	sed -i '/install.*libaio.a/s/^/#/' src/Makefile
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

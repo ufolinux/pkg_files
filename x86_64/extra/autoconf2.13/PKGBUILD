@@ -1,0 +1,25 @@
+pkgname=autoconf2.13
+pkgver=2.13
+pkgrel=1
+pkgdesc="A GNU tool for automatically configuring source code (Legacy 2.1x version)"
+arch=(x86_64)
+url="https://www.gnu.org/software/autoconf/"
+depends=('perl')
+source=(https://ftp.gnu.org/gnu/autoconf/autoconf-${pkgver}.tar.gz)
+
+build() {
+	cd "${srcdir}/autoconf-${pkgver}"
+
+	./configure --prefix=/usr --infodir=/usr/share/info --program-suffix=-2.13
+
+	make
+}
+
+package() {
+	cd "${srcdir}/autoconf-${pkgver}"
+
+	make prefix="${pkgdir}/usr" infodir="${pkgdir}/usr/share/info" install
+
+	mv "${pkgdir}"/usr/share/info/autoconf{,-2.13}.info
+	mv "${pkgdir}"/usr/share/info/standards{,-2.13}.info
+}

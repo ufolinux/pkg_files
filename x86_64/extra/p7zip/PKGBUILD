@@ -1,0 +1,30 @@
+pkgname=p7zip
+pkgver=17.04
+pkgrel=2
+arch=('x86_64')
+depends=(glibc xorg-server)
+source=(https://github.com/jinfeihan57/p7zip/archive/v17.04/$pkgname-$pkgver.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	sed '/^gzip/d' -i install.sh
+
+	sed -i '160a if(_buffer == nullptr || _size == _pos) return E_FAIL;' CPP/7zip/Common/StreamObjects.cpp
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	make all3
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make \
+	DEST_DIR="$pkgdir" \
+	DEST_HOME=/usr \
+	DEST_MAN=/usr/share/man	\
+	DEST_SHARE_DOC=/usr/share/doc/p7zip install
+}

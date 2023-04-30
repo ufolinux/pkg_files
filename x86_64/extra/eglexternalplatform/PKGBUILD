@@ -1,0 +1,14 @@
+pkgname=eglexternalplatform
+pkgver=1.1
+pkgrel=1
+arch=(x86_64)
+makedepends=(git)
+commitid=7c8f8e2218e46b1a4aa9538520919747f1184d86  # tags/1.1
+source=("git+https://github.com/NVIDIA/eglexternalplatform.git#commit=$commitid")
+
+package() {
+    cd $pkgname
+
+    install -Dt "$pkgdir/usr/include/EGL" -m644 interface/*
+    install -Dt "$pkgdir/usr/share/pkgconfig" -m644 *.pc
+}

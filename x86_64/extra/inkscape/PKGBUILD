@@ -1,0 +1,33 @@
+pkgname=inkscape
+pkgver=1.1.1
+pkgrel=1
+arch=('x86_64')
+depends=(boost double-conversion gc gdl gsl gtkmm libsoup libxslt poppler popt wget potrace lcms)
+source=(https://inkscape.org/gallery/item/29255/$pkgname-$pkgver.tar.xz
+	https://www.linuxfromscratch.org/patches/blfs/svn/$pkgname-$pkgver-poppler_21.11.0-1.patch)
+
+prepare() {
+	cd $pkgname-1.1.1_2021-09-20_3bf5ae0d25
+	mkdir -p build
+	rm -rf build/*
+
+	patch -Np1 -i ../inkscape-1.1.1-poppler_21.11.0-1.patch
+}
+
+build() {
+	cd $pkgname-1.1.1_2021-09-20_3bf5ae0d25/build
+
+	cmake				\
+	-D ENABLE_LCMS=OFF		\
+	-D CMAKE_INSTALL_PREFIX=/usr	\
+	-D CMAKE_BUILD_TYPE=Release	\
+	..
+
+	make
+}
+
+package() {
+	cd $pkgname-1.1.1_2021-09-20_3bf5ae0d25/build
+
+	make DESTDIR=$pkgdir install
+}

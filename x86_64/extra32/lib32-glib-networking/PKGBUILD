@@ -1,0 +1,24 @@
+pkgname=lib32-glib-networking
+pkgver=2.72.0
+pkgrel=1
+arch=(x86_64)
+depends=(glib-networking glib2 lib32-gnutls)
+makedepends=(git meson)
+_tag=e572a436031129bf3d376978d3e8b1f6f934a328
+source=(git+https://gitlab.gnome.org/GNOME/glib-networking.git#tag=${_tag})
+
+build() {
+	export CC='gcc -m32'
+	export PKG_CONFIG=i686-pc-linux-gnu-pkg-config
+
+	meson glib-networking build \
+	--prefix=/usr \
+	--libdir=/usr/lib32
+
+	meson compile -C build
+}
+
+package() {
+	meson install -C build --destdir "${pkgdir}"
+	rm -rf "${pkgdir}"/usr/{lib,share}
+}

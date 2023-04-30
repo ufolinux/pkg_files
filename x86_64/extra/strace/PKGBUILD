@@ -1,0 +1,20 @@
+pkgname=strace
+pkgver=5.14
+pkgrel=2
+arch=('x86_64')
+depends=('libunwind')
+source=(https://github.com/$pkgname/$pkgname/releases/download/v$pkgver/$pkgname-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure --prefix=/usr --with-libunwind --enable-mpers=no
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

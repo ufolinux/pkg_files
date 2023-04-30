@@ -1,0 +1,28 @@
+pkgname=abseil-cpp
+pkgver=20211102.0
+pkgrel=1
+arch=('x86_64')
+makedepends=('cmake')
+source=("https://github.com/abseil/abseil-cpp/archive/$pkgver/$pkgname-$pkgver.tar.gz")
+
+build() {
+	cd "$srcdir/$pkgname-$pkgver"
+
+	cmake -Bbuild \
+	-D CMAKE_BUILD_TYPE=RelWithDebInfo \
+	-D CMAKE_CXX_FLAGS="-DNDEBUG" \
+	-D CMAKE_INSTALL_PREFIX=/usr \
+	-D CMAKE_CXX_STANDARD=17 \
+	-D BUILD_SHARED_LIBS=ON \
+	-D CMAKE_POSITION_INDEPENDENT_CODE=ON
+
+	cd build
+
+	cmake --build .
+}
+
+package() {
+	cd "$srcdir/$pkgname-$pkgver/build"
+
+	DESTDIR="$pkgdir" cmake --install .
+}

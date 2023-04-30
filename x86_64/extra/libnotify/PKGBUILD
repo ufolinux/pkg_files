@@ -1,0 +1,28 @@
+pkgname=libnotify
+pkgver=0.7.9
+pkgrel=1
+arch=('x86_64')
+depends=(gtk+)
+makedepends=(gobject-introspection gtk-doc notification-daemon)
+source=(https://download.gnome.org/sources/$pkgname/0.7/$pkgname-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	mkdir -p build && cd build
+
+	meson			\
+	--prefix=/usr		\
+	--buildtype=release	\
+	-D gtk_doc=false	\
+	-D man=false		\
+	..
+
+	ninja
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+
+	DESTDIR=$pkgdir meson install
+}

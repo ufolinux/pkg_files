@@ -1,0 +1,25 @@
+pkgname=automake-1.15
+pkgver=1.15.1
+pkgrel=2
+arch=('x86_64')
+depends=(perl)
+makedepends=(autoconf)
+source=(https://ftp.gnu.org/gnu/automake/automake-$pkgver.tar.xz)
+
+build() {
+    cd automake-$pkgver
+
+    ./configure --prefix=/usr --program-suffix=-1.15
+    make
+}
+
+package() {
+    cd automake-$pkgver
+    make DESTDIR=$pkgdir install
+
+    rm -rf "$pkgdir"/usr/share/aclocal
+    rm -fv "$pkgdir"/usr/share/man/man1/{automake,aclocal}.1*
+
+    rm -rf "$pkgdir"/usr/share/info
+    rm -rf "$pkgdir"/usr/share/doc
+}

@@ -1,0 +1,45 @@
+pkgname=lib32-fontconfig
+rname=fontconfig
+pkgver=2.14.0
+pkgrel=1
+pkgdesc='Library for configuring and customizing font access'
+url=https://www.freedesktop.org/wiki/Software/fontconfig/
+arch=(x86_64)
+depends=(fontconfig lib32-expat lib32-freetype2)
+makedepends=(git meson gperf lib32-freetype2)
+install=fontconfig-32.install
+source=(
+	https://freedesktop.org/software/$rname/release/$rname-$pkgver.tar.gz
+	fontconfig-32.hook
+)
+
+build() {
+	export CC='gcc -m32'
+	export CXX='g++ -m32'
+	export PKG_CONFIG=i686-pc-linux-gnu-pkg-config
+
+	meson $rname-$pkgver build \
+        --prefix=/usr           \
+	--libdir=/usr/lib32	\
+        --sysconfdir=/etc       \
+        --localstatedir=/var    \
+        -D doc-txt=disabled     \
+        -D doc-pdf=disabled     \
+        -D doc-html=disabled
+
+	meson compile -C build
+}
+
+package() {
+	cd build
+
+	export FONTCONFIG_PATH=/etc/fonts
+	meson install --destdir "$pkgdir"
+
+	cd ..
+
+	rm -r "${pkgdir}"/{etc,usr/{include,share}}
+	mv "${pkgdir}"/usr/bin/fc-cache{,-32}
+	find "${pkgdir}"/usr/bin -type f -not -name '*-32' -delete
+	install -Dm 644 *.hook -t "${pkgdir}"/usr/share/libalpm/hooks/
+}

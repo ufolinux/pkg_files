@@ -1,0 +1,24 @@
+pkgname=python3-libvirt
+rname=libvirt-python
+pkgver=8.5.0
+pkgrel=1
+arch=(x86_64)
+depends=(libvirt python3)
+makedepends=(python3-pip)
+source=(https://libvirt.org/sources/python/libvirt-python-${pkgver}.tar.gz)
+
+prepare() {
+	pip3 install setuptools
+}
+
+build() {
+	cd $rname-$pkgver
+
+	python setup.py build
+}
+
+package() {
+	cd $rname-$pkgver
+
+	python setup.py install --root=$pkgdir --optimize=1
+}

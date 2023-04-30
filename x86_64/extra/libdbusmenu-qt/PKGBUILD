@@ -1,0 +1,30 @@
+pkgname=libdbusmenu-qt
+pkgver=0.9.3
+pkgrel=1
+arch=('x86_64')
+depends=(qt5)
+makedepends=(cmake)
+source=(https://launchpad.net/ubuntu/+archive/primary/+files/libdbusmenu-qt_$pkgver+16.04.20160218.orig.tar.gz)
+
+prepare() {
+	cd $pkgname*/
+
+	mkdir -p build
+}
+
+build() {
+	cd $pkgname*/build
+
+	cmake				\
+	-D CMAKE_INSTALL_PREFIX=/usr	\
+	-D CMAKE_BUILD_TYPE=Release	\
+	-Wno-dev ..
+
+	make
+}
+
+package() {
+	cd $pkgname*/build
+
+	make DESTDIR=$pkgdir install
+}

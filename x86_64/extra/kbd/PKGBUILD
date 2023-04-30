@@ -1,0 +1,28 @@
+pkgname=kbd
+pkgver=2.4.0
+pkgrel=2
+arch=('x86_64')
+depends=(glibc linux-pam)
+source=(https://www.kernel.org/pub/linux/utils/$pkgname/$pkgname-$pkgver.tar.xz
+	http://www.linuxfromscratch.org/patches/lfs/development/kbd-$pkgver-backspace-1.patch)
+
+build() {
+        cd $pkgname-$pkgver
+
+        patch -Np1 -i ../$pkgname-$pkgver-backspace-1.patch
+
+        sed -i 's/\(RESIZECONS_PROGS=\)yes/\1no/g' configure
+        sed -i 's/resizecons.8 //' docs/man/man8/Makefile.in
+
+	[ -d /tools/lib/pkgconfig ] && export PKG_CONFIG_PATH=/tools/lib/pkgconfig
+        ./configure --prefix=/usr --disable-vlock
+        make
+}
+
+package() {
+	cd $pkgname-$pkgver
+        make DESTDIR=$pkgdir install
+
+        mkdir -p $pkgdir/bin
+        mv -v $pkgdir/usr/bin/{dumpkeys,kbd_mode,loadkeys,setfont} $pkgdir/bin
+}

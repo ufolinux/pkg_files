@@ -1,0 +1,32 @@
+pkgname=lib32-libxkbcommon
+pkgver=1.4.0
+pkgrel=1
+arch=(x86_64)
+makedepends=(
+  git lib32-libxcb lib32-libxml2
+  lib32-wayland meson wayland-protocols util-macros
+)
+checkdepends=(
+    libglvnd
+)
+_tag=6e8f0d331715a3672f5c663b704b9ea5caabe113
+source=(git+https://github.com/xkbcommon/libxkbcommon#tag=${_tag})
+
+build() {
+    export CC='gcc -m32'
+    export PKG_CONFIG='i686-pc-linux-gnu-pkg-config'
+
+    meson libxkbcommon build \
+    --prefix=/usr \
+    --libdir=/usr/lib32 \
+    -D enable-docs=false \
+    -D enable-tools=false
+
+    meson compile -C build
+}
+
+package() {
+    meson install -C build --destdir "${pkgdir}"
+
+    rm -rf "${pkgdir}"/usr/{bin,include,lib,share}
+}

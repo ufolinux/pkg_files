@@ -1,0 +1,30 @@
+_pkgbasename=giflib
+pkgname=lib32-$_pkgbasename
+pkgver=5.2.1
+pkgrel=1
+arch=('x86_64')
+depends=($_pkgbasename)
+makedepends=('xmlto' 'docbook-xsl' 'docbook-xml')
+source=(https://downloads.sourceforge.net/project/giflib/${_pkgbasename}-${pkgver}.tar.gz
+        giflib-5.1.9-fix-missing-quantize-API-symbols.patch
+        giflib-5.1.9-make-flags.patch)
+
+prepare() {
+	cd ${_pkgbasename}-${pkgver}
+
+	patch -Np1 < ../giflib-5.1.9-fix-missing-quantize-API-symbols.patch
+	patch -Np1 < ../giflib-5.1.9-make-flags.patch
+}
+
+build() {
+	cd ${_pkgbasename}-${pkgver}
+
+	make CC="gcc -m32"
+}
+
+package() {
+	cd ${_pkgbasename}-${pkgver}
+	make PREFIX=/usr LIBDIR=/usr/lib32 DESTDIR="${pkgdir}" install
+
+	rm -rf "${pkgdir}"/usr/{include,share,bin}
+}

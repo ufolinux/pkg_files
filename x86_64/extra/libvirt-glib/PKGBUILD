@@ -1,0 +1,30 @@
+pkgname=libvirt-glib
+pkgver=4.0.0
+pkgrel=1
+arch=(x86_64)
+depends=(libvirt libcap-ng)
+makedepends=(meson intltool gobject-introspection python3 vala)
+source=(https://libvirt.org/sources/glib/$pkgname-$pkgver.tar.xz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	mkdir -p build && cd build
+
+	meson setup \
+	--prefix=/usr \
+	--buildtype=release \
+	..
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	ninja -C build
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	DESTDIR=$pkgdir ninja -C build install
+}

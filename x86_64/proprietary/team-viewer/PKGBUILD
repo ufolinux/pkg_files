@@ -1,0 +1,19 @@
+pkgname=team-viewer
+pkgver=14x
+pkgrel=1
+arch=('x86_64')
+depends=(glibc qt libglvnd mesa dbus lz4 icu glib2 nss shared-mime-info libx11 libxcb libxcomposite libxcursor libxdamage libxext
+	 libxfixes libxi libxrender libxtst  libxrandr libxkbcommon libxss systemd pcre sqlite3 libxau libxdmcp libcap libgcrypt libgpg-error minizip)
+source=(https://download.teamviewer.com/download/linux/version_14x/teamviewer_amd64.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	echo "Nothing to do"
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	
+}

@@ -1,0 +1,32 @@
+pkgname=base-chroot
+pkgver=2023.1
+pkgrel=1
+pkgdesc="Base metapckage alike pkg to give user/dev needed CLI-System"
+arch=('x86_64')
+source=()
+depends=(
+	# Base packages
+	accountsservice ca-certificates diffutils file gnu-efi kmod libnl linux-pam pciutils procps-ng tar xz
+	acl dosfstools filesystem gzip less libseccomp lz4 pcre readline texinfo zlib
+	attr coreutils freetype2 iana-etc libarchive libtasn1 lzo pcre2 sed tzdata
+	cpio duktape fuse2 icu libcap ncurses shadow util-linux
+	bash curl e2fsprogs gawk inetutils libevent libx11 openssl pkgconf squashfs-tools wget
+	binutils dbus gettext intltool libffi libxcrypt p11-kit polkit syslinux which
+	bzip2 dhcpcd expat glib2 iproute2 libgudev libxml2 popt systemd wpa_supplicant
+	findutils nghttp2
+
+	# pkg manager
+	bottle)
+
+build() {
+	mkdir -p $pkgname-$pkgver
+	cd $pkgname-$pkgver
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	# Make rootfs structure
+	mkdir -vp $pkgdir/etc/systemd/system/
+	mkdir -vp $pkgdir/usr/bin
+}

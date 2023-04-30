@@ -1,0 +1,28 @@
+pkgname=mdadm
+pkgver=4.2
+pkgrel=1
+arch=('x86_64')
+makedepends=(gcc)
+source=(https://www.kernel.org/pub/linux/utils/raid/mdadm/mdadm-$pkgver.tar.xz
+	disable-werror.patch)
+
+prepare() {
+	cd $pkgname-$pkgver
+	patch -Np0 -i ${srcdir}/disable-werror.patch
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	make CXFLAGS="$CFLAGS" BINDIR=/usr/bin UDEVDIR=/usr/lib/udev 
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make INSTALL=/usr/bin/install BINDIR=/usr/bin DESTDIR="$pkgdir" UDEVDIR=/usr/lib/udev install
+	make SYSTEMD_DIR="$pkgdir"/usr/lib/systemd/system install-systemd
+
+	mkdir -p $pkgdir/usr/lib/initcpio/install/mdadm
+	ln -s mdadm_udev "$pkgdir"/usr/lib/initcpio/install/mdadm
+}

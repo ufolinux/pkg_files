@@ -1,0 +1,30 @@
+pkgname=xdg-user-dirs
+pkgver=0.17
+pkgrel=1
+arch=('x86_64')
+depends=(bash systemd)
+makedepends=(docbook-xsl git)
+commitid=(5defafb5702eb6edc247f52a67e58f0c4f598b42)
+source=(git+https://gitlab.freedesktop.org/xdg/xdg-user-dirs.git#commit=$commitid)
+
+prepare() {
+	cd $pkgname
+
+	NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+	cd $pkgname
+
+	./configure		\
+	--prefix=/usr		\
+	--sysconfdir=/etc
+
+	make
+}
+
+package() {
+	cd $pkgname
+
+	make DESTDIR=$pkgdir install
+}

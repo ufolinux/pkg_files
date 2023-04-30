@@ -1,0 +1,19 @@
+post_upgrade() {
+	echo
+	echo "[!]: installing setuptools"
+	pip3 install setuptools
+
+	echo
+	echo "[!]: Installing fdroid deps"
+	pip3 install doxypypy doxyqml jinja2 pyyaml
+
+	pip3 install pyasn1 requests ruamel-yaml pillow gitpython androguard paramiko qrcode
+
+	pip3 install apache-libcloud clint defusedxml mwclient python-vagrant yamllint
+
+	pip3 install pyasn1_modules
+}
+
+post_install() {
+	post_upgrade
+}

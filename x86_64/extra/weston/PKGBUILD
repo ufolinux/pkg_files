@@ -1,0 +1,30 @@
+pkgname=weston
+pkgver=10.0.0
+pkgrel=1
+arch=('x86_64')
+depends=(wayland libdrm cairo libpng pango glib2 mesa systemd dbus lcms libxcb libx11 libxcursor)
+source=(https://wayland.freedesktop.org/releases/$pkgname-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+	mkdir -p build && cd build
+
+	meson					\
+	--prefix=/usr				\
+	--buildtype=release			\
+	-D image-webp=false			\
+	-D backend-drm-screencast-vaapi=false	\
+	-D backend-rdp=false			\
+	-D color-management-colord=false	\
+	-D remoting=false			\
+	-D pipewire=false			\
+	..
+
+	ninja
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+
+	DESTDIR=$pkgdir ninja install
+}

@@ -1,0 +1,20 @@
+pkgname=gzip
+pkgver=1.11
+pkgrel=1
+arch=('x86_64')
+depends=(glibc bash)
+source=(https://ftp.gnu.org/gnu/$pkgname/$pkgname-$pkgver.tar.xz)
+
+build() {
+        cd $pkgname-$pkgver
+
+        ./configure --prefix=/usr
+        make
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+	mkdir -p $pkgdir/bin
+        mv -v $pkgdir/usr/bin/gzip $pkgdir/bin
+}

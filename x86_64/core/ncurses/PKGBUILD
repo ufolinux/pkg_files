@@ -1,0 +1,59 @@
+pkgname=ncurses
+pkgver=6.3
+pkgrel=1
+arch=('x86_64')
+depends=(glibc)
+makedepends=(autoconf-archive )
+source=(https://ftp.gnu.org/gnu/$pkgname/$pkgname-$pkgver.tar.gz)
+
+build() {
+        cd $pkgname-$pkgver
+
+        sed -i '/LIBTOOL_INSTALL/d' c++/Makefile.in
+
+	./configure \
+	--prefix=/usr \
+        --mandir=/usr/share/man \
+        --with-shared \
+        --with-cxx-shared \
+        --without-debug \
+        --without-normal \
+        --enable-pc-files \
+        --enable-widec \
+	--with-versioned-syms
+
+        make
+}
+
+package() {
+        cd $pkgname-$pkgver
+
+        make DESTDIR=$pkgdir install
+
+        mkdir -p $pkgdir/lib
+        mv -v $pkgdir/usr/lib/libncursesw.so.6* $pkgdir/lib
+        mkdir -p $pkgdir/usr/lib
+        ln -sfv ../../lib/$(readlink $pkgdir/usr/lib/libncursesw.so) $pkgdir/usr/lib/libncursesw.so
+
+        for lib in ncurses form panel menu ; do
+            rm -vf                    $pkgdir/usr/lib/lib${lib}.so
+            echo "INPUT(-l${lib}w)" > $pkgdir/usr/lib/lib${lib}.so
+        mkdir -p $pkgdir/usr/lib/pkgconfig/
+            ln -sfv ${lib}w.pc        $pkgdir/usr/lib/pkgconfig/${lib}.pc
+        done
+
+        rm -vf                     $pkgdir/usr/lib/libcursesw.so
+        echo "INPUT(-lncursesw)" > $pkgdir/usr/lib/libcursesw.so
+        ln -sfv libncurses.so      $pkgdir/usr/lib/libcurses.so
+
+        # Some backwards compatability for foreign tools
+        # Example where compiling AOSP will whine about missing *.5 lib symlink
+        # libncurses.so.5: cannot open shared object file: No such file or directory
+
+        for compat in ncurses ncurses++ form panel menu; do
+		ln -sfv libncursesw.so $pkgdir/usr/lib/lib${compat}.so.5
+	done
+
+	ln -sfv libncursesw.so $pkgdir/usr/lib/libtinfo.so.5
+	ln -sfv libncursesw.so $pkgdir/usr/lib/libtic.so.5
+}

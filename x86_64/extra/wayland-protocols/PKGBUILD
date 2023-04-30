@@ -1,0 +1,24 @@
+pkgname=wayland-protocols
+pkgver=1.30
+pkgrel=1
+arch=('x86_64')
+depends=('wayland')
+source=(https://gitlab.freedesktop.org/wayland/wayland-protocols/-/releases/$pkgver/downloads/$pkgname-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	mkdir -p build && cd build
+
+	meson		\
+	--prefix=/usr	\
+	--buildtype=release
+
+	ninja
+}
+
+package() {
+	cd $pkgname-$pkgver
+	cd build
+	DESTDIR=$pkgdir ninja install
+}

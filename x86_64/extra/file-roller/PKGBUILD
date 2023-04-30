@@ -1,0 +1,30 @@
+pkgname=file-roller
+pkgver=3.40.0
+pkgrel=1
+pkgdesc="Create and modify archives"
+url="https://wiki.gnome.org/Apps/FileRoller"
+arch=(x86_64)
+depends=(gtk+ dconf libarchive file json-glib libnotify zip unzip)
+makedepends=(git meson)
+optdepends=('p7zip: 7z, arj, exe and encrypted zip files support'
+	'unrar: better RAR archive support'
+	'unace: ACE archive support'
+	'lrzip: lrzip archive support'
+	'squashfs-tools: squashfs image support')
+_commit=d5cfba5a4e86b2e8118113be410f39fc854b1df7  # tags/3.40.0^0
+source=("git+https://gitlab.gnome.org/GNOME/file-roller.git#commit=$_commit")
+
+prepare() {
+	cd $pkgname
+}
+
+build() {
+	meson $pkgname build \
+	--prefix=/usr
+
+	meson compile -C build
+}
+
+package() {
+	DESTDIR="$pkgdir" meson install -C build
+}

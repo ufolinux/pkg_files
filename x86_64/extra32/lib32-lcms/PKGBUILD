@@ -1,0 +1,28 @@
+_pkgbasename=lcms2
+pkgname=lib32-lcms
+pkgver=2.12
+pkgrel=1
+pkgdesc="Small-footprint color management engine, version 2 (32-bit)"
+arch=('x86_64')
+depends=('lib32-libtiff' lcms)
+source=("https://github.com/mm2/Little-CMS/archive/${pkgver}/${_pkgbasename}-${pkgver}.tar.gz")
+
+build() {
+	export CC="gcc -m32"
+	export CXX="g++ -m32"
+	export PKG_CONFIG_PATH="/usr/lib32/pkgconfig"
+
+	cd Little-CMS-${pkgver}
+
+	./configure --prefix=/usr --libdir=/usr/lib32
+
+	make
+}
+
+package() {
+	cd Little-CMS-${pkgver}
+
+	make DESTDIR="${pkgdir}" install
+
+	rm -rf "${pkgdir}"/usr/{include,share,bin}
+}

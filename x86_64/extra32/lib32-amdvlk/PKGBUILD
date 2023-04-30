@@ -1,0 +1,58 @@
+pkgname=lib32-amdvlk
+pkgver=2022.Q2.3
+pkgrel=1
+arch=(x86_64)
+makedepends=('python3' 'lib32-wayland' 'lib32-libxrandr' 'xorg-server' 'cmake' 'ninja' 'git')
+makedepends+=('llvm' 'clang' 'lld' 'perl-modules' 'python2' 'repo')
+options=('!lto')
+
+prepare() {
+  mkdir -p amdvlk && cd amdvlk
+
+  repo init -u https://github.com/GPUOpen-Drivers/AMDVLK.git -b refs/tags/v-$pkgver --depth=1
+
+  repo sync --force-sync --no-clone-bundle --no-tags
+}
+
+build() {
+  cd $srcdir/amdvlk/drivers/spvgen/external
+  python2 fetch_external_sources.py
+
+  cd $srcdir/amdvlk/drivers
+
+  export PKG_CONFIG_PATH="/usr/lib32/pkgconfig"
+
+  # use lld and clang to fix linking error
+  # https://github.com/GPUOpen-Drivers/llpc/issues/1645
+  cd ${srcdir}/xgl
+  cmake -H. -B builds/Release -S xgl \
+    -D CMAKE_C_COMPILER=clang \
+    -D CMAKE_CXX_COMPILER=clang++ \
+    -D LLVM_USE_LINKER=lld \
+    -D CMAKE_EXE_LINKER_FLAGS='-fuse-ld=lld' \
+    -D CMAKE_SHARED_LINKER_FLAGS='-fuse-ld=lld' \
+    -D CMAKE_BUILD_TYPE=Release \
+    -D CMAKE_C_FLAGS=-m32 \
+    -D CMAKE_CXX_FLAGS=-m32 \
+    -D LLVM_TARGET_ARCH:STRING=i686 \
+    -D LLVM_DEFAULT_TARGET_TRIPLE="i686-pc-linux-gnu" \
+    -D BUILD_WAYLAND_SUPPORT=On \
+    -G Ninja
+
+  ninja -C builds/Release
+}
+
+package() {
+  install -m755 -d "${pkgdir}"/usr/lib32
+  install -m755 -d "${pkgdir}"/usr/share/vulkan/icd.d
+  install -m755 -d "${pkgdir}"/usr/share/vulkan/implicit_layer.d
+  install -m755 -d "${pkgdir}"/usr/share/licenses/${pkgname}
+
+  install xgl/builds/Release/icd/amdvlk32.so "${pkgdir}"/usr/lib32/
+  install xgl/builds/Release/icd/amd_icd32.json "${pkgdir}"/usr/share/vulkan/icd.d/
+  install xgl/builds/Release/icd/amd_icd32.json "${pkgdir}"/usr/share/vulkan/implicit_layer.d/
+  install AMDVLK/LICENSE.txt "${pkgdir}"/usr/share/licenses/${pkgname}/
+
+  sed -i "s/\/lib/\/lib32/g" "${pkgdir}"/usr/share/vulkan/icd.d/amd_icd32.json
+  sed -i "s/\/lib/\/lib32/g" "${pkgdir}"/usr/share/vulkan/implicit_layer.d/amd_icd32.json
+}

@@ -1,0 +1,24 @@
+# Ignore available pkg files
+**/*.pkg.tar.gz
+
+# Now ignore other things that are not needed to be included in .git
+**/pkg
+**/src
+**/*xz*
+**/*tar.gz
+**/*tar.bz2
+**/*.zip
+**/*tgz
+**/*tar.zst
+**/*sign*
+**/*sig*
+**/*asc*
+**/.git
+**/*.dat.gz
+**/*.save
+
+# Ignore all of the extra folders in pkgbuild dir
+*/*/*/*/
+
+# Also ignore this
+**/key

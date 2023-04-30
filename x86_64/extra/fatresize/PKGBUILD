@@ -1,0 +1,27 @@
+pkgname=fatresize
+pkgver=1.1.0
+pkgrel=1
+pkgdesc='A utility to resize FAT filesystems using libparted'
+arch=(x86_64)
+depends=(parted)
+source=($pkgname-$pkgver.tar.gz::"https://github.com/ya-mouse/fatresize/archive/v$pkgver.tar.gz")
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	autoreconf -fisv
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure --prefix=/usr --sbindir=/usr/bin
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR="$pkgdir" install
+}

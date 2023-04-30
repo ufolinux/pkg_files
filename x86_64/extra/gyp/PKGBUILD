@@ -1,0 +1,33 @@
+pkgname=gyp
+pkgver=20190716.fcd686f1
+pkgrel=1
+arch=('x86_64')
+depends=(python3 ninja)
+makedepends=(git)
+_commit=fcd686f1880fa52a1ee78d3e98af1b88cb334528 # changes/82/1701782/5
+source=(git+https://chromium.googlesource.com/external/gyp#commit=$_commit
+	gyp-fips.patch
+	gyp-fix-cmake.patch
+	gyp-python38.patch
+	gyp-python39.patch)
+
+prepare() {
+  cd $pkgname
+
+  # Commit date + short rev
+  echo $(TZ=UTC git show -s --pretty=%cd --date=format-local:%Y%m%d HEAD).$(git rev-parse --short HEAD)
+
+  # Python 3 fixes from Fedora
+  git apply -3 ../*.patch
+}
+
+build() {
+  cd $pkgname
+  python setup.py build
+}
+
+package() {
+  cd $pkgname
+  python setup.py install --root="$pkgdir" --optimize=1 --skip-build
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 LICENSE
+}

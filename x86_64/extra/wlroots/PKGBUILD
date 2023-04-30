@@ -1,0 +1,22 @@
+pkgname=wlroots
+pkgver=0.15.1
+pkgrel=1
+arch=(x86_64)
+depends=(libglvnd libinput wayland systemd libxcb libxkbcommon mesa xcb-util-errors xcb-util-renderutil
+	xcb-util-wm)
+makedepends=(glslang meson ninja vulkan-headers wayland-protocols xwayland)
+source=(https://gitlab.freedesktop.org/wlroots/wlroots/-/releases/$pkgver/downloads/$pkgname-$pkgver.tar.gz)
+
+build() {
+	meson \
+	--prefix=/usr \
+	$pkgname-$pkgver build
+
+	ninja -C build
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	DESTDIR=$pkgdir ninja install -C build
+}

@@ -1,0 +1,35 @@
+pkgname=benchmark
+pkgver=1.6.1
+pkgrel=1
+arch=('x86_64')
+depends=('gcc')
+makedepends=('cmake')
+source=("https://github.com/google/$pkgname/archive/v$pkgver/$pkgname-$pkgver.tar.gz")
+
+prepare() {
+    cd "$srcdir/$pkgname-$pkgver"
+
+    mkdir -p build
+}
+
+build() {
+    cd "$srcdir/$pkgname-$pkgver/build"
+
+    cmake \
+    -D CMAKE_BUILD_TYPE=None \
+    -D CMAKE_CXX_FLAGS="${CXXFLAGS} -DNDEBUG" \
+    -D CMAKE_INSTALL_PREFIX=/usr \
+    -D CMAKE_INSTALL_LIBDIR=lib \
+    -D BUILD_SHARED_LIBS=ON \
+    -D BENCHMARK_ENABLE_LTO=ON \
+    -D BENCHMARK_ENABLE_GTEST_TESTS=OFF \
+    ..
+
+    make
+}
+
+package() {
+    cd "$srcdir/$pkgname-$pkgver/build"
+
+    make DESTDIR="$pkgdir/" install
+}

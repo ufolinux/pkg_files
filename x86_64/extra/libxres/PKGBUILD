@@ -1,0 +1,21 @@
+pkgname=libxres
+pkgver=1.2.1
+pkgrel=1
+arch=('x86_64')
+depends=(libxext)
+makedepends=(util-macros xorgproto)
+source=(https://xorg.freedesktop.org/releases/individual/lib/libXres-${pkgver}.tar.bz2)
+
+build() {
+	cd "libXres-${pkgver}"
+
+	./configure --prefix=/usr --sysconfdir=/etc
+
+	make
+}
+
+package() {
+	cd "libXres-${pkgver}"
+
+	make DESTDIR="${pkgdir}" install
+}

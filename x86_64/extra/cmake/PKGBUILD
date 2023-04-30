@@ -1,0 +1,30 @@
+pkgname=cmake
+pkgver=3.23.2
+pkgrel=1
+arch=('x86_64')
+depends=('curl' 'hicolor-icon-theme' 'expat' 'nghttp2' 'jsoncpp' 'libuv' 'libarchive' 'gcc' 'zstd')
+source=(https://cmake.org/files/v3.23/$pkgname-$pkgver.tar.gz)
+
+build() {
+        cd $pkgname-$pkgver
+	
+	sed -i '/"lib64"/s/64//' Modules/GNUInstallDirs.cmake
+	
+	./configure		\
+	--prefix=/usr		\
+	--system-libs		\
+	--system-zstd		\
+	--system-zlib		\
+	--system-jsoncpp	\
+	--system-curl		\
+	--system-nghttp2	\
+	--no-qt-gui		\
+	--no-system-librhash
+
+        make -j6
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+}

@@ -1,0 +1,40 @@
+pkgname=protobuf
+pkgver=3.19.4
+pkgrel=1
+arch=('x86_64')
+depends=(gcc glibc zlib)
+makedepends=(python3-pip unzip)
+source=(https://github.com/protocolbuffers/$pkgname/releases/download/v$pkgver/$pkgname-all-$pkgver.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	pip install setuptools
+
+	autoreconf -fi
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure	\
+	--prefix=/usr
+
+	make
+
+	cd python
+	python setup.py build --cpp_implementation
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+
+	cd python
+
+	python setup.py install --skip-build	\
+			--cpp_implementation	\
+			--optimize=1		\
+			--root="$pkgdir"
+}

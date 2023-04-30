@@ -1,0 +1,20 @@
+pkgname=which
+pkgver=2.21
+pkgrel=2
+arch=('x86_64')
+depends=(glibc bash)
+source=(https://ftp.gnu.org/gnu/$pkgname/$pkgname-$pkgver.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure	\
+	--prefix=/usr
+
+        make
+}
+
+package() {
+        cd $pkgname-$pkgver
+        make DESTDIR=$pkgdir install
+}

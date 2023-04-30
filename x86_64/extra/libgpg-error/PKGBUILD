@@ -1,0 +1,19 @@
+pkgname=libgpg-error
+pkgver=1.42
+pkgrel=1
+arch=('x86_64')
+source=(https://gnupg.org/ftp/gcrypt/$pkgname/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure --prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

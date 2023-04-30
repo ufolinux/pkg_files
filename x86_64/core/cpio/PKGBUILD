@@ -1,0 +1,25 @@
+pkgname=cpio
+pkgver=2.13
+pkgrel=2
+arch=('x86_64')
+depends=(glibc)
+source=(https://ftp.gnu.org/gnu/$pkgname/$pkgname-$pkgver.tar.gz)
+
+build() {
+        cd $pkgname-$pkgver
+
+	sed -i '/The name/,+2 d' src/global.c
+
+	./configure --prefix=/usr         \
+		    --enable-mt		  \
+	            --bindir=/bin         \
+	            --libexecdir=/usr/lib \
+		    --with-rmt=/usr/libexec/rmt
+        make
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+	rm -r $pkgdir/usr/share/man/man8
+}

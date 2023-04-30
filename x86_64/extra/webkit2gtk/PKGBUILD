@@ -1,0 +1,43 @@
+pkgname=webkit2gtk
+pkgver=2.36.4
+pkgrel=1
+arch=('x86_64')
+depends=(cairo gtk3+ icu libgudev libsecret libsoup libtasn1 libwebp mesa
+	openjpeg ruby3 sqlite3 which wpebackend-fdo gobject-introspection
+	hicolor-icon-theme libnotify gtk-doc harfbuzz wayland)
+makedepends=(cmake)
+source=(https://webkitgtk.org/releases/webkitgtk-$pkgver.tar.xz)
+
+prepare() {
+	mkdir -p build
+}
+
+build() {
+	cd build
+
+	cmake					\
+	-D CMAKE_BUILD_TYPE=Release		\
+	-D CMAKE_INSTALL_PREFIX=/usr		\
+	-D CMAKE_SKIP_RPATH=ON			\
+	-D PORT=GTK				\
+	-D LIB_INSTALL_DIR=/usr/lib		\
+	-D USE_LIBHYPHEN=OFF			\
+	-D ENABLE_GLES2=ON			\
+	-D ENABLE_GAMEPAD=OFF			\
+	-D ENABLE_SPELLCHECK=OFF		\
+	-D ENABLE_MINIBROWSER=ON		\
+	-D GSTREAMER_ENABLE=ON			\
+	-D USE_WOFF2=OFF			\
+	-D USE_SOUP2=ON				\
+	-D USE_WPE_RENDERER=ON			\
+	-D ENABLE_BUBBLEWRAP_SANDBOX=OFF	\
+	-Wno-dev -G Ninja ../webkitgtk-$pkgver
+
+	ninja
+}
+
+package() {
+	cd build
+
+	DESTDIR=$pkgdir ninja install
+}

@@ -1,0 +1,22 @@
+pkgname=libmnl
+pkgver=1.0.4
+pkgrel=1
+arch=('x86_64')
+depends=(glibc)
+makedepends=(gcc)
+source=(https://www.netfilter.org/projects/$pkgname/files/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure	\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

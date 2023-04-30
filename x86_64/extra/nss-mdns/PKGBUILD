@@ -1,0 +1,26 @@
+pkgname=nss-mdns
+pkgver=0.15.1
+pkgrel=1
+arch=(x86_64)
+depends=(glibc avahi)
+makedepends=(make)
+source=(https://github.com/lathiat/nss-mdns/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	./configure \
+	--prefix=/usr
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

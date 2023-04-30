@@ -1,0 +1,40 @@
+pkgname=lib32-alsa-plugins
+iname=alsa-plugins
+pkgver=1.2.6
+pkgrel=1
+arch=('x86_64')
+depends=(lib32-alsa-lib)
+makedepends=(lib32-dbus lib32-pulseaudio)
+source=(https://www.alsa-project.org/files/pub/plugins/${iname}-$pkgver.tar.bz2)
+
+prepare() {
+	cd $iname-$pkgver
+
+	autoreconf -fi
+}
+
+build() {
+	cd $iname-$pkgver
+
+	export CC="gcc -m32"
+	export CXX="g++ -m32"
+	export PKG_CONFIG="i686-pc-linux-gnu-pkg-config"
+
+	./configure \
+	--prefix=/usr \
+	--disable-jack \
+	--disable-arcamav \
+	--disable-samplerate \
+	--libdir=/usr/lib32 \
+	--enable-maemo-plugin
+
+	make
+}
+
+package() {
+	cd $iname-$pkgver
+
+	make DESTDIR=$pkgdir install
+
+	rm -rfv "$pkgdir"/{etc,usr/share}
+}

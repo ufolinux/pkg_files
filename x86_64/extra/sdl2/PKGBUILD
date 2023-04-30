@@ -1,0 +1,26 @@
+pkgname=sdl2
+pkgver=2.26.1
+pkgrel=1
+arch=('x86_64')
+depends=('glibc' 'libxext' 'libxrender' 'libx11' 'libglvnd' 'libxcursor' 'ibus' 'libusb')
+makedepends=('alsa-lib' 'mesa' 'pulseaudio' 'libxrandr' 'libxinerama' 'wayland' 'libxkbcommon'
+    'wayland-protocols' 'ibus' 'libxss' 'cmake' 'jack2' 'ninja' 'libdecor')
+source=("https://www.libsdl.org/release/SDL2-${pkgver}.tar.gz")
+
+build() {
+    CFLAGS+=" -ffat-lto-objects"
+    cmake -S SDL2-${pkgver} -B build -G Ninja \
+    -D CMAKE_INSTALL_PREFIX=/usr \
+    -D SDL_STATIC=ON \
+    -D SDL_DLOPEN=ON \
+    -D SDL_RPATH=OFF
+
+    cmake --build build
+}
+
+package() {
+    DESTDIR="${pkgdir}" cmake --install build
+
+    # For some reason, this isn't named correctly and we have to fix it to reflect the actual staticlib name.
+    sed -i "s/libSDL2\.a/libSDL2main.a/g" "$pkgdir"/usr/lib/cmake/SDL2/SDL2Targets-noconfig.cmake
+}

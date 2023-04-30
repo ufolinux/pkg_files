@@ -1,0 +1,29 @@
+pkgname=xf86-video-qxl
+pkgver=0.1.5
+pkgrel=1
+arch=('x86_64')
+depends=(xorg-server libxfont2 systemd)
+makedepends=(spice-protocol xorgproto libcacard git)
+commitid=52e975263fe88105d151297768c7ac675ed94122
+source=(git+https://gitlab.freedesktop.org/xorg/driver/xf86-video-qxl.git#commit=$commitid)
+
+prepare() {
+	cd $pkgname
+
+	autoreconf -fvi
+}
+
+build() {
+	cd $pkgname
+
+	./configure \
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname
+
+	make DESTDIR=$pkgdir install
+}

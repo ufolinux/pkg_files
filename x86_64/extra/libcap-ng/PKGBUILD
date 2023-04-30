@@ -1,0 +1,31 @@
+pkgname=libcap-ng
+pkgver=0.8.3
+pkgrel=1
+arch=(x86_64)
+depends=(glibc)
+makedepends=(python3 swig)
+source=(https://github.com/stevegrubb/libcap-ng/archive/v${pkgver}/${pkgname}-${pkgver}.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	autoreconf -fiv
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure \
+	--prefix=/usr \
+	--enable-static=no \
+	--without-python \
+	--with-python3
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR="$pkgdir" install
+}

@@ -1,0 +1,23 @@
+pkgname=ufo-desktop-xfce
+pkgver=2022.3
+pkgrel=1
+arch=(x86_64)
+depends=(
+	libxfce4ui thunar-archive-plugin tumbler xfce4-notifyd xfce4-pulseaudio-plugin xfce4-settings xfdesktop
+	exo libxfce4util thunar-vcs-plugin xfce4-appfinder xfce4-panel xfce4-screenshooter xfce4-terminal xfwm4
+	garcon thunar thunar-volman xfce4-dev-tools xfce4-power-manager xfce4-session xfconf ufo-fonts)
+source=(
+	settings.ini
+	xfwm4.xml)
+
+build() {
+	echo "Nothing to make as its metapackage"
+}
+
+package() {
+	mkdir -p $pkgdir/etc/xdg/xfce4/xfconf/xfce-perchannel-xml \
+	$pkgdir/etc/xdg/gtk-3.0
+
+	cp -f $srcdir/xfwm4.xml $pkgdir/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/
+	cp -f $srcdir/settings.ini $pkgdir/etc/xdg/gtk-3.0/
+}

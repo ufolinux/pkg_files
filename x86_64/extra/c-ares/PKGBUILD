@@ -1,0 +1,25 @@
+pkgname=c-ares
+pkgver=1.18.1
+pkgrel=1
+pkgdesc="A C library for asynchronous DNS requests"
+arch=('x86_64')
+url="https://c-ares.haxx.se/"
+depends=('glibc')
+makedepends=('cmake')
+source=("https://github.com/${pkgname}/${pkgname}/releases/download/${pkgname//-}-${pkgver//./_}/${pkgname}-${pkgver}.tar.gz"{,.asc})
+
+build() {
+	cd "$pkgname-$pkgver"
+	cmake -DCMAKE_INSTALL_PREFIX=/usr \
+	-DCMAKE_BUILD_TYPE='None' \
+	-Wno-dev \
+	-B build \
+	-S .
+
+	make VERBOSE=1 -C build
+}
+
+package() {
+	cd "$pkgname-$pkgver"
+	make DESTDIR="${pkgdir}" install -C build
+}

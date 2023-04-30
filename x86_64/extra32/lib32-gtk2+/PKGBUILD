@@ -1,0 +1,47 @@
+_pkgbasename=gtk2
+pkgname=lib32-${_pkgbasename}+
+pkgver=2.24.33
+pkgrel=1
+pkgdesc="GObject-based multi-platform GUI toolkit (legacy) (32-bit)"
+arch=('x86_64')
+url="https://www.gtk.org/"
+install=gtk2+.install
+depends=(lib32-{'atk>','pango','cairo','gdk-pixbuf'}
+         lib32-lib{xcursor,'xrandr','xi',xinerama,xcomposite,xdamage}
+         gtk2+ lib32-cups)
+makedepends=('python3')
+source=(https://download.gnome.org/sources/gtk+/2.24/gtk+-${pkgver}.tar.xz
+        xid-collision-debug.patch)
+
+prepare() {
+  cd "${srcdir}/gtk+-${pkgver}"
+
+  patch -Np1 -i "${srcdir}/xid-collision-debug.patch"
+}
+
+build() {
+  export CC="gcc -m32"
+  export CXX="g++ -m32"
+  export PKG_CONFIG_PATH="/usr/lib32/pkgconfig"
+
+  cd "${srcdir}/gtk+-${pkgver}"
+
+  ./configure --prefix=/usr \
+      --sysconfdir=/etc \
+      --localstatedir=/var \
+      --libdir=/usr/lib32 \
+      --with-xinput=yes
+
+  make
+}
+
+package() {
+  cd "${srcdir}/gtk+-${pkgver}"
+  make DESTDIR="${pkgdir}" install
+  rm -rf "${pkgdir}"/etc
+  rm -rf "${pkgdir}"/usr/{include,share}
+
+  cd "${pkgdir}"/usr/bin
+  mv gtk-query-immodules-2.0 gtk-query-immodules-2.0-32
+  rm -f gtk-builder-convert gtk-demo gtk-update-icon-cache
+}

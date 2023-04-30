@@ -1,0 +1,49 @@
+pkgname=alsa-plugins
+pkgver=1.2.7.1
+pkgrel=1
+arch=(x86_64)
+makedepends=(alsa-lib dbus ffmpeg jack2 libavtp pulseaudio pipewire)
+source=("https://www.alsa-project.org/files/pub/plugins/$pkgname-$pkgver.tar.bz2"
+	pulse-sysdefault.diff)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	# Make use of the pulse plugin's "fallback" feature
+	# Keeps parity with our old config from pulseaudio-alsa
+	patch -Np1 -i ../pulse-sysdefault.diff
+
+	autoreconf -fiv
+}
+
+build() {
+  cd $pkgname-$pkgver
+
+	./configure \
+	--prefix=/usr \
+	--sysconfdir=/etc \
+	--enable-maemo-plugin \
+	--enable-maemo-resource-manager
+
+	# prevent excessive overlinking due to libtool
+	sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR="$pkgdir" install
+
+	# remove maemo plugin configuration (it overrides defaults for pcm and ctl),
+	# until a better way is found to package default overrides:
+	# https://bugs.archlinux.org/task/65440
+	rm -v "${pkgdir}/etc/alsa/conf.d/98-maemo.conf"
+
+	# make a proper off-by-default config template out of the example file
+	mv -v "${pkgdir}/etc/alsa/conf.d/99-pulseaudio-default.conf.example" \
+		"${pkgdir}/usr/share/alsa/alsa.conf.d/99-pulseaudio-default.conf"
+
+	mkdir -p "${pkgdir}/etc/alsa/conf.d"
+	ln -st "${pkgdir}/etc/alsa/conf.d" /usr/share/alsa/alsa.conf.d/99-pulseaudio-default.conf
+}

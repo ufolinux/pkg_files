@@ -1,0 +1,26 @@
+pkgname=glew-1.10
+pkgver=1.10.0
+pkgrel=1
+arch=(x86_64)
+depends=(libglvnd libx11 libxext libxi libxmu)
+makedepends=(gcc make)
+source=(https://downloads.sourceforge.net/glew/glew-$pkgver.tgz)
+
+prepare() {
+	cd glew-$pkgver
+	# Dont enforce lib64 on amd64 machine
+	sed -i 's|lib64|lib|' config/Makefile.linux
+}
+
+build() {
+	cd glew-$pkgver
+
+	make -j4
+}
+
+package() {
+	cd glew-$pkgver
+
+	make GLEW_DEST=$pkgdir/usr install
+	rm -rf "${pkgdir}"/usr/{bin,include,lib/{libGLEW.{a,so},pkgconfig}}
+}

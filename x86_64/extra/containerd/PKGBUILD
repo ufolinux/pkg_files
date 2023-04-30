@@ -1,0 +1,27 @@
+pkgname=containerd
+pkgver=1.5.9
+pkgrel=1
+arch=('x86_64')
+depends=(runc)
+makedepends=(go git libseccomp containers-common go-md2man btrfs-progs)
+source=(git+https://github.com/containerd/containerd.git#tag=v${pkgver})
+
+prepare() {
+	sed -i 's,/sbin,/usr/bin,;s,/usr/local,/usr,' $pkgname/containerd.service
+}
+
+build() {
+	cd $pkgname
+
+	export GOFLAGS="-trimpath -mod=readonly -modcacherw"
+	make VERSION=v$pkgver GO_BUILD_FLAGS="-trimpath -mod=readonly -modcacherw" GO_GCFLAGS="" EXTRA_LDFLAGS="-buildid="
+	make VERSION=v$pkgver man
+}
+
+package() {
+	cd $pkgname
+
+	make DESTDIR=$pkgdir/usr install
+
+	install -Dm644 containerd.service "$pkgdir"/usr/lib/systemd/system/containerd.service
+}

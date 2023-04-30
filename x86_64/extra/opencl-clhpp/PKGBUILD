@@ -1,0 +1,26 @@
+pkgname=opencl-clhpp
+pkgver=2.0.16
+pkgrel=1
+arch=('x86_64')
+url='https://github.com/KhronosGroup/OpenCL-CLHPP'
+makedepends=('cmake')
+source=("${pkgname}-${pkgver}.tar.gz::https://github.com/KhronosGroup/OpenCL-CLHPP/archive/v${pkgver}.tar.gz")
+depends=('opencl-headers')
+
+build() {
+	cd "${srcdir}"/OpenCL-CLHPP*/
+
+	cmake -B build ./ \
+	-D CMAKE_INSTALL_PREFIX=/usr \
+	-D BUILD_DOCS=Off \
+	-D BUILD_EXAMPLES=Off \
+	-D BUILD_TESTS=Off
+
+	make -C build
+}
+
+package() {
+	cd "${srcdir}"/OpenCL-CLHPP*/
+
+	DESTDIR="$pkgdir" make -C build install
+}

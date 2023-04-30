@@ -1,0 +1,35 @@
+pkgname=lynx
+pkgver=2.8.9
+rver=rel.1
+pkgrel=1
+arch=('x86_64')
+depends=(gnutls zip unzip zlib bzip2 openssl ncurses glibc)
+source=(https://invisible-mirror.net/archives/lynx/tarballs/$pkgname$pkgver$rver.tar.bz2
+	lynx-2.8.9rel.1-security_fix-1.patch)
+
+prepare() {
+	cd $pkgname$pkgver$rver
+
+	patch -Np1 -i ../lynx-2.8.9rel.1-security_fix-1.patch
+}
+
+build() {
+	cd $pkgname$pkgver$rver
+
+	./configure			\
+	--prefix=/usr			\
+	--sysconfdir=/etc/lynx		\
+	--with-zlib			\
+	--with-bzlib			\
+	--with-ssl			\
+	--with-screen=ncursesw		\
+	--enable-locale-charset
+
+	make
+}
+
+package() {
+	cd $pkgname$pkgver$rver
+
+	make DESTDIR=$pkgdir install-full
+}

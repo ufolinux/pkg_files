@@ -1,0 +1,20 @@
+pkgname=libxmu
+pkgver=master
+pkgrel=2
+arch=('x86_64')
+depends=(libxext xorgproto libxt)
+source=(git+https://gitlab.freedesktop.org/xorg/lib/libxmu.git --depth=1)
+
+build() {
+	cd $pkgname
+
+	NOCONFIGURE=1 ./autogen.sh
+	./configure --prefix=/usr --libdir=/usr/lib
+	make
+}
+
+package() {
+	cd $pkgname
+
+	make DESTDIR=$pkgdir install
+}

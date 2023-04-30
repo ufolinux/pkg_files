@@ -1,0 +1,47 @@
+## Default
+ac_add_options --with-wasi-sysroot=/usr/share/wasi-sysroot
+ac_add_options --enable-application=browser
+mk_add_options MOZ_OBJDIR=${PWD}/obj
+ac_add_options --prefix=/usr
+ac_add_options --enable-release
+ac_add_options --enable-hardening
+ac_add_options --enable-optimize
+ac_add_options --enable-rust-simd
+ac_add_options --enable-linker=lld
+ac_add_options --disable-elf-hack
+ac_add_options --disable-bootstrap
+
+## Branding
+ac_add_options --enable-official-branding
+ac_add_options --enable-update-channel=release
+ac_add_options --with-distribution-id=org.ufolinux
+ac_add_options --with-unsigned-addon-scopes=app,system
+ac_add_options --allow-addon-sideload
+export MOZILLA_OFFICIAL=1
+export MOZ_APP_REMOTINGNAME=${pkgname//-/}
+
+## Keys
+#ac_add_options --with-google-location-service-api-keyfile=${PWD@Q}/google-api-key
+#ac_add_options --with-google-safebrowsing-api-keyfile=${PWD@Q}/google-api-key
+#ac_add_options --with-mozilla-api-keyfile=${PWD@Q}/mozilla-api-key
+
+## System libraries
+ac_add_options --with-system-nspr
+ac_add_options --with-system-nss
+
+## Features
+ac_add_options --enable-alsa
+ac_add_options --enable-jack
+ac_add_options --enable-crashreporter
+ac_add_options --disable-updater
+ac_add_options --disable-tests
+
+## Ufo / LFS Feature
+
+# The following option unsets Telemetry Reporting. With the Addons Fiasco,
+# Mozilla was found to be collecting user's data, including saved passwords and
+# web form data, without users consent. Mozilla was also found shipping updates
+# to systems without the user's knowledge or permission.
+# As a result of this, use the following command to permanently disable
+# telemetry reporting in Firefox.
+unset MOZ_TELEMETRY_REPORTING

@@ -1,0 +1,33 @@
+pkgname=lib32-duktape
+pkgver=2.6.0
+pkgrel=1
+arch=('x86_64')
+makedepends=(setconf)
+depends=(glibc)
+source=(https://duktape.org/duktape-$pkgver.tar.xz
+	duktape.pc)
+
+prepare() {
+	cd duktape-$pkgver
+
+	mv Makefile.sharedlibrary Makefile
+	sed 's/-Wall -Wextra/$(CFLAGS)/g' -i Makefile
+	setconf Makefile INSTALL_PREFIX "$pkgdir/usr"
+	setconf "$srcdir/duktape.pc" Version "$pkgver"
+}
+
+build() {
+	CFLAGS="$CFLAGS -m32 -D DUK_USE_FASTINT -w" make -C duktape-$pkgver
+}
+
+package() {
+	install -d "$pkgdir/usr/include"
+	install -Dm644 duktape.pc "$pkgdir/usr/lib32/pkgconfig/duktape.pc"
+
+	cd duktape-$pkgver
+	make DESTDIR=$pkgdir install
+
+	mv $pkgdir/usr/lib/* $pkgdir/usr/lib32/
+
+	rm -fr "$pkgdir"/{etc,usr/{bin,include,lib,share}}
+}

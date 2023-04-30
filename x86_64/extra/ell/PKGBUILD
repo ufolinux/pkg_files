@@ -1,0 +1,21 @@
+pkgname=ell
+pkgver=0.48
+pkgrel=1
+arch=('x86_64')
+depends=(glibc dbus)
+source=(https://mirrors.edge.kernel.org/pub/linux/libs/$pkgname/$pkgname-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure	\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

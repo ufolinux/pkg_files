@@ -1,0 +1,29 @@
+pkgname=libomxil-bellagio
+pkgver=0.9.3
+pkgrel=1
+arch=('x86_64')
+depends=('glibc')
+source=("https://downloads.sourceforge.net/project/omxil/omxil/Bellagio%200.9.3/$pkgname-$pkgver.tar.gz"
+	fedora-fixes.patch)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	patch -Np1 -i ../fedora-fixes.patch
+	sed -e 's/-Werror//' -i configure.ac
+	autoreconf -fiv
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	CFLAGS+=' -fcommon'
+
+	./configure --prefix=/usr --docdir=/usr/share/doc/$pkgname
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+}

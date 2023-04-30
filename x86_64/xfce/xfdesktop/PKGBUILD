@@ -1,0 +1,27 @@
+pkgname=xfdesktop
+pkgver=4.18.0
+xver=4.18
+pkgrel=5
+arch=('x86_64')
+depends=(exo libwnck libxdamage libnotify startup-notification garcon thunar)
+makedepends=(gcc)
+source=(https://archive.xfce.org/src/xfce/$pkgname/$xver/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr		\
+	--sysconfdir=/etc	\
+	--enable-thunarx	\
+	--disable-debug		\
+	LIBS=-lX11
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

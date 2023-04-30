@@ -1,0 +1,42 @@
+pkgname=lua
+pkgver=5.4.4
+mver=5.4
+pkgrel=1
+arch=(x86_64)
+depends=(readline)
+makedepends=(gcc)
+options=('!emptydirs')
+source=(https://www.lua.org/ftp/lua-$pkgver.tar.gz
+	liblua.so.patch
+	lua.pc)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	patch -p1 -i ../liblua.so.patch
+
+	sed "s/%VER%/$mver/g;s/%REL%/$pkgver/g" ../lua.pc > lua.pc
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	make MYCFLAGS="$CFLAGS -fPIC" MYLDFLAGS="$LDFLAGS" linux-readline
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make TO_LIB="liblua.a liblua.so liblua.so.$mver liblua.so.$pkgver" \
+	INSTALL_DATA="cp -d" \
+	INSTALL_TOP="$pkgdir/usr" \
+	INSTALL_MAN="$pkgdir/usr/share/man/man1" \
+	install
+
+	# pkgconf related
+	install -Dm644 lua.pc "$pkgdir"/usr/lib/pkgconfig/lua.pc
+
+	# docs
+	install -d "$pkgdir"/usr/share/doc/$pkgname
+	install -m644 doc/*.{gif,png,css,html} "$pkgdir"/usr/share/doc/$pkgname
+}

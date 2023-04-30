@@ -1,0 +1,30 @@
+pkgname=talloc
+pkgver=2.3.3
+pkgrel=1
+pkgdesc="Hierarchical pool based memory allocator with destructors"
+arch=(x86_64)
+depends=(glibc)
+makedepends=(python3-pip)
+source=(https://www.samba.org/ftp/talloc/talloc-$pkgver.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	./configure \
+	--prefix=/usr \
+	--bundled-libraries=NONE \
+	--builtin-libraries=replace \
+	--enable-talloc-compat1
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

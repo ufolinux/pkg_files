@@ -1,0 +1,29 @@
+pkgname=lib32-libpsl
+pkgver=0.21.1
+pkgrel=1
+arch=('x86_64')
+depends=('libpsl' 'glibc')
+makedepends=('git' 'libxslt' 'meson' 'ninja' 'python3')
+_tag=a5e6f26cce82898c54a0caa6dda0ab924b806daf
+source=(libpsl.tar.gz::https://github.com/rockdaboot/libpsl/archive/a5e6f26cce82898c54a0caa6dda0ab924b806daf.tar.gz)
+
+build() {
+	export CC='gcc -m32'
+	export CXX='g++ -m32'
+	export PKG_CONFIG_PATH='/usr/lib32/pkgconfig'
+
+	rm -rf libpsl-$_tag/list/public_suffix_list.dat && mkdir -p libpsl-$_tag/list
+	wget https://github.com/publicsuffix/list/raw/master/public_suffix_list.dat -O libpsl-$_tag/list/public_suffix_list.dat
+
+	meson libpsl-$_tag build \
+	--prefix=/usr \
+	--libdir=/usr/lib32 \
+	--wrap-mode=nofallback
+
+	ninja -C build
+}
+
+package() {
+	DESTDIR="${pkgdir}" ninja -C build install
+	rm -rf "${pkgdir}"/usr/{bin,include,share}
+}

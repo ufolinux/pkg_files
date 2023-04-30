@@ -1,0 +1,21 @@
+pkgname=bash-completion
+pkgver=2.11
+pkgrel=1
+arch=(x86_64)
+depends=('bash')
+source=(https://github.com/scop/bash-completion/releases/download/$pkgver/$pkgname-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+	./configure --prefix=/usr --sysconfdir=/etc
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+	
+	make DESTDIR=$pkgdir install
+
+	rm $pkgdir/etc/profile.d/bash_completion.sh
+	rm $pkgdir/usr/share/bash-completion/completions/makepkg
+}

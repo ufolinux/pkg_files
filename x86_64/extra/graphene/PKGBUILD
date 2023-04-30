@@ -1,0 +1,25 @@
+pkgname=graphene
+pkgver=1.10.8
+pkgrel=1
+arch=(x86_64)
+depends=(glib2)
+makedepends=(gobject-introspection python3-pip)
+commitid=4e2578450809c2099400cf85caf18eafcd7100aa
+source=(git+https://github.com/ebassi/graphene#commit=$commitid)
+
+prepare() {
+	pip3 install tappy
+}
+
+build() {
+	meson \
+	$pkgname build\
+	--prefix=/usr \
+	-D installed_tests=false
+
+	meson compile -C build
+}
+
+package() {
+	meson install -C build --destdir $pkgdir
+}

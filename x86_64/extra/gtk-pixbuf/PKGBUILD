@@ -1,0 +1,30 @@
+pkgname=gdk-pixbuf
+pkgver=2.42.6
+pkgrel=1
+arch=('x86_64')
+depends=('glib2' 'libjpeg' 'libpng' 'shared-mime-info' 'librsvg' 'libtiff')
+makedepends=(gtk+)
+source=(https://download.gnome.org/sources/$pkgname/2.42/$pkgname-$pkgver.tar.xz)
+
+prepare() {
+	cd $pkgname-$pkgver
+	mkdir -p build
+}
+
+build() {
+	cd $pkgname-$pkgver/build
+	
+	meson			\
+	--prefix=/usr		\
+	--buildtype=release	\
+	--wrap-mode=nofallback	\
+	..
+
+	ninja
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+
+	DESTDIR=$pkgdir ninja install
+}

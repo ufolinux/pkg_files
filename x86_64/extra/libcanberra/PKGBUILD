@@ -1,0 +1,42 @@
+pkgname=libcanberra
+pkgver=0.30
+pkgrel=2
+arch=('x86_64')
+depends=(libvorbis alsa-lib pulseaudio libvorbis)
+makedepends=(intltool tdb gtk2+ gtk3+)
+source=(http://0pointer.de/lennart/projects/$pkgname/$pkgname-$pkgver.tar.xz
+	libcanberra-multi-backend.patch
+	40-libcanberra-gtk-module.sh)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	wget https://linuxfromscratch.org/patches/blfs/svn/$pkgname-$pkgver-wayland-1.patch
+	patch -Np1 -i $pkgname-$pkgver-wayland-1.patch
+
+	# https://bugs.archlinux.org/task/71341
+	# https://bugs.freedesktop.org/show_bug.cgi?id=51662
+	patch -Np1 -i ../libcanberra-multi-backend.patch
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure \
+	--prefix=/usr \
+	--with-builtin=dso \
+	--enable-null \
+	--enable-alsa \
+	--enable-pulse \
+	--with-systemdsystemunitdir=/usr/lib/systemd/system
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+
+	install -Dt "$pkgdir/etc/X11/xinit/xinitrc.d" ../40-libcanberra-gtk-module.sh
+}

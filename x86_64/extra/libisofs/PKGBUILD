@@ -1,0 +1,31 @@
+pkgname=libisofs
+pkgver=1.5.4
+pkgrel=3
+arch=('x86_64')
+depends=(glibc)
+source=(https://dev.lovelyhq.com/libburnia/libisofs/archive/release-$pkgver.tar.gz
+	efi_boot_size.patch
+	File_size_limit.patch)
+
+prepare() {
+	cd $pkgname
+
+	patch -p0 -i ../efi_boot_size.patch
+	patch -p1 -i ../File_size_limit.patch
+}
+
+build() {
+	cd $pkgname
+	
+	./bootstrap
+	./configure --prefix=/usr         \
+	            --bindir=/bin         \
+	            --sysconfdir=/etc      \
+	            --docdir=/usr/share/doc/nano
+	make -j6
+}
+
+package() {
+	cd $pkgname
+	make DESTDIR=$pkgdir install
+}

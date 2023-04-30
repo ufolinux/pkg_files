@@ -1,0 +1,23 @@
+pkgname=yasm
+pkgver=1.3.0
+pkgrel=1
+arch=('x86_64')
+depends=(python3)
+source=(https://tortall.net/projects/$pkgname/releases/$pkgname-$pkgver.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	sed -i 's#) ytasm.*#)#' Makefile.in
+
+	./configure		\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

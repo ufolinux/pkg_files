@@ -1,0 +1,22 @@
+pkgname=python3-cairo
+pkgver=1.21.0
+pkgrel=1
+arch=('x86_64')
+replace=(python-cairo)
+depends=(cairo python3)
+makedepends=(python3-pip)
+source=(https://github.com/pygobject/pycairo/releases/download/v$pkgver/pycairo-$pkgver.tar.gz)
+
+build() {
+	# Install deps
+	pip3 install setuptools
+
+	cd pycairo-$pkgver
+	python setup.py build
+}
+
+package() {
+	cd pycairo-$pkgver
+
+	python setup.py install --root="$pkgdir" --skip-build --optimize=1
+}

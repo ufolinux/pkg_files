@@ -1,0 +1,20 @@
+pkgname=libxdm
+pkgver=1.1.12
+pkgrel=1
+arch=('x86_64')
+depends=('libxau' 'xcb-proto' 'libxaw' 'libxdmcp')
+source=(https://gitlab.freedesktop.org/xorg/app/xdm/-/archive/xdm-$pkgver/$pkgname-$pkgver.tar.gz)
+
+build() {
+        cd xdm*
+
+	NOCONFIGURE=1 ./autogen.sh
+
+	./configure --prefix=/usr
+	make
+}
+
+package() {
+	cd xdm*
+	make DESTDIR=$pkgdir install
+}

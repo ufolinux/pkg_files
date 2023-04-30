@@ -1,0 +1,53 @@
+pkgname=curl
+pkgver=7.85.0
+pkgrel=1
+arch=('x86_64')
+depends=(ca-certificates nghttp2 brotli libidn2 gnutls libpsl openssl zlib zstd)
+source=(https://curl.haxx.se/download/$pkgname-$pkgver.tar.xz)
+
+prepare() {
+	# We also want gnutls libs for steam ( possibly for other pkg's too )
+	cp -rf $pkgname-$pkgver $pkgname-$pkgver-gnutls
+}
+
+build() {
+	cd $srcdir/$pkgname-$pkgver
+
+	./configure --prefix=/usr \
+                    --enable-threaded-resolver \
+		    --with-openssl \
+                    --with-ca-bundle=/etc/ssl/cert.pem
+	make
+
+	cd $srcdir/$pkgname-$pkgver-gnutls
+
+	./configure \
+	--prefix=/usr \
+	--enable-threaded-resolver \
+	--without-ssl \
+	--with-gnutls='/usr' \
+	--with-ca-bundle=/etc/ssl/cert.pem
+
+	make -C lib
+}
+
+package() {
+	cd $srcdir/$pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+
+	cd $srcdir/$pkgname-$pkgver-gnutls
+
+	tmpdir1=$srcdir/tmpdir1
+	make -C lib DESTDIR="${tmpdir1}" install
+
+	mv "${tmpdir1}"/usr/lib/libcurl{,-gnutls}.so.4.8.0
+	rm "${tmpdir1}"/usr/lib/libcurl.{a,so}*
+
+	for version in 3 4 4.0.0 4.1.0 4.2.0 4.3.0 4.4.0 4.5.0 4.6.0 4.7.0; do
+		ln -s libcurl-gnutls.so.4.8.0 "${tmpdir1}"/usr/lib/libcurl-gnutls.so.${version}
+	done
+
+	# Now move tmpdir1 libs to pkgdir
+	cp -rf $tmpdir1/* $pkgdir/
+}

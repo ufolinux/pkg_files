@@ -1,0 +1,26 @@
+pkgname=python3-pysmbc
+rname=pysmbc
+pkgver=1.0.23
+pkgrel=1
+arch=(x86_64)
+depends=(samba)
+makedepends=(python3-pip)
+source=(https://pypi.io/packages/source/p/$rname/$rname-$pkgver.tar.gz)
+
+prepare() {
+	pip3 install setuptools
+}
+
+build() {
+	cd $rname-$pkgver
+
+	python3 setup.py build
+}
+
+package() {
+	cd $rname-$pkgver
+
+	python3 setup.py install \
+	--root=$pkgdir \
+	--optimize=1
+}

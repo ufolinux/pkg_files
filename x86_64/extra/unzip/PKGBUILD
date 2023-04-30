@@ -1,0 +1,23 @@
+pkgname=unzip
+pkgver=60
+pkgrel=1
+arch=('x86_64')
+source=(https://downloads.sourceforge.net/infozip/$pkgname$pkgver.tar.gz)
+
+prepare() {
+	cd $pkgname$pkgver	
+	wget https://linuxfromscratch.org/patches/blfs/svn/$pkgname-6.0-consolidated_fixes-1.patch
+	patch -Np1 -i $pkgname-6.0-consolidated_fixes-1.patch
+}
+
+build() {
+	cd $pkgname$pkgver
+
+	make -f unix/Makefile generic
+}
+
+package() {
+	cd $pkgname$pkgver
+
+	make prefix=$pkgdir/usr MANDIR=$pkgdir/usr/share/man/man1 -f unix/Makefile install
+}

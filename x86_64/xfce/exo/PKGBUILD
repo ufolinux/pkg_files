@@ -1,0 +1,23 @@
+pkgname=exo
+pkgver=4.18.0
+xver=4.18
+pkgrel=2
+arch=('x86_64')
+depends=(libxfce4ui libxfce4util gtk+)
+source=(https://archive.xfce.org/src/xfce/$pkgname/$xver/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr		\
+	--sysconfdir=/etc
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

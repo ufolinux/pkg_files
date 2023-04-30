@@ -1,0 +1,22 @@
+pkgname=iproute2
+pkgver=5.16.0
+pkgrel=1
+arch=('x86_64')
+depends=(glibc elfutils)
+source=(https://www.kernel.org/pub/linux/utils/net/$pkgname/$pkgname-$pkgver.tar.xz)
+
+build() {
+        cd $pkgname-$pkgver
+
+        sed -i /ARPD/d Makefile
+        rm -fv man/man8/arpd.8
+
+        [ -e /usr/lib/pkgconfig/xtables.pc ] || sed -i 's/m_ipt.o//' tc/Makefile
+
+        make
+}
+
+package() {
+	cd $pkgname-$pkgver
+        make DESTDIR=$pkgdir install
+}

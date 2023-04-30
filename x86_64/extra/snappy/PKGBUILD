@@ -1,0 +1,42 @@
+pkgname=snappy
+pkgver=1.1.9
+pkgrel=1
+arch=('x86_64')
+depends=('glibc' 'gcc')
+makedepends=('cmake' 'clang')
+source=("https://github.com/google/snappy/archive/$pkgver/$pkgname-$pkgver.tar.gz"
+        cmake_add_pkgconfig.patch
+	fix_inline.patch::https://github.com/google/snappy/pull/128/commits/0c716d435abe65250100c2caea0e5126ac4e14bd.patch
+	snappy.pc.in)
+
+prepare() {
+    cd "$pkgname-$pkgver"
+
+    patch -p1 < ../cmake_add_pkgconfig.patch
+    patch -p1 < ../fix_inline.patch
+
+    cp ../snappy.pc.in .
+}
+
+build() {
+    cd "$pkgname-$pkgver"
+
+    # compile without assertions
+    CXXFLAGS+=\ -DNDEBUG
+
+    cmake \
+    -D CMAKE_INSTALL_PREFIX=/usr \
+    -D CMAKE_INSTALL_LIBDIR=/usr/lib \
+    -D SNAPPY_BUILD_TESTS=OFF \
+    -D BUILD_SHARED_LIBS=yes \
+    -D SNAPPY_BUILD_BENCHMARKS=OFF \
+    .
+
+    make
+}
+
+package() {
+    cd "$pkgname-$pkgver"
+
+    make DESTDIR="$pkgdir" install
+}

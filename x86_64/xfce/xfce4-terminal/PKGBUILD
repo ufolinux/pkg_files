@@ -1,0 +1,22 @@
+pkgname=xfce4-terminal
+pkgver=1.0.4
+xver=1.0
+pkgrel=3
+arch=('x86_64')
+depends=(libxfce4ui vte gnutls)
+source=(https://archive.xfce.org/src/apps/$pkgname/0.8/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

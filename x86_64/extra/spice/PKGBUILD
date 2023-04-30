@@ -1,0 +1,30 @@
+pkgname=spice
+pkgver=0.15.0
+pkgrel=1
+arch=(x86_64)
+depends=(pixman opus libjpeg glib2 lz4 gstreamer sasl2)
+makedepends=(meson spice-protocol libcacard gdk-pixbuf glib-networking python3-pip)
+source=(https://www.spice-space.org/download/releases/spice-server/$pkgname-$pkgver.tar.bz2
+	python-module.diff)
+
+prepare() {
+	pip3 install pyparsing six
+
+	cd $pkgname-$pkgver/subprojects/spice-common/
+	patch -p1 -i $srcdir/python-module.diff
+
+	sed -i "/doxygen.sh/d" $srcdir/$pkgname-$pkgver/meson.build
+}
+
+build() {
+	meson $pkgname-$pkgver build \
+	--prefix=/usr \
+	-D tests=false \
+	-D gstreamer=no
+
+	ninja -C build
+}
+
+package() {
+	DESTDIR=$pkgdir ninja -C build install
+}

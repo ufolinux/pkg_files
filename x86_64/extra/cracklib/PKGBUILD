@@ -1,0 +1,26 @@
+pkgname=cracklib
+pkgver=2.9.7
+pkgrel=1
+arch=('x86_64')
+depends=('glibc' 'zlib' 'python3')
+source=(https://github.com/cracklib/cracklib/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure --prefix=/usr --sbindir=/usr/bin
+	make 
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR="$pkgdir" install
+
+	# symlink cracklib-small #34778
+	mkdir -p "$pkgdir"/usr/share/dict
+	ln -sf /usr/share/cracklib/cracklib-small "$pkgdir"/usr/share/dict/cracklib-small
+
+	sh ./util/cracklib-format dicts/cracklib-small \
+	| sh ./util/cracklib-packer "$pkgdir"/usr/share/cracklib/pw_dict
+}

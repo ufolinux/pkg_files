@@ -1,0 +1,24 @@
+pkgname=python3-pycups
+rname=pycups
+pkgver=2.0.1
+pkgrel=2
+arch=(x86_64)
+depends=(cups python3)
+makedepends=(gcc python3-pip)
+source=(https://github.com/OpenPrinting/$rname/archive/v$pkgver.tar.gz)
+
+prepare() {
+	pip3 install setuptools
+}
+
+build() {
+	cd $rname-$pkgver
+
+	python3 setup.py build
+}
+
+package() {
+	cd $rname-$pkgver
+
+	python setup.py install --root=$pkgdir --optimize=1
+}

@@ -1,0 +1,27 @@
+pkgname=libqalculate
+pkgver=4.1.1
+pkgrel=1
+arch=(x86_64)
+depends=(gmp mpfr libxml2 curl icu gettext readline doxygen)
+source=(https://github.com/Qalculate/$pkgname/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure \
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

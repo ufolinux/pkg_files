@@ -1,0 +1,33 @@
+pkgname=runc
+pkgver=1.1.0
+pkgrel=1
+arch=('x86_64')
+depends=(libseccomp criu)
+makedepends=(git go go-md2man)
+commitid=067aaf8548d78269dcb2c13b856775e27c410f9c
+source=(git+https://github.com/opencontainers/runc.git#commit=$commitid)
+
+prepare() {
+	mkdir -p src/github.com/opencontainers
+	cp -r runc src/github.com/opencontainers/
+}
+
+build() {
+	cd src/github.com/opencontainers/runc
+	export GOPATH="$srcdir"
+	export BUILDTAGS='seccomp apparmor'
+	export CGO_CPPFLAGS="${CPPFLAGS}"
+	export CGO_CFLAGS="${CFLAGS}"
+	export CGO_CXXFLAGS="${CXXFLAGS}"
+	export CGO_LDFLAGS="${LDFLAGS}"
+	export GOFLAGS="-trimpath -mod=readonly -modcacherw"
+	make runc
+}
+
+package() {
+	cd src/github.com/opencontainers/runc
+
+	install -Dm755 runc "$pkgdir/usr/bin/runc"
+	install -Dm644 contrib/completions/bash/runc \
+		"$pkgdir/usr/share/bash-completion/completions/runc"
+}

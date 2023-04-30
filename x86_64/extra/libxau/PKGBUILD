@@ -1,0 +1,18 @@
+pkgname=libxau
+pkgver=1.0.9
+pkgrel=1
+arch=('x86_64')
+depends=('xorgproto')
+source=(https://x.org/pub/individual/lib/libXau-$pkgver.tar.bz2)
+
+build() {
+        cd libXau-$pkgver
+
+	./configure --prefix=/usr
+	make
+}
+
+package() {
+	cd libXau-$pkgver
+	make DESTDIR=$pkgdir install
+}

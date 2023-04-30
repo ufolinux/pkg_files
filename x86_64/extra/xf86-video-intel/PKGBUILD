@@ -1,0 +1,23 @@
+pkgname=xf86-video-intel
+pkgver=master
+pkgrel=4
+arch=('x86_64')
+depends=(xorg-server xcb-util libxinerama)
+source=(git+https://anongit.freedesktop.org/git/xorg/driver/xf86-video-intel.git)
+
+build() {
+	cd $pkgname
+
+	./autogen.sh
+
+	./configure		\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname
+	make DESTDIR=$pkgdir install
+	mkdir -p $pkgdir/etc/X11/xorg.conf.d
+}

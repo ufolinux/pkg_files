@@ -1,0 +1,30 @@
+pkgname=lib32-brotli
+pkgver=1.0.9
+pkgrel=1
+pkgdesc='Brotli compression library'
+arch=(x86_64)
+url=https://github.com/google/brotli
+depends=(
+	brotli
+)
+makedepends=(
+	cmake git
+)
+_tag=e61745a6b7add50d380cfd7d3883dd6c62fc2c71
+source=(git+https://github.com/google/brotli#tag=${_tag})
+
+build() {
+	export CC='gcc -m32'
+	export PKG_CONFIG_PATH=/usr/lib32/pkgconfig
+
+	cmake -S brotli -B build \
+	-D CMAKE_INSTALL_PREFIX=/usr \
+	-D CMAKE_INSTALL_LIBDIR=/usr/lib32
+
+	cmake --build build
+}
+
+package() {
+	DESTDIR="$pkgdir" cmake --install build
+	rm -rf "${pkgdir}"/usr/{bin,include}
+}

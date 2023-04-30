@@ -1,0 +1,25 @@
+pkgname=appstream
+pkgver=0.15.5
+pkgrel=1
+arch=(x86_64)
+depends=(curl qt5 librsvg yaml libxmlb libsoup nghttp2)
+makedepends=(meson xmlto gobject-introspection gtk-doc qt5 itstool vala gperf)
+source=(https://www.freedesktop.org/software/appstream/releases/AppStream-$pkgver.tar.xz
+        update-appstream-cache.hook)
+
+build() {
+    meson build AppStream-$pkgver \
+    --prefix=/usr \
+    --libexecdir=lib \
+    -D qt=true \
+    -D vapi=true \
+    -D compose=true
+
+    meson compile -C build
+}
+
+package() {
+	meson install --destdir "$pkgdir" -C build
+
+	install -Dm644 update-appstream-cache.hook "$pkgdir"/usr/share/libalpm/hooks/90-update-appstream-cache.hook
+}

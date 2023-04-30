@@ -1,0 +1,22 @@
+pkgname=spice-gtk
+pkgver=0.40
+pkgrel=1
+arch=(x86_64)
+depends=(gst-plugins-base gst-plugins-good gtk3+ gobject-introspection polkit)
+makedepends=(meson spice-protocol usbutils vala wayland-protocols)
+source=(https://www.spice-space.org/download/gtk/$pkgname-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	meson build \
+	--prefix=/usr
+
+	ninja -C build
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	DESTDIR=$pkgdir meson install -C build
+}

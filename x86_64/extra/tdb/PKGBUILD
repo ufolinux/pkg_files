@@ -1,0 +1,24 @@
+pkgname=tdb
+pkgver=1.4.5
+pkgrel=1
+pkgdesc='Trivial Database similar to GDBM but allows simultaneous commits'
+arch=(x86_64)
+depends=('glibc')
+makedepends=('python3' 'libxslt' 'docbook-xsl')
+source=(https://samba.org/ftp/${pkgname}/${pkgname}-${pkgver}.tar.gz)
+
+build() {
+	cd ${pkgname}-${pkgver}
+
+	./configure --prefix=/usr \
+	--localstatedir=/var \
+	--sysconfdir=/etc/samba
+
+	make
+}
+
+package() {
+	cd ${pkgname}-${pkgver}
+
+	make DESTDIR="$pkgdir" install
+}

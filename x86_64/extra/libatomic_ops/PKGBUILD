@@ -1,0 +1,21 @@
+pkgname=libatomic_ops
+pkgver=7.6.12
+pkgrel=1
+arch=('x86_64')
+source=(https://github.com/ivmai/$pkgname/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure --prefix=/usr    \
+            --enable-shared  \
+            --disable-static \
+            --docdir=/usr/share/doc/libatomic_ops-7.6.12
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

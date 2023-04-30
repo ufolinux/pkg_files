@@ -1,0 +1,23 @@
+pkgname=p11-kit
+pkgver=0.24.1
+pkgrel=1
+arch=('x86_64')
+depends=(libtasn1 libffi systemd libtasn1 libffi)
+source=(https://github.com/p11-glue/p11-kit/releases/download/$pkgver/p11-kit-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure \
+	--prefix=/usr \
+	--sysconfdir=/etc \
+	--with-trust-paths=/etc/ca-certificates/trust-source:/usr/share/ca-certificates/trust-source
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

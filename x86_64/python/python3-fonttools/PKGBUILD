@@ -1,0 +1,24 @@
+pkgname=python3-fonttools
+rname=fonttools
+pkgver=4.36.0
+pkgrel=1
+arch=(x86_64)
+depends=(python3 brotli)
+makedepends=(python3-pip)
+source=(https://github.com/$rname/$rname/archive/$pkgver/$pkgver.tar.gz)
+
+prepare() {
+	pip3 install setuptools build wheel installer
+}
+
+build() {
+	cd $rname-$pkgver
+
+	python -m build -wn
+}
+
+package() {
+	cd $rname-$pkgver
+
+	python -m installer -d "$pkgdir" dist/*.whl
+}

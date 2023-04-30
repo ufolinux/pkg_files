@@ -1,0 +1,28 @@
+pkgname=packagekit-qt5
+pkgver=1.0.2
+pkgrel=1
+arch=('x86_64')
+depends=('packagekit' 'qt5')
+makedepends=('cmake')
+source=("https://github.com/hughsie/PackageKit-Qt/releases/download/v$pkgver/PackageKit-Qt-$pkgver.tar.xz")
+
+build() {
+        mkdir -p PackageKit-Qt-${pkgver}/build
+        cd PackageKit-Qt-${pkgver}/build
+
+        cmake .. \
+	-D CMAKE_INSTALL_PREFIX=/usr
+
+        make
+}
+
+package() {
+        cd PackageKit-Qt-${pkgver}/build
+
+        make DESTDIR="${pkgdir}" install
+
+	# Hacky way but its how i deal with it for now
+        mkdir -p $pkgdir/usr/lib64 && mkdir -p $pkgdir/usr/lib && touch $pkgdir/usr/lib64/ignore
+        cp -rf $pkgdir/usr/lib64/* $pkgdir/usr/lib/
+        rm -rf $pkgdir/usr/lib64 $pkgdir/usr/lib/ignore
+}

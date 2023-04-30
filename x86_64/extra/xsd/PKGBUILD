@@ -1,0 +1,32 @@
+pkgname=xsd
+pkgver=4.0.0
+_pkgver=4.0.0+dep
+pkgrel=1
+arch=('x86_64')
+depends=('xerces-c')
+source=("https://www.codesynthesis.com/download/${pkgname}/4.0/${pkgname}-${_pkgver}.tar.bz2"
+        "xsdcxx.patch"
+        "elements.patch")
+
+prepare() {
+	cd ${pkgname}-${_pkgver}
+
+	patch -p1 -i "${srcdir}/xsdcxx.patch"
+	patch -p0 -i "${srcdir}/elements.patch"
+}
+
+build() {
+	cd ${pkgname}-${_pkgver}
+
+	make CXXFLAGS=" -w -std=c++11 ${CXXFLAGS}"
+}
+
+package() {
+	cd ${pkgname}-${_pkgver}
+
+	make install_prefix="${pkgdir}/usr" install
+
+	# Fix conflicts with mono
+	mv "${pkgdir}"/usr/bin/xsd{,cxx}
+	mv "${pkgdir}"/usr/share/man/man1/xsd{,cxx}.1
+}

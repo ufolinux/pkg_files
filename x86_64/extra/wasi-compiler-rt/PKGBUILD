@@ -1,0 +1,45 @@
+pkgname=wasi-compiler-rt
+pkgver=13.0.1
+pkgrel=1
+pkgdesc='WASI LLVM compiler runtime'
+arch=('x86_64')
+url='https://compiler-rt.llvm.org/'
+depends=('wasi-libc')
+makedepends=('cmake' 'ninja' 'llvm' 'clang' 'lld')
+source=("https://github.com/llvm/llvm-project/releases/download/llvmorg-${pkgver}/compiler-rt-${pkgver}.src.tar.xz"
+	WASI.cmake
+	wasi-toolchain.cmake)
+options=('staticlibs')
+prepare() {
+	# Platform files have been copied from here https://github.com/WebAssembly/wasi-sdk
+	mkdir -p cmake/Platform
+	cp WASI.cmake cmake/Platform
+}
+
+build() {
+	# Build options are derived from here https://github.com/WebAssembly/wasi-sdk/blob/main/Makefile
+
+	# Currently, wasi-sdk requires C++ code be compiled with -fno-exceptions. libc++abi is compiled, however is is currently compiled with exception-handling support disabled.
+	# https://github.com/WebAssembly/wasi-sdk/issues/52#issuecomment-530619365
+	cmake -B build -G Ninja \
+	-DCMAKE_BUILD_TYPE=Release \
+	-DCMAKE_C_COMPILER_WORKS=ON \
+	-DCMAKE_CXX_COMPILER_WORKS=ON \
+	-DCMAKE_MODULE_PATH="${srcdir}"/make \
+	-DCMAKE_TOOLCHAIN_FILE="${srcdir}"/wasi-toolchain.cmake \
+	-DCOMPILER_RT_BAREMETAL_BUILD=On \
+	-DCOMPILER_RT_INCLUDE_TESTS=OFF \
+	-DCOMPILER_RT_HAS_FPIC_FLAG=OFF \
+	-DCOMPILER_RT_DEFAULT_TARGET_ONLY=On \
+	-DCOMPILER_RT_OS_DIR=wasi \
+	-DWASI_SDK_PREFIX=/usr \
+	-DCMAKE_C_FLAGS="-fno-exceptions --sysroot=/usr/share/wasi-sysroot" \
+	-DCMAKE_INSTALL_PREFIX=/usr/lib/clang/${pkgver}/ \
+	compiler-rt-${pkgver}.src/lib/builtins
+
+	cmake --build build -v
+}
+
+package() {
+	DESTDIR="${pkgdir}" cmake --install build
+}

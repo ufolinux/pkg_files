@@ -1,0 +1,23 @@
+pkgname=lzo
+pkgver=2.10
+pkgrel=1
+arch=('x86_64')
+depends=(glibc)
+makedepends=(make gcc)
+source=(https://www.oberhumer.com/opensource/lzo/download/$pkgname-$pkgver.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure			\
+	--prefix=/usr			\
+	--enable-shared
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

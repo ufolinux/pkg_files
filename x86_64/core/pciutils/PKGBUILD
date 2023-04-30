@@ -1,0 +1,28 @@
+pkgname=pciutils
+pkgver=3.7.0
+pkgrel=2
+arch=('x86_64')
+depends=(glibc kmod)
+source=(https://www.kernel.org/pub/software/utils/$pkgname/$pkgname-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	make OPT="${CFLAGS} -fPIC -DPIC" \
+             PREFIX=/usr                \
+             SHAREDIR=/usr/share/hwdata \
+             MANDIR=/usr/share/man      \
+             SHARED=yes
+}
+
+package() {
+        cd $pkgname-$pkgver
+        make PREFIX=/usr                \
+             SHAREDIR=/usr/share/hwdata \
+             MANDIR=/usr/share/man      \
+             SHARED=yes                 \
+             DESTDIR=$pkgdir               \
+             install install-lib
+
+        chmod -v 755 $pkgdir/usr/lib/libpci.so
+}

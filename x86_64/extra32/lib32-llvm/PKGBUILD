@@ -1,0 +1,85 @@
+pkgname=lib32-llvm
+rname=llvm
+pkgver=13.0.1
+pkgrel=1
+arch=('x86_64')
+url="https://llvm.org/"
+license=('custom:Apache 2.0 with LLVM Exception')
+depends=('lib32-libffi' 'lib32-zlib' 'lib32-polly' 'lib32-libxml2' 'llvm')
+makedepends=('cmake' 'ninja' 'python3')
+options=('!lto') # extra/llvm has many test failures with LTO
+dlink=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
+source=($dlink/llvm-$pkgver.src.tar.xz
+	01.patch
+	02.patch
+	03.patch
+	04.patch)
+
+prepare() {
+	cd $rname-$pkgver.src
+	mkdir -p build
+
+	# https://github.com/intel/intel-graphics-compiler/issues/204
+	echo "[PATCH]: 01 of 04" && patch -Rp2 -i ../01.patch
+
+	# Work around intermittent 'clang -0 -g' crashes
+	echo "[PATCH]: 02 of 04" && patch -Np2 -i ../02.patch
+
+	# Fix an ISPC build failure (https://github.com/ispc/ispc/issues/2189)
+	echo "[PATCH]: 03 of 04" && patch -Np2 -i ../03.patch
+
+	# https://github.com/llvm/llvm-project/issues/53243 + https://github.com/rust-lang/rust/issues/92869
+	echo "[PATCH]: 04 of 04" && patch -Np2 -i ../04.patch
+}
+
+
+build() {
+	cd "$srcdir/$rname-$pkgver.src/build"
+	export PKG_CONFIG_PATH="/usr/lib32/pkgconfig"
+
+	cmake .. -G Ninja \
+	-DCMAKE_BUILD_TYPE=Release \
+	-DCMAKE_INSTALL_PREFIX=/usr \
+	-DLLVM_LIBDIR_SUFFIX=32 \
+	-DCMAKE_C_FLAGS:STRING=-m32 \
+	-DCMAKE_CXX_FLAGS:STRING=-m32 \
+	-DLLVM_TARGET_ARCH:STRING=i686 \
+	-DLLVM_HOST_TRIPLE=$CHOST \
+	-DLLVM_DEFAULT_TARGETS_TRIPLE="i686-pc-linux-gnu" \
+	-DLLVM_BUILD_LLVM_DYLIB=ON \
+	-DLLVM_LINK_LLVM_DYLIB=ON \
+	-DLLVM_ENABLE_RTTI=ON \
+	-DLLVM_ENABLE_FFI=ON \
+	-DLLVM_BUILD_DOCS=OFF \
+	-DLLVM_ENABLE_SPHINX=OFF \
+	-DLLVM_ENABLE_DOXYGEN=OFF \
+	-DLLVM_BINUTILS_INCDIR=/usr/include
+
+	ninja all
+}
+
+package() {
+	cd "$srcdir/$rname-$pkgver.src/build"
+
+	DESTDIR="$pkgdir" ninja install
+
+	# Fix permissions of static libs
+	chmod -x "$pkgdir"/usr/lib32/*.a
+
+	mv "$pkgdir/usr/bin/llvm-config" "$pkgdir/usr/lib32/llvm-config"
+	mv "$pkgdir/usr/include/llvm/Config/llvm-config.h" \
+		"$pkgdir/usr/lib32/llvm-config-32.h"
+
+	rm -rf "$pkgdir"/usr/{bin,include,share/{doc,man,llvm,opt-viewer}}
+
+	# Header stub is taken from Fedora
+	install -d "$pkgdir/usr/include/llvm/Config"
+	mv "$pkgdir/usr/lib32/llvm-config-32.h" "$pkgdir/usr/include/llvm/Config/"
+
+	mkdir "$pkgdir"/usr/bin
+	mv "$pkgdir/usr/lib32/llvm-config" "$pkgdir/usr/bin/llvm-config32"
+
+	# Symlink LLVMgold.so from /usr/lib/bfd-plugins
+	install -d "$pkgdir/usr/lib32/bfd-plugins"
+	ln -s ../LLVMgold.so "$pkgdir/usr/lib32/bfd-plugins/LLVMgold.so"
+}

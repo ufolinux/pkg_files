@@ -1,0 +1,38 @@
+From f7391439057b3d8845a9af01b03848b3211ca986 Mon Sep 17 00:00:00 2001
+From: Michal Klocek <michal.klocek@qt.io>
+Date: Tue, 11 May 2021 10:24:35 +0200
+Subject: Add support for QT_GN_VERSION
+
+Change-Id: If5ac705f3a4292da915d1f36526ef1fbed3868e6
+Reviewed-by: Allan Sandfeld Jensen <allan.jensen@qt.io>
+---
+ gn/src/gn/gn_main.cc | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+(limited to 'gn/src/gn/gn_main.cc')
+
+diff --git a/gn/src/gn/gn_main.cc b/gn/src/gn/gn_main.cc
+index 3d260a3c46f..ae54a2aecfd 100644
+--- a/gn/src/gn/gn_main.cc
++++ b/gn/src/gn/gn_main.cc
+@@ -16,7 +16,7 @@
+ #include "util/msg_loop.h"
+ #include "util/sys_info.h"
+ 
+-// #include "last_commit_position.h"
++#include "qt_version.h"
+ 
+ namespace {
+ 
+@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
+     command = commands::kHelp;
+   } else if (cmdline.HasSwitch(switches::kVersion)) {
+     // Make "--version" print the version and exit.
+-//     OutputString(std::string(LAST_COMMIT_POSITION) + "\n");
++    OutputString(std::string(QT_GN_VERSION) +"\n");
+     exit(0);
+   } else if (args.empty()) {
+     // No command, print error and exit.
+-- 
+cgit v1.2.1
+

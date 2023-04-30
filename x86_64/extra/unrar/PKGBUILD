@@ -1,0 +1,20 @@
+pkgname=unrar
+pkgver=6.1.3
+pkgrel=1
+arch=('x86_64')
+depends=(glibc)
+makedepends=(gcc make)
+source=(https://www.rarlab.com/rar/unrarsrc-$pkgver.tar.gz)
+
+build() {
+	cd $pkgname
+
+	make -f makefile
+}
+
+package() {
+	cd $pkgname
+
+	mkdir -p $pkgdir/usr/bin
+	install -v -m755 unrar $pkgdir/usr/bin
+}

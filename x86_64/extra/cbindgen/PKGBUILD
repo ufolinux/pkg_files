@@ -1,0 +1,25 @@
+pkgname=cbindgen
+pkgver=0.24.3
+pkgrel=1
+arch=('x86_64')
+depends=(rust)
+source=(https://github.com/eqrion/$pkgname/archive/v$pkgver/$pkgname-$pkgver.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	cargo fetch --locked --target x86_64-unknown-linux-gnu
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	cargo build --release --frozen
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	mkdir -p $pkgdir/usr/bin
+	install -Dm755 target/release/cbindgen $pkgdir/usr/bin/
+}

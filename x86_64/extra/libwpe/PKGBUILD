@@ -1,0 +1,29 @@
+pkgname=libwpe
+pkgver=1.12.0
+pkgrel=1
+arch=('x86_64')
+depends=(libxkbcommon mesa)
+source=(https://wpewebkit.org/releases/libwpe-$pkgver.tar.xz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	mkdir build
+}
+
+build() {
+	cd $pkgname-$pkgver/build
+
+	meson			\
+	--prefix=/usr		\
+	--buildtype=release	\
+	..
+
+	ninja
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+
+	DESTDIR=$pkgdir ninja install
+}

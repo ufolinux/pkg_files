@@ -1,0 +1,10 @@
+pkgname=gtk+
+pkgver=3.24.32
+pkgrel=1
+pkgdesc="Just an metapackage for gtk3+"
+arch=('x86_64')
+depends=(gtk3+)
+
+package() {
+	echo "This is a metapackage!"
+}

@@ -1,0 +1,63 @@
+pkgname=js78
+pkgver=78.15.0esr
+pkgrel=1
+arch=('x86_64')
+depends=(autoconf icu which)
+makedepends=(autoconf icu which llvm clang)
+source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz
+	0001-Fixes-for-LTO-PGO-support.patch
+	0002-Fixes-for-Python-3.10.patch
+	0003-Fixes-for-Rust-1.56.patch)
+
+prepare() {
+	cd firefox-78.15.0
+
+	patch -Np1 -i ../0001-Fixes-for-LTO-PGO-support.patch
+
+	patch -Np1 -i ../0002-Fixes-for-Python-3.10.patch
+
+	patch -Np1 -i ../0003-Fixes-for-Rust-1.56.patch
+}
+
+build() {
+	export CC=clang
+	export CXX=clang++
+
+	export AR=llvm-ar
+	export NM=llvm=nm
+	export RANLIB=llvm-ranlib
+
+
+	# Rust-simd is disabled as of errors
+	local conf_args=(
+	--prefix=/usr
+	--disable-debug
+	--disable-debug-symbols
+	--disable-jemalloc
+	--disable-strip
+	--disable-tests
+	--enable-readline
+	--enable-release
+	--enable-shared-js
+	--with-system-zlib
+	--with-system-icu
+	--disable-rust-simd
+	)
+	mkdir -p firefox-78.15.0/obj
+	cd firefox-78.15.0/obj
+
+	echo "[Building]: instrumented JS ..."
+	
+	CC=gcc CXX=g++	\
+	bash ../js/src/configure "${conf_args[@]}"
+	
+	make
+}
+
+package() {
+	cd firefox-78.15.0/obj
+
+	make DESTDIR=$pkgdir install
+	rm $pkgdir/usr/lib/*.ajs
+	find $pkgdir/usr/{lib/pkgconfig,include} -type f -exec chmod -c a-x {} +
+}

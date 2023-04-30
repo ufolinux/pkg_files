@@ -1,0 +1,19 @@
+pkgname=xf86-video-vesa
+pkgver=2.5.0
+pkgrel=4
+arch=('x86_64')
+depends=(xorg-server)
+source=(https://x.org/pub/individual/driver/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure --prefix=/usr
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

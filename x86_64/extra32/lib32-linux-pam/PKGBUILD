@@ -1,0 +1,32 @@
+pkgname=lib32-linux-pam
+pkgver=1.5.2
+pkgrel=1
+pkgdesc="PAM (Pluggable Authentication Modules) library"
+arch=('x86_64')
+url="http://linux-pam.org"
+depends=(lib32-libtirpc linux-pam)
+makedepends=('docbook-xml' 'docbook-xsl')
+source=(https://github.com/linux-pam/linux-pam/releases/download/v$pkgver/Linux-PAM-$pkgver.tar.xz)
+options=('!emptydirs')
+
+build() {
+	cd Linux-PAM-$pkgver
+
+	export CC='gcc -m32'
+	export CXX='g++ -m32'
+	export PKG_CONFIG_PATH='/usr/lib32/pkgconfig'
+
+	./configure \
+	--libdir=/usr/lib32 \
+	--sbindir=/usr/bin \
+	--disable-db
+
+	make
+}
+
+package() {
+	cd Linux-PAM-$pkgver
+	make DESTDIR="$pkgdir" SCONFIGDIR=/etc/security install
+
+	rm -rf "${pkgdir}"/{etc,usr/{bin,include,lib,share}}
+}

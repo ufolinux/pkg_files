@@ -1,0 +1,61 @@
+# Maintainer: Kyle Keen <keenerd@gmail.com>
+
+pkgname=seamonkey
+pkgver=2.53.10.2
+pkgrel=2
+pkgdesc="SeaMonkey internet suite"
+arch=('x86_64')
+license=('MPL')
+depends=('dbus-glib' 'gtk+' 'gtk2+' 'icu' 'python3' 'rust' 'yasm' 'zip' 'unzip'
+	'libevent' 'libxt' 'sqlite3' 'alsa-lib' 'doxygen' 'valgrind' 'nasm' 'libxcomposite' 'libxcursor')
+makedepends=('base-devel' 'clang' 'mesa')
+url="https://www.seamonkey-project.org/"
+source=("https://archive.mozilla.org/pub/seamonkey/releases/$pkgver/source/seamonkey-$pkgver.source.tar.xz"
+        "mozconfig")
+install="$pkgname.install"
+options=(!lto)
+
+# Google API keys (see http://www.chromium.org/developers/how-tos/api-keys)
+_google_api_key=
+
+# Mozilla API keys (see https://location.services.mozilla.com/api)
+_mozilla_api_key=
+
+prepare() {
+  cd "$pkgname-$pkgver"
+  cp ../mozconfig .mozconfig
+
+  echo -n "$_google_api_key" > google-api-key
+  echo -n "$_mozilla_api_key" > mozilla-api-key
+
+  cat >> .mozconfig <<EOF
+  ac_add_options --with-google-location-service-api-keyfile=${PWD@Q}/google-api-key
+  ac_add_options --with-google-safebrowsing-api-keyfile=${PWD@Q}/google-api-key
+  ac_add_options --with-mozilla-api-keyfile=${PWD@Q}/mozilla-api-key
+EOF
+}
+
+build() {
+  cd "$pkgname-$pkgver"
+
+  ./mach build
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+
+  DESTDIR="$pkgdir" INSTALL_SDK= ./mach install
+
+  rm -rf "$pkgdir"/usr/lib/seamonkey/{dictionaries,hyphenation}
+  ln -s /usr/share/hunspell "$pkgdir/usr/lib/seamonkey/dictionaries"
+  ln -s /usr/share/hyphen "$pkgdir/usr/lib/seamonkey/hyphenation"
+
+  install -Dm644 comm/suite/branding/seamonkey/default128.png \
+          "$pkgdir/usr/share/pixmaps/seamonkey.png"
+
+  install -Dm644 toolkit/mozapps/installer/linux/rpm/mozilla.desktop \
+                "$pkgdir/usr/share/applications/seamonkey.desktop"
+  sed -i 's/@MOZ_APP_DISPLAYNAME@/SeaMonkey internet suite/' \
+                "$pkgdir/usr/share/applications/seamonkey.desktop"
+  sed -i 's/@MOZ_APP_NAME@/seamonkey/' "$pkgdir/usr/share/applications/seamonkey.desktop"
+}

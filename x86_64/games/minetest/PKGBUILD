@@ -1,0 +1,36 @@
+pkgname=minetest
+pkgver=5.5.1
+pkgrel=1
+arch=(x86_64)
+depends=(irrlicht gcc freetype2 sqlite3 zstd luajit gmp jsoncpp)
+makedepends=(make cmake ninja)
+source=(https://github.com/$pkgname/$pkgname/archive/refs/tags/$pkgver.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	git clone https://github.com/minetest/irrlicht.git lib/irrlichtmt -b 1.9.0mt4 --depth=1
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	mkdir -p build && cd build
+	cmake -G Ninja \
+	-D CMAKE_INSTALL_PREFIX=/usr \
+	-D BUILD_CLIENT=1 \
+	-D ENABLE_GETTEXT=1 \
+	-D ENABLE_LEVELDB=0 \
+	-D ENABLE_POSTGRESQL=1 \
+	-D ENABLE_SPATIAL=1 \
+	-D ENABLE_REDIS=0 \
+	..
+
+	ninja
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+
+	DESTDIR=$pkgdir ninja install
+}

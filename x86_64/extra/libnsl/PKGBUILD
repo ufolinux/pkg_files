@@ -1,0 +1,27 @@
+pkgname=libnsl
+pkgver=2.0.0
+pkgrel=1
+arch=(x86_64)
+depends=(libtirpc)
+source=(https://github.com/thkukuk/libnsl/archive/v$pkgver.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	autoreconf -fiv
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure \
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR="$pkgdir" install
+}

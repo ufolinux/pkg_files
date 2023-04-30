@@ -1,0 +1,23 @@
+pkgname=nano
+pkgver=6.2
+pkgrel=1
+arch=('x86_64')
+source=(https://nano-editor.org/dist/v6/$pkgname-$pkgver.tar.gz)
+
+build() {
+        cd $pkgname-$pkgver
+
+	./configure --prefix=/usr         \
+	            --bindir=/bin         \
+	            --sysconfdir=/etc      \
+	            --docdir=/usr/share/doc/nano
+        make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+	
+	install -v -m644 doc/{nano.html,sample.nanorc} $pkgdir/usr/share/doc/nano
+}

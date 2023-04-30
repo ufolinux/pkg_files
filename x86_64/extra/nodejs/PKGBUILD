@@ -1,0 +1,39 @@
+pkgname=nodejs
+pkgver=17.4.0
+pkgrel=1
+arch=('x86_64')
+depends=(which icu libuv nghttp2 openssl c-ares)
+source=(https://nodejs.org/dist/v$pkgver/node-v$pkgver.tar.xz
+	allow-py3.11.patch)
+
+prepare() {
+	cd node-v$pkgver
+
+	# Patch nodejs to allow usage of python-3.11
+#	patch -Np0 -i ../allow-py3.11.patch
+}
+
+build() {
+	cd node-v$pkgver
+
+	./configure			\
+	--prefix=/usr			\
+	--experimental-http-parser	\
+	--shared-brotli			\
+	--shared-cares			\
+	--shared-libuv			\
+	--shared-openssl		\
+	--shared-nghttp2		\
+	--shared-zlib			\
+	--with-intl=system-icu
+
+	make -j6
+}
+
+package() {
+	cd node-v$pkgver
+
+	make DESTDIR=$pkgdir install
+
+	
+}

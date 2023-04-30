@@ -1,0 +1,61 @@
+pkgname=vlc
+pkgver=3.0.17.4
+pkgrel=1
+arch=(x86_64)
+depends=('libxpm' 'lua' 'libidn'
+	'ffmpeg' 'xcb-util-keysyms' 'tar' 'libxinerama'
+	'libsecret' 'libarchive' 'qt5' 'attr'
+	'freetype2' 'fribidi' 'harfbuzz' 'vdpau'
+	'fontconfig' 'libxml2' 'gnutls' 'wayland-protocols' 'double-conversion')
+makedepends=('gst-plugins-base' 'libnotify'
+	'gtk3+' 'librsvg' 'avahi' 'systemd'
+	'libmtp' 'samba' 'libssh2' 'mesa' 'protobuf'
+	'libogg' 'libvpx' 'libvorbis' 'opus' 'libtheora'
+	'libpng' 'libjpeg' 'libass' 'bison'
+	'pulseaudio' 'alsa-lib' 'jack2')
+source=(https://github.com/videolan/vlc/archive/refs/tags/$pkgver.tar.gz
+	update-vlc-plugin-cache.hook)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	sed -e 's:truetype/ttf-dejavu:TTF:g' -i modules/visualization/projectm.cpp
+
+	autoreconf -vfi
+
+	sed -e 's|-Werror-implicit-function-declaration||g' -i configure
+
+	export BUILDCC=gcc
+	export CXXFLAGS+=" -std=c++11"
+	export CPPFLAGS+=" -I/usr/include/samba-4.0"
+	export CFLAGS+=" -I/usr/include/samba-4.0 -ffat-lto-objects"
+
+	# NOTICE: This is very minimal build of vlc as of missing deps for extra vlc plugins!!!
+
+	./configure \
+	--prefix=/usr \
+	--sysconfdir=/etc \
+	--with-kde-solid=/usr/share/solid/actions/ \
+	--enable-nls \
+	--disable-a52 \
+	--enable-vdpau
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR="${pkgdir}" install
+
+	for res in 16 32 48 128 256; do
+		install -Dm 644 "$srcdir/vlc-$pkgver/share/icons/${res}x${res}/vlc.png" \
+		"${pkgdir}/usr/share/icons/hicolor/${res}x${res}/apps/vlc.png"
+	done
+
+	install -Dm 644 "$srcdir/update-vlc-plugin-cache.hook" -t "$pkgdir/usr/share/libalpm/hooks"
+}

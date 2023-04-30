@@ -1,0 +1,29 @@
+pkgname=sound-theme-spec
+pkgver=0.8
+pkgrel=1
+arch=(x86_64)
+depends=(glibc)
+makedepends=(intltool)
+commitid=b38cb3916fbb7243a3f4e78284d5613cc9321c8c
+source=(https://gitlab.freedesktop.org/xdg/sound-theme-spec/-/archive/$commitid/sound-theme-spec-$commitid.tar.gz)
+
+prepare() {
+	cd $pkgname-$commitid
+
+	autoreconf -fvi
+}
+
+build() {
+	cd $pkgname-$commitid
+
+	./configure \
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$commitid
+
+	make DESTDIR=$pkgdir install
+}

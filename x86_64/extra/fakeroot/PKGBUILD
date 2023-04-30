@@ -1,0 +1,28 @@
+pkgname=fakeroot
+pkgver=3.0.3
+pkgrel=1
+arch=('x86_64')
+source=(git+https://salsa.debian.org/clint/fakeroot)
+
+prepare() {
+	cd $pkgname
+	./bootstrap
+}
+
+build() {
+        cd $pkgname
+
+	./configure		\
+		--prefix=/usr
+        make
+}
+
+package() {
+	cd $pkgname
+	mkdir -p $pkgdir/usr/lib
+	make -C scripts DESTDIR=$pkgdir install
+	cp -rf .libs/*.so $pkgdir/usr/lib/
+	cp -rf .libs/*.a $pkgdir/usr/lib/
+	mkdir -p $pkgdir/usr/bin
+	cp faked $pkgdir/usr/bin
+}

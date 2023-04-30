@@ -1,0 +1,16 @@
+pkgname=lz4
+pkgver=1.9.3
+pkgrel=2
+arch=('x86_64')
+depends=(glibc)
+source=(https://github.com/lz4/lz4/archive/v$pkgver/lz4-v$pkgver.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+	make PREFIX=/usr
+}
+
+package() {
+	cd $pkgname-$pkgver
+        make DESTDIR=$pkgdir PREFIX=/usr install
+}

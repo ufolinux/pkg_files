@@ -1,0 +1,23 @@
+pkgname=lame
+pkgver=3.100
+pkgrel=1
+arch=('x86_64')
+depends=(libsndfile nasm)
+makedepends=(gcc)
+source=(https://downloads.sourceforge.net/lame/lame-$pkgver.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr		\
+	--enable-mp3rtp
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

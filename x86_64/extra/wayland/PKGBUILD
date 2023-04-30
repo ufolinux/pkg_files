@@ -1,0 +1,27 @@
+pkgname=wayland
+pkgver=1.21.0
+pkgrel=2
+arch=('x86_64')
+depends=('expat' 'glibc' 'libffi' 'libxml2')
+makedepends=('docbook-xsl' 'docbook-xml' 'libxslt' 'meson' 'xmlto' 'wayland-protocols')
+source=(https://gitlab.freedesktop.org/wayland/wayland/-/releases/$pkgver/downloads/$pkgname-$pkgver.tar.xz)
+options=(!strip)
+
+build() {
+	cd $pkgname-$pkgver
+
+	mkdir -p build && cd build
+
+	meson \
+	--prefix=/usr \
+	--buildtype=release \
+	-D documentation=false \
+
+	ninja
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+
+	DESTDIR=$pkgdir ninja install
+}

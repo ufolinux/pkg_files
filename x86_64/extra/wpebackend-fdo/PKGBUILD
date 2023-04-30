@@ -1,0 +1,29 @@
+pkgname=wpebackend-fdo
+pkgver=1.12.0
+pkgrel=1
+arch=('x86_64')
+depends=(libepoxy libwpe wayland-protocols)
+source=(https://wpewebkit.org/releases/wpebackend-fdo-$pkgver.tar.xz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	mkdir -p build
+}
+
+build() {
+	cd $pkgname-$pkgver/build
+
+	meson			\
+	--prefix=/usr		\
+	--buildtype=release	\
+	..
+
+	ninja
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+
+	DESTDIR=$pkgdir ninja install
+}

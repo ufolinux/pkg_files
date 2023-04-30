@@ -1,0 +1,19 @@
+pkgname=libpciaccess
+pkgver=0.16
+pkgrel=1
+arch=('x86_64')
+depends=('fontconfig' 'libxcb')
+source=(https://x.org/releases/individual/lib/$pkgname-$pkgver.tar.gz)
+
+build() {
+        cd $pkgname-$pkgver
+	./configure --prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

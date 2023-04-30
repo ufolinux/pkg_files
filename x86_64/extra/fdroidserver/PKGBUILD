@@ -1,0 +1,27 @@
+pkgname=fdroidserver
+pkgver=2.0.3
+pkgrel=1
+arch=(x86_64)
+depends=(python3-pip)
+install=fdroid.install
+source=($pkgname-$pkgver.tar.gz::https://gitlab.com/fdroid/fdroidserver/-/archive/${pkgver}/fdroidserver-${pkgver}.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	python setup.py compile_catalog
+	python setup.py bdist_egg
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	python setup.py install --root="$pkgdir/" --optimize=1 --install-data="/usr"
+
+	mkdir -p "$pkgdir/usr/bin"
+	install "fdroid" "$pkgdir/usr/bin"
+	install -D gradlew-fdroid "$pkgdir/usr/lib/python$(python --version|cut -f2 -d" "|cut -f1,2 -d".")/site-packages/gradlew-fdroid"
+
+	install -D completion/bash-completion "$pkgdir/usr/share/bash-completion/completions/fdroidserver"
+	mkdir -p "$pkgdir/opt/android-sdk/tools"
+}

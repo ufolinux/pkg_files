@@ -1,0 +1,31 @@
+pkgname=volume_key
+pkgver=0.3.12
+pkgrel=1
+arch=('x86_64')
+depends=(cryptsetup glib2 gpgme nss)
+makedepends=(gcc python3)
+source=(https://github.com/felixonmars/volume_key/archive/volume_key-$pkgver.tar.gz)
+
+prepare() {
+	cd $pkgname*-$pkgver
+
+	autoreconf -fiv
+}
+
+build() {
+	cd $pkgname*-$pkgver
+
+	./configure		\
+	--prefix=/usr		\
+	--without-python	\
+	--without-python3	\
+	--without-swig
+
+	make
+}
+
+package() {
+	cd $pkgname*-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

@@ -1,0 +1,20 @@
+pkgname=gnutls
+pkgver=3.7.2
+pkgrel=1
+arch=('x86_64')
+depends=(nettle)
+source=(https://gnupg.org/ftp/gcrypt/$pkgname/v3.7/$pkgname-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr		\
+	--with-included-unistring
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

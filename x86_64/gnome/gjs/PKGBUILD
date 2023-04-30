@@ -1,0 +1,19 @@
+pkgname=gjs
+pkgver=1.70.1
+pkgrel=1
+arch=(x86_64)
+depends=(cairo dbus gobject-introspection js78 gtk3+)
+makedepends=()
+source=()
+
+build() {
+	cd $pkgname-$pkgver
+
+	
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	
+}

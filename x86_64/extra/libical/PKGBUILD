@@ -1,0 +1,33 @@
+pkgname=libical
+pkgver=3.0.13
+pkgrel=1
+arch=('x86_64')
+depends=(gobject-introspection vala)
+makedepends=(cmake)
+source=(https://github.com/libical/libical/releases/download/v$pkgver/libical-$pkgver.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	mkdir -p build
+}
+
+build() {
+	cd $pkgname-$pkgver/build
+
+	cmake				\
+	-DCMAKE_INSTALL_PREFIX=/usr	\
+	-DCMAKE_BUILD_TYPE=Release	\
+	-DICAL_BUILD_DOCS=false		\
+	-DGOBJECT_INTROSPECTION=true	\
+	-DICAL_GLIB_VAPI=true		\
+	..
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+
+	make DESTDIR=$pkgdir install
+}

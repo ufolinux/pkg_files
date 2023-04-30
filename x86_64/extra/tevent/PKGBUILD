@@ -1,0 +1,28 @@
+pkgname=tevent
+pkgver=0.11.0
+pkgrel=1
+arch=(x86_64)
+depends=(talloc python3)
+makedepends=(cmocka)
+source=(https://samba.org/ftp/tevent/${pkgname}-${pkgver}.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	./configure \
+	--prefix=/usr \
+	--bundled-libraries=NONE \
+	--builtin-libraries=replace
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	make -j4
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

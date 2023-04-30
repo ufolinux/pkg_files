@@ -1,0 +1,12 @@
+pkgname=setconf
+pkgver=0.7.7
+pkgrel=1
+arch=('x86_64')
+depends=(python3)
+source=(https://setconf.roboticoverlords.org/$pkgname-$pkgver.tar.xz)
+
+package() {
+	cd $pkgname-$pkgver
+
+	install -Dm755 "$pkgname.py" "$pkgdir/usr/bin/$pkgname"
+}

@@ -1,0 +1,24 @@
+pkgname=python3-ply
+rname=ply
+pkgver=3.11
+pkgrel=1
+arch=(x86_64)
+depends=(python3)
+makedepends=(python3-pip)
+source=(https://pypi.io/packages/source/p/ply/ply-$pkgver.tar.gz)
+
+prepare() {
+	pip3 install setuptools
+}
+
+build() {
+	cd $rname-$pkgver
+
+	python setup.py build
+}
+
+package() {
+	cd $rname-$pkgver
+
+	python setup.py install --root=$pkgdir
+}

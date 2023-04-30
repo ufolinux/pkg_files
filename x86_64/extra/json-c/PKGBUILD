@@ -1,0 +1,26 @@
+pkgname=json-c
+arch=(x86_64)
+pkgver=0.15
+pkgrel=1
+makedepends=(cmake)
+source=(https://s3.amazonaws.com/json-c_releases/releases/$pkgname-$pkgver.tar.gz)
+
+
+build() {
+	mkdir build
+	cd build
+
+	cmake				\
+	-DCMAKE_INSTALL_PREFIX=/usr	\
+	-DCMAKE_BUILD_TYPE=Release	\
+	-DBUILD_STATIC_LIBS=OFF		\
+	../$pkgname-$pkgver
+
+	make
+}
+
+package() {
+	cd build
+
+	make DESTDIR=$pkgdir install
+}

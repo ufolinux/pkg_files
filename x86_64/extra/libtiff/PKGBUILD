@@ -1,0 +1,22 @@
+pkgname=libtiff
+pkgver=4.3.0
+pkgrel=2
+arch=('x86_64')
+depends=(glibc libjpeg zlib xz zstd freeglut)
+makedepends=(mesa glu jbigkit)
+source=(https://download.osgeo.org/libtiff/tiff-$pkgver.tar.gz)
+
+build() {
+	cd tiff-$pkgver
+	./configure		\
+	--prefix=/usr		\
+	--sysconfdir=/etc
+
+	make
+}
+
+package() {
+	cd tiff-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

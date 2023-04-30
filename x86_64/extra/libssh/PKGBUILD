@@ -1,0 +1,28 @@
+pkgname=libssh
+pkgver=0.9.6
+pkgrel=1
+arch=('x86_64')
+depends=('zlib' 'openssl')
+makedepends=('cmake' 'cmocka' 'doxygen' 'python3' 'openssh')
+source=("https://www.libssh.org/files/0.9/$pkgname-$pkgver.tar.xz")
+
+prepare() {
+	  mkdir -p build
+}
+
+build() {
+	cd build
+
+	cmake ../$pkgname-$pkgver \
+	-DCMAKE_INSTALL_PREFIX=/usr \
+	-DWITH_GSSAPI=OFF \
+	-DUNIT_TESTING=ON
+
+	make
+}
+
+package_libssh() {
+	cd build
+
+	make DESTDIR="$pkgdir" install
+}

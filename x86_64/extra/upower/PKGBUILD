@@ -1,0 +1,25 @@
+pkgname=upower
+pkgver=0.99.13
+pkgrel=1
+arch=('x86_64')
+depends=(libgudev libusb polkit)
+commitid=(177df5b9f9b76f25a2ad9da41aa0c1fa)
+source=(https://gitlab.freedesktop.org/$pkgname/$pkgname/uploads/$commitid/$pkgname-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure			\
+	--prefix=/usr			\
+	--localstatedir=/var		\
+	--enable-deprecated		\
+	--disable-docs
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

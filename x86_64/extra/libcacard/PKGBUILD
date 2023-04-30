@@ -1,0 +1,21 @@
+pkgname=libcacard
+pkgver=2.7.0
+pkgrel=1
+arch=(x86_64)
+depends=(nss glib2)
+source=(https://www.spice-space.org/download/libcacard/libcacard-$pkgver.tar.xz)
+
+
+build () {
+    cd libcacard-$pkgver
+
+    ./configure --prefix=/usr
+
+    make
+}
+
+package() {
+    cd libcacard-$pkgver
+
+    make DESTDIR="$pkgdir" install
+}

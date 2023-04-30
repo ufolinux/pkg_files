@@ -1,0 +1,27 @@
+pkgname=liburing
+pkgver=2.1
+pkgrel=1
+arch=(x86_64)
+depends=(glibc)
+makedepends=(git)
+commitid=807c8169e153a3985f1a4deddc302846673ef979 # Merge branch 'fix/man-madvise' of https://github.com/topecongiro/liburing
+source=(git+https://git.kernel.dk/liburing#tag=liburing-$pkgver)
+
+prepare() {
+	cd $pkgname
+
+	./configure \
+	--prefix=/usr
+}
+
+build() {
+	cd $pkgname
+
+	make
+}
+
+package() {
+	cd $pkgname
+
+	make DESTDIR=$pkgdir install
+}

@@ -1,0 +1,53 @@
+pkgname=linux-pam
+pkgver=1.5.2
+pkgrel=2
+pkgdesc="PAM (Pluggable Authentication Modules) library"
+arch=('x86_64')
+license=('GPL2')
+url="http://linux-pam.org"
+depends=('glibc' 'libtirpc' 'libgcrypt')
+makedepends=('docbook-xml' 'docbook-xsl')
+backup=(etc/security/{access.conf,faillock.conf,group.conf,limits.conf,namespace.conf,namespace.init,pam_env.conf,time.conf}
+	etc/environment
+	etc/pam.d/system-auth
+	etc/pam.d/system-local-login
+	etc/pam.d/system-login
+	etc/pam.d/system-remote-login
+	etc/pam.d/system-services
+	etc/pam.d/other)
+source=(https://github.com/linux-pam/linux-pam/releases/download/v$pkgver/Linux-PAM-$pkgver.tar.xz{,.asc}
+        pam.tmpfiles
+	other
+	system-auth
+	system-local-login
+	system-login
+	system-remote-login
+	system-services)
+
+options=('!emptydirs')
+
+build() {
+  cd Linux-PAM-$pkgver
+  ./configure \
+    --libdir=/usr/lib \
+    --sbindir=/usr/bin \
+    --disable-db
+  make
+}
+
+package() {
+	install -Dm 644 pam.tmpfiles "$pkgdir"/usr/lib/tmpfiles.d/pam.conf
+	cd Linux-PAM-$pkgver
+	make DESTDIR="$pkgdir" SCONFIGDIR=/etc/security install
+
+	# set unix_chkpwd uid
+	chmod +s "$pkgdir"/usr/bin/unix_chkpwd
+
+	install -dm755 $pkgdir/etc/pam.d
+	install -m644 -t $pkgdir/etc/pam.d $srcdir/system-auth
+	install -m644 -t $pkgdir/etc/pam.d $srcdir/system-local-login
+	install -m644 -t $pkgdir/etc/pam.d $srcdir/system-login
+	install -m644 -t $pkgdir/etc/pam.d $srcdir/system-remote-login
+	install -m644 -t $pkgdir/etc/pam.d $srcdir/system-services
+	install -m644 -t $pkgdir/etc/pam.d $srcdir/other
+}

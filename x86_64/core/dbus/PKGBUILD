@@ -1,0 +1,55 @@
+pkgname=dbus
+pkgver=1.12.20
+pkgrel=5
+arch=('x86_64')
+depends=(libx11 systemd expat)
+source=(https://dbus.freedesktop.org/releases/dbus/dbus-$pkgver.tar.gz
+	dbus-reload.hook
+	no-fatal-warnings.diff)
+
+build() {
+	cd $pkgname-$pkgver
+
+	patch -Np1 -i ../no-fatal-warnings.diff
+
+	./configure					\
+		--prefix=/usr				\
+	        --sysconfdir=/etc			\
+		--localstatedir=/var			\
+		--libexecdir=/usr/lib/dbus-1.0		\
+		runstatedir=/var/run			\
+		--with-console-auth-dir=/var/run/console	\
+		--with-dbus-user=dbus			\
+		--with-system-pid-file=/var/run/dbus/pid	\
+		--with-system-socket=/var/run/dbus/system_bus_socket	\
+		--with-systemdsystemunitdir=/usr/lib/systemd/system	\
+		--enable-systemd			\
+		--enable-user-session			\
+		--with-x
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+	
+	make DESTDIR=$pkgdir install
+
+	rm -r $pkgdir/{etc,var}
+
+	mkdir -p $pkgdir/lib
+	mv -v $pkgdir/usr/lib/libdbus-1.so.* $pkgdir/lib
+	ln -sfv ../../lib/$(readlink $pkgdir/usr/lib/libdbus-1.so) $pkgdir/usr/lib/libdbus-1.so
+
+	#chown -v root:messagebus $pkgdir/usr/libexec/dbus-daemon-launch-helper
+	#chmod -v      4750       $pkgdir/usr/libexec/dbus-daemon-launch-helper
+
+	echo 'u dbus 81 "System Message Bus"' 	|
+		install -Dm644 /dev/stdin "$pkgdir/usr/lib/sysusers.d/dbus.conf"
+
+	install -Dt $pkgdir/usr/share/libalpm -m644 $srcdir/*.hook
+
+	# if build logind support
+	#ln -sv $pkgdir/var/lib/dbus/machine-id $pkgdir/etc
+	rm -rf $pkgdir/var/run $pkgdir/run
+}

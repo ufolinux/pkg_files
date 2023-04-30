@@ -1,0 +1,21 @@
+pkgname=libnetfilter_conntrack
+pkgver=1.0.8
+pkgrel=1
+arch=('x86_64')
+depends=(libnfnetlink libmnl)
+source=(https://www.netfilter.org/projects/$pkgname/files/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure	\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

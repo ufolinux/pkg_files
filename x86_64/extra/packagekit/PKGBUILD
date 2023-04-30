@@ -1,0 +1,35 @@
+pkgname=packagekit
+pkgver=1.2.5
+pkgrel=3
+arch=('x86_64')
+makedepends=('polkit' 'sqlite3' 'gobject-introspection' 'intltool'
+             'bash-completion' 'vala' 'meson')
+options=('!emptydirs')
+commitid=8abe2d65bdc6950a7627ad89609cbb3fe446bcbb # Finish TODO's
+source=("git+https://git.it-kuny.ch/drunk/source-code/packagekit#commit=$commitid")
+backup=('var/lib/PackageKit/transactions.db'
+    'etc/PackageKit/alpm.d/bottle.conf'
+    'etc/PackageKit/alpm.d/repos.list')
+
+build() {
+    meson "packagekit" build \
+    --prefix=/usr \
+    -D cron=false \
+    -D dbus_sys=/usr/share/dbus-1/system.d \
+    -D gstreamer_plugin=false \
+    -D gtk_doc=false \
+    -D gtk_module=false \
+    -D packaging_backend=alpm \
+    -D alpm_package_manager=bottle \
+    -D systemd=true
+
+    ninja -C build
+}
+
+package_packagekit() {
+        # install directory with root owner, polkit group and
+        # correct permission
+        install -d -o root -g 102 -m 750 "${pkgdir}/usr/share/polkit-1/rules.d"
+
+        DESTDIR="$pkgdir" meson install -C build
+}

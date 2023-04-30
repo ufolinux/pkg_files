@@ -1,0 +1,46 @@
+changelog-seen = 2
+profile = "user"
+
+[target.x86_64-unknown-linux-gnu]
+llvm-config = "/usr/bin/llvm-config"
+
+[llvm]
+link-shared = true
+
+[build]
+target = [
+  "x86_64-unknown-linux-gnu",
+]
+
+locked-deps = true
+vendor = true
+tools = ["cargo", "rls", "clippy", "rustfmt", "analysis", "src", "rust-demangler"]
+sanitizers = true
+profiler = true
+
+# Generating docs fails with the wasm32-* targets
+docs = false
+
+[install]
+prefix = "/usr"
+libdir = "/usr/lib"
+bindir = "/usr/bin"
+
+[rust]
+debuginfo-level-std = 2
+channel = "stable"
+description = "Ufo Linux"
+rpath = false
+backtrace-on-ice = true
+remap-debuginfo = true
+jemalloc = true
+incremental = true
+
+# LLVM crashes when passing an object through ThinLTO twice.  This is triggered
+# when using rust code in cross-language LTO if libstd was built using ThinLTO.
+# http://blog.llvm.org/2019/09/closing-gap-cross-language-lto-between.html
+# https://github.com/rust-lang/rust/issues/54872
+codegen-units-std = 1
+
+[dist]
+compression-formats = ["xz"]

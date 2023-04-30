@@ -1,0 +1,19 @@
+pkgname=xml-simple
+pkgver=2.25
+pkgrel=1
+arch=('x86_64')
+source=(https://cpan.org/authors/id/G/GR/GRANTM/XML-Simple-$pkgver.tar.gz)
+
+build() {
+	cd XML-Simple-$pkgver
+
+	perl Makefile.PL
+
+	make
+}
+
+package() {
+	cd XML-Simple-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

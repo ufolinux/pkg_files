@@ -1,0 +1,28 @@
+pkgname=xf86-video-nouveau
+pkgver=1.0.17
+pkgrel=4
+arch=('x86_64')
+depends=(xorg-server mesa)
+source=(https://x.org/pub/individual/driver/$pkgname-$pkgver.tar.bz2
+	xorg-server-21.1.diff)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	patch -Np1 -i ../xorg-server-21.1.diff
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+	mkdir -p $pkgdir/etc/X11/xorg.conf.d
+}

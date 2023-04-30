@@ -1,0 +1,24 @@
+pkgname=libwacom
+pkgver=1.12
+pkgrel=1
+arch=('x86_64')
+depends=('systemd' 'glib2')
+source=(https://github.com/linuxwacom/libwacom/releases/download/$pkgname-$pkgver/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+	./autogen.sh --prefix=/usr
+
+	make
+#	cd ..
+#	meson build $pkgname-$pkgver	\
+#	--prefix=/usr
+
+#	ninja -C build
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+#	DESTDIR=$pkgdir ninja install -C build
+}

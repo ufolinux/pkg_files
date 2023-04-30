@@ -1,0 +1,28 @@
+pkgname=dkms
+pkgver=3.0.3
+pkgrel=2
+arch=(x86_64)
+depends=(gcc glibc coreutils gawk sed kmod make patch)
+makedepends=(git gcc)
+backup=(etc/dkms/framework.conf)
+source=(git+https://github.com/dell/dkms.git#tag=v$pkgver
+	dkms.install
+	dkms.upgrade
+	dkms.remove
+	dkms.sh)
+
+package() {
+	cd $pkgname
+
+	install -D -m 644 $srcdir/dkms.install "$pkgdir/usr/share/libalpm/hooks/70-dkms-install.hook"
+	install -D -m 644 $srcdir/dkms.upgrade "$pkgdir/usr/share/libalpm/hooks/70-dkms-upgrade.hook"
+	install -D -m 644 $srcdir/dkms.remove "$pkgdir/usr/share/libalpm/hooks/71-dkms-remove.hook"
+	install -D -m 755 $srcdir/dkms.sh "$pkgdir/usr/share/libalpm/scripts/dkms"
+
+	make							\
+	DESTDIR=$pkgdir						\
+	BASHDIR=$pkgdir/usr/share/bash-completion/completions	\
+	KCONF=$srcdir/trash					\
+	LIBDIR=$srcdir/trash					\
+	install
+}

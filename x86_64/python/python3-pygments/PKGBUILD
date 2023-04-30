@@ -1,0 +1,24 @@
+pkgname=python3-pygments
+rname=Pygments
+pkgver=2.12.0
+pkgrel=1
+arch=(x86_64)
+depends=(python3-sphinx python3-wcag-contrast-ratio)
+makedepends=(python3-pip)
+source=(https://pypi.org/packages/source/P/$rname/$rname-$pkgver.tar.gz)
+
+prepare() {
+	pip3 install setuptools
+}
+
+build() {
+	cd $rname-$pkgver
+
+	python3 setup.py build
+}
+
+package() {
+	cd $rname-$pkgver
+
+	 python3 setup.py install --root="$pkgdir" -O1
+}

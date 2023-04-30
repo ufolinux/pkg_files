@@ -1,0 +1,25 @@
+pkgname=irrlicht
+pkgver=1.9.0mt4
+pkgrel=2
+arch=(x86_64)
+depends=(zlib libpng libjpeg libglvnd xorg-server)
+makedepends=(make cmake ninja)
+source=(https://github.com/minetest/irrlicht/archive/refs/tags/$pkgver.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	mkdir -p build && cd build
+	cmake \
+	-DCMAKE_PREFIX_PATH=/usr \
+	-DCMAKE_BUILD_TYPE=Release \
+	..
+
+	make -j6
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+
+	make DESTDIR=$pkgdir install
+}

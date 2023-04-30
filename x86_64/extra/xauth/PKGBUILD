@@ -1,0 +1,21 @@
+pkgname=xauth
+pkgver=1.1.1
+pkgrel=1
+arch=('x86_64')
+depends=(libxmu)
+source=(https://xorg.freedesktop.org/archive/individual/app/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure			\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

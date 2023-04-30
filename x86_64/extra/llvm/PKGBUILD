@@ -1,0 +1,61 @@
+pkgname=llvm
+pkgver=13.0.1
+pkgrel=1
+depends=(libffi libxml2 ncurses perl zlib libedit)
+makedepends=('cmake' 'python3')
+arch=('x86_64')
+psource=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
+source=($psource/$pkgname-$pkgver.src.tar.xz
+	01.patch
+	02.patch
+	03.patch
+	04.patch
+	llvm-config.h)
+
+prepare() {
+	cd $pkgname-$pkgver.src
+	mkdir -p build
+	
+	# https://github.com/intel/intel-graphics-compiler/issues/204
+	echo "[PATCH]: 01 of 04" && patch -Rp2 -i ../01.patch
+
+	# Work around intermittent 'clang -0 -g' crashes
+	echo "[PATCH]: 02 of 04" && patch -Np2 -i ../02.patch
+
+	# Fix an ISPC build failure (https://github.com/ispc/ispc/issues/2189)
+	echo "[PATCH]: 03 of 04" && patch -Np2 -i ../03.patch
+
+	# https://github.com/llvm/llvm-project/issues/53243 + https://github.com/rust-lang/rust/issues/92869
+	echo "[PATCH]: 04 of 04" && patch -Np2 -i ../04.patch
+}
+
+build() {
+	cd $pkgname-$pkgver.src/build
+	
+	cmake .. -G Ninja		\
+	-D CMAKE_BUILD_TYPE=Release	\
+	-D CMAKE_INSTALL_PREFIX=/usr	\
+	-D LLVM_BUILD_LLVM_DYLIB=ON	\
+	-D LLVM_LINK_LLVM_DYLIB=ON	\
+	-D LLVM_INSTALL_UTILS=ON		\
+	-D LLVM_ENABLE_RTTI=ON		\
+	-D LLVM_ENABLE_FFI=ON		\
+	-D LLVM_BUILD_TESTS=OFF		\
+	-D LLVM_BUILD_DOCS=OFF		\
+	-D LLVM_BINUTILS_INCDIR=/usr/include
+
+	ninja all
+}
+
+package() {
+	cd $pkgname-$pkgver.src/build
+
+	DESTDIR=$pkgdir ninja install
+
+	pushd ../utils/lit
+	python3 setup.py install --root="$pkgdir" -O1
+	popd
+
+	install -d "$pkgdir/usr/lib/bfd-plugins"
+	ln -s ../LLVMgold.so "$pkgdir/usr/lib/bfd-plugins/LLVMgold.so"
+}

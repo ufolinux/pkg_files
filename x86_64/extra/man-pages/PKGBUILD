@@ -1,0 +1,26 @@
+pkgname=man-pages
+pkgver=5.13
+pkgrel=1
+arch=('x86_64')
+source=(https://www.kernel.org/pub/linux/docs/$pkgname/$pkgname-$pkgver.tar.xz)
+
+packages() {
+	cd $srcdir/$pkgname-$pkgver
+
+	sed -i "s|prefix := /usr/local|prefix := /usr|g" Makefile
+
+	# Included already by shadow
+	rm man5/passwd.5
+	rm man3/getspnam.3
+
+	# Included already by tzdata
+	rm man5/tzfile.5 man8/{tzselect,zdump,zic}.8
+
+	# Included already by libxcrypt
+	rm man3/crypt*.3
+}
+
+package() {
+        cd $pkgname-$pkgver
+        make DESTDIR=$pkgdir install
+}

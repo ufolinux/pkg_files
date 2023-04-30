@@ -1,0 +1,89 @@
+pkgname=steam
+pkgver=1.0.0.74
+pkgrel=4
+arch=('x86_64')
+depends=(
+	# LIB64
+	'bash' 'alsa-lib' 'alsa-plugins' 'atk' 'cairo' 'curl' 'dbus-glib' 'fontconfig'
+	'freetype2' 'freeglut' 'gdk-pixbuf' 'glew1.10' 'glib2' 'glu' 'gtk2+'
+	'libcurl-compat' 'libcurl-gnutls' 'dbus' 'libdrm' 'libgcrypt15' 'libice'
+	'libidn11' 'libjpeg6' 'libnm' 'libpng12' 'pulseaudio' 'librsvg' 'librtmp0'
+	'libsm' 'libtheora' 'libtiff4' 'libudev0-shim' 'libusb' 'libva' 'vdpau'
+	'libvorbis' 'libvpx1.3' 'libwrap' 'libxcomposite' 'libxcursor' 'libxft'
+	'libxi' 'libxinerama' 'libxmu' 'libxrandr' 'libxrender' 'libxtst'
+	'libxxf86vm' 'nspr' 'openal' 'openssl-1.0' 'pango' 'sdl' 'sdl2'
+	'sdl2_image' 'sdl2_mixer' 'sdl2_ttf' 'sdl_image' 'sdl_mixer' 'sdl_ttf'
+	'vulkan-icd-loader' 'glew-1.10'
+
+	# LIB32
+	'lib32-alsa-lib' 'lib32-alsa-plugins' 'lib32-atk' 'lib32-cairo' 'lib32-curl'
+	'lib32-dbus-glib' 'lib32-fontconfig' 'lib32-freetype2' 'lib32-freeglut'
+	'lib32-gdk-pixbuf' 'lib32-glew1.10' 'lib32-glib2' 'lib32-glu' 'lib32-gtk2+'
+	'lib32-libcaca' 'lib32-libcanberra'
+	'lib32-cups' 'lib32-libcurl-compat' 'lib32-libcurl-gnutls' 'lib32-dbus'
+	'lib32-libdrm' 'lib32-libgcrypt15' 'lib32-libice' 'lib32-libidn11'
+	'lib32-libjpeg6' 'lib32-libnm' 'lib32-pipewire' 'lib32-libpng12' 'lib32-pulseaudio'
+	'lib32-librtmp0' 'lib32-libsm' 'lib32-libtheora' 'lib32-libtiff4'
+	'lib32-libudev0-shim' 'lib32-libusb' 'lib32-libva' 'lib32-vdpau'
+	'lib32-libvorbis' 'lib32-libvpx1.3' 'lib32-libwrap' 'lib32-libxcomposite'
+	'lib32-libxcursor' 'lib32-libxft' 'lib32-libxi' 'lib32-libxinerama'
+	'lib32-libxmu' 'lib32-libxrandr' 'lib32-libxrender' 'lib32-libxtst'
+	'lib32-libxxf86vm' 'lib32-nspr' 'lib32-openal'
+	'lib32-openssl-1.0' 'lib32-pango' 'lib32-sdl' 'lib32-sdl2' 'lib32-sdl2_image'
+	'lib32-sdl2_mixer' 'lib32-sdl2_ttf' 'lib32-sdl_image' 'lib32-sdl_mixer'
+	'lib32-sdl_ttf' 'libcaca' 'libcanberra' 'cups'
+	'lib32-vulkan-icd-loader'
+	'lib32-libappindicator' 'lib32-libdbusmenu' 'lib32-glew-1.10')
+source=(https://repo.steampowered.com/${pkgname}/pool/${pkgname}/s/${pkgname}/${pkgname}_${pkgver}.tar.gz
+	steam-wayland.sh
+	steam-wayland.desktop
+	steam-x11.sh
+	steam-x11.desktop)
+
+prepare() {
+	cd ${pkgname}-launcher
+
+	# apply roundups for udev rules
+	sed -r 's|("0666")|"0660", TAG+="uaccess"|g' -i subprojects/steam-devices/60-steam-input.rules
+	sed -r 's|("misc")|\1, OPTIONS+="static_node=uinput"|g' -i subprojects/steam-devices/60-steam-input.rules
+	sed -r 's|(, TAG\+="uaccess")|, MODE="0660"\1|g' -i subprojects/steam-devices/60-steam-vr.rules
+}
+
+package() {
+	cd ${pkgname}-launcher
+
+	make DESTDIR="${pkgdir}" install
+
+	install -Dm 755 "${srcdir}/steam-x11.sh" "${pkgdir}/usr/bin/steam-runtime"
+	install -d "${pkgdir}/usr/lib/steam"
+	mv "${pkgdir}/usr/bin/steam" "${pkgdir}/usr/lib/steam/steam"
+	ln -sf /usr/bin/steam-runtime "${pkgdir}/usr/bin/steam"
+
+	install -Dm 644 COPYING steam_subscriber_agreement.txt -t "${pkgdir}/usr/share/licenses/${pkgname}"
+	install -Dm 644 debian/changelog -t "${pkgdir}/usr/share/doc/${pkgname}"
+
+	# blank steamdeps because apt-get
+	ln -sf /usr/bin/true "${pkgdir}/usr/bin/steamdeps"
+
+	install -Dm 644 subprojects/steam-devices/60-steam-input.rules \
+		"${pkgdir}/usr/lib/udev/rules.d/70-steam-input.rules"
+	install -Dm 644 subprojects/steam-devices/60-steam-vr.rules \
+		"${pkgdir}/usr/lib/udev/rules.d/70-steam-vr.rules"
+
+	install -Dm 644 $srcdir/steam-wayland.desktop -t "${pkgdir}/usr/share/applications"
+	install -Dm 755 $srcdir/steam-wayland.sh "${pkgdir}/usr/bin/steam-wayland"
+
+	install -Dm 644 $srcdir/steam-x11.desktop -t "${pkgdir}/usr/share/applications"
+	install -Dm 755 $srcdir/steam-x11.sh "${pkgdir}/usr/bin/steam-x11"
+
+	install -d "${pkgdir}/usr/lib/steam"
+	ln -sf /usr/lib/libcurl.so.3 "${pkgdir}/usr/lib/steam/libcurl.so.3"
+	ln -sf /usr/lib/libcurl.so.4.2.0 "${pkgdir}/usr/lib/steam/libcurl.so.4"
+	ln -sf /usr/lib/libcurl.so.4.2.0 "${pkgdir}/usr/lib/steam/libcurl.so.4.2.0"
+	if [ "${CARCH}" == "x86_64" ]; then
+		install -d "${pkgdir}/usr/lib32/steam"
+		ln -sf /usr/lib32/libcurl.so.3 "${pkgdir}/usr/lib32/steam/libcurl.so.3"
+		ln -sf /usr/lib32/libcurl.so.4.2.0 "${pkgdir}/usr/lib32/steam/libcurl.so.4"
+		ln -sf /usr/lib32/libcurl.so.4.2.0 "${pkgdir}/usr/lib32/steam/libcurl.so.4.2.0"
+	fi
+}

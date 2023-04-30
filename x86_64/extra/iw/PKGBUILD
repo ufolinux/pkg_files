@@ -1,0 +1,18 @@
+pkgname=iw
+pkgver=5.16
+pkgrel=1
+arch=('x86_64')
+depends=('libnl')
+source=("https://www.kernel.org/pub/software/network/$pkgname/$pkgname-$pkgver.tar.xz")
+
+build() {
+    cd "$srcdir"/$pkgname-$pkgver
+
+    make
+}
+
+package() {
+    cd "$srcdir"/$pkgname-$pkgver
+
+    make DESTDIR="$pkgdir" SBINDIR="/usr/bin" install
+}

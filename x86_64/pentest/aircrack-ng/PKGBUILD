@@ -1,0 +1,31 @@
+pkgname=aircrack-ng
+pkgver=1.6
+pkgrel=1
+arch=(x86_64)
+depends=(openssl sqlite3 pcre iw ethtool
+    libpcap python3 zlib libnl libusb)
+commitid=f94a3fe3f1c74938169317a6395b7f72452499c4
+source=(git+https://github.com/aircrack-ng/aircrack-ng.git#commit=$commitid)
+
+prepare() {
+	cd $pkgname
+
+	autoreconf -fiv
+}
+
+build() {
+	cd $pkgname
+
+	./configure \
+	--prefix=/usr \
+    --with-ext-scripts \
+    --with-experimental
+
+    make
+}
+
+package() {
+    cd $pkgname
+
+    make DESTDIR=$pkgdir install
+}

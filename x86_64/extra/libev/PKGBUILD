@@ -1,0 +1,24 @@
+pkgname=libev
+pkgver=4.33
+pkgrel=1
+arch=('x86_64')
+depends=(glibc)
+makedepends=(gcc make)
+source=(http://dist.schmorp.de/${pkgname}/${pkgname}-${pkgver}.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+
+	rm -f $pkgdir/usr/include/event.h
+}

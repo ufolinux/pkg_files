@@ -1,0 +1,21 @@
+pkgname=iceauth
+pkgver=master
+pkgrel=1
+arch=('x86_64')
+depends=(libx11)
+source=(git+https://gitlab.freedesktop.org/xorg/app/iceauth.git)
+
+build() {
+	cd $pkgname
+
+	./autogen.sh
+
+	./configure --prefix=/usr
+	make
+}
+
+package() {
+	cd $pkgname
+
+	make DESTDIR=$pkgdir install
+}

@@ -1,0 +1,26 @@
+pkgname=(minizip)
+pkgver=1.2.11
+pkgrel=1
+arch=('x86_64')
+depends=('glibc' 'zlib')
+source=("https://zlib.net/zlib-${pkgver}.tar.gz")
+
+build() {
+	cd "${srcdir}/zlib-$pkgver"
+
+	cd contrib/minizip
+	cp Makefile Makefile.orig
+	cp ../README.contrib readme.txt
+	autoreconf --install
+	./configure --prefix=/usr --enable-static=no
+	make
+}
+
+package() {
+	cd "${srcdir}/zlib-$pkgver/contrib/minizip"
+
+	make install DESTDIR="${pkgdir}"
+
+	# https://github.com/madler/zlib/pull/229
+	rm "${pkgdir}/usr/include/minizip/crypt.h"
+}

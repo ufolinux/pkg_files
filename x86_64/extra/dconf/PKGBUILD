@@ -1,0 +1,47 @@
+pkgname=dconf
+epkgname=dconf-editor
+pkgver=0.40.0
+epkgver=3.38.3
+gver=0.40
+pkgrel=1
+arch=('x86_64')
+depends=('glib2' 'gobject-introspection' 'dbus' 'gtk+' 'libxml2' 'libxslt' 'vala' 'gtk-doc')
+source=(https://download.gnome.org/sources/$pkgname/$gver/$pkgname-$pkgver.tar.xz
+	https://download.gnome.org/sources/$epkgname/3.38/$epkgname-$epkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	mkdir -p build && cd build
+
+	meson			\
+	--prefix=/usr		\
+	--buildtype=release	\
+	..
+
+	ninja
+
+	# DConf Editor
+	cd $srcdir/$epkgname-$epkgver
+
+        mkdir -p build && cd build
+
+        meson                   \
+        --prefix=/usr           \
+        --buildtype=release     \
+        ..
+
+        ninja
+}
+
+package() {
+	# DConf
+	cd $pkgname-$pkgver/build
+
+	DESTDIR=$pkgdir ninja install
+
+	# DConf Editor
+	cd $srcdir/$epkgname-$epkgver/build
+
+        DESTDIR=$pkgdir ninja install
+}

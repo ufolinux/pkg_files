@@ -1,0 +1,35 @@
+pkgname=libspiro
+# DD/MM/YY
+pkgver=10042022
+pkgrel=1
+arch=(x86_64)
+depends=(glibc)
+makedepends=(git make)
+commitid=8aa44b49ed45ae07ca3e20fbdce3ef470e8c29c2
+source=(git+https://github.com/fontforge/libspiro.git#commit=$commitid)
+
+prepare() {
+	cd $pkgname
+
+	autoreconf -fi
+
+	automake --foreign -Wall
+
+	./configure \
+	--prefix=/usr
+}
+
+build() {
+	cd $pkgname
+
+	make -j4
+}
+
+package() {
+	cd $pkgname
+
+	make DESTDIR=$pkgdir install
+
+	# And install that pkgconf file ( Forgetting that is a hassle )
+	install -Dm644 libspiro.pc $pkgdir/usr/lib/pkgconfig/libspiro.pc
+}

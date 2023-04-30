@@ -1,0 +1,22 @@
+pkgname=libxinerama
+pkgver=1.1.4
+pkgrel=1
+arch=('x86_64')
+depends=(libxext)
+source=(https://xorg.freedesktop.org/releases/individual/lib/libXinerama-$pkgver.tar.bz2)
+
+build() {
+	cd libXinerama-$pkgver
+
+	./configure		\
+	--prefix=/usr		\
+	--sysconfdir=/etc LIBS=-lX11
+
+	make
+}
+
+package() {
+	cd libXinerama-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

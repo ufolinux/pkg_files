@@ -1,0 +1,23 @@
+pkgname=reprepro
+pkgver=5.3.0
+pkgrel=1
+pkgdesc='Debian package repository producer'
+arch=('x86_64')
+depends=('db' 'gpgme' 'zlib' 'bzip2' 'xz' 'libarchive' 'libgpg-error')
+source=("http://ftp.debian.org/debian/pool/main/r/${pkgname}/${pkgname}_${pkgver}.orig.tar.gz")
+
+build() {
+    cd "${pkgname}-${pkgver}"
+
+    ./configure \
+    --prefix=/usr
+
+    make
+}
+
+
+package() {
+    cd "${pkgname}-${pkgver}"
+
+    make DESTDIR="${pkgdir}" install
+}

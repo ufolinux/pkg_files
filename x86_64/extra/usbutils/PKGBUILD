@@ -1,0 +1,21 @@
+pkgname=usbutils
+pkgver=014
+pkgrel=2
+arch=('x86_64')
+depends=(libusb)
+makedepends=(glibc wget)
+source=(https://www.kernel.org/pub/linux/utils/usb/usbutils/usbutils-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure --prefix=/usr --datadir=/usr/share/hwdata
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

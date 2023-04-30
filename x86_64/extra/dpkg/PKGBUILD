@@ -1,0 +1,37 @@
+pkgname=dpkg
+pkgver=1.21.8
+pkgrel=1
+pkgdesc='The Debian Package Manager tools'
+arch=('x86_64')
+options=('emptydirs')
+depends=('xz' 'zlib' 'bzip2' 'perl')
+makedepends=('perl-modules' 'git')
+source=(https://salsa.debian.org/dpkg-team/dpkg/-/archive/$pkgver/dpkg-$pkgver.tar.bz2)
+
+prepare() {
+	cd dpkg-$pkgver
+    echo "$pkgver" > .dist-version
+
+	./autogen
+}
+
+build() {
+    cd dpkg-$pkgver
+
+    CFLAGS+=' -ffat-lto-objects' \
+    ./configure --prefix=/usr \
+        --sysconfdir=/etc \
+        --localstatedir=/var \
+        --disable-start-stop-daemon
+
+    make
+}
+
+package() {
+    cd dpkg-$pkgver
+
+    make DESTDIR="$pkgdir" install
+
+    install -d "$pkgdir/var/dpkg"/updates/
+    touch "$pkgdir/var/lib/dpkg"/{status,available}
+}

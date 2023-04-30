@@ -1,0 +1,27 @@
+pkgname=libx265
+pkgver=3.2.1
+pkgrel=1
+arch=('x86_64')
+depends=(glibc)
+makedepends=(nasm cmake)
+source=(http://ftp.videolan.org/pub/videolan/x265/x265_$pkgver.tar.gz)
+
+prepare() {
+	cd x265_$pkgver
+
+	mkdir -p bld
+}
+
+build() {
+	cd x265_$pkgver/bld
+
+	cmake -DCMAKE_INSTALL_PREFIX=/usr ../source
+
+	make
+}
+
+package() {
+	cd x265_$pkgver/bld
+
+	make DESTDIR=$pkgdir install
+}

@@ -1,0 +1,19 @@
+pkgname=ethtool
+pkgver=5.16
+pkgrel=1
+arch=('x86_64')
+depends=('glibc' 'libmnl')
+source=(https://www.kernel.org/pub/software/network/$pkgname/$pkgname-$pkgver.tar.xz)
+build() {
+    cd $pkgname-$pkgver
+
+    ./configure --prefix=/usr --mandir=/usr/share/man --sbindir=/usr/bin
+
+    make
+}
+
+package() {
+    cd $pkgname-$pkgver
+
+    make DESTDIR="$pkgdir" install
+}

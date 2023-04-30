@@ -1,0 +1,49 @@
+pkgname=bash
+pkgver=5.1.16
+pkgrel=1
+arch=('x86_64')
+depends=(readline glibc ncurses)
+backup=(etc/bash.bash{rc,_logout}
+	etc/skel/.bash{rc,_profile,_logout})
+source=(https://ftp.gnu.org/gnu/$pkgname/$pkgname-$pkgver.tar.gz
+	dot.bash_logout
+	dot.bash_profile
+	dot.bashrc
+	system.bash_logout
+	system.bashrc)
+
+build() {
+        cd $pkgname-$pkgver
+
+        ./configure		\
+	--prefix=/usr		\
+	--with-curses		\
+	--enable-readline	\
+	--without-bash-malloc	\
+	--with-installed-readline
+
+        make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+        make DESTDIR=$pkgdir install
+	
+	cd ../
+	
+        mkdir -p $pkgdir/bin/
+        mv $pkgdir/usr/bin/bash $pkgdir/bin
+        ln -s bash $pkgdir/bin/sh
+
+	# System
+	mkdir -p $pkgdir/etc
+	install -Dm644 system.bashrc $pkgdir/etc/bash.bashrc
+	install -Dm644 system.bash_logout $pkgdir/etc/bash.bash_logout
+
+	# User
+	install -dm755 $pkgdir/etc/skel/
+	install -m644 dot.bashrc $pkgdir/etc/skel/.bashrc
+	install -m644 dot.bash_profile $pkgdir/etc/skel/.bash_profile
+	install -m644 dot.bash_logout $pkgdir/etc/skel/.bash_logout
+}

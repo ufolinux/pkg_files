@@ -1,0 +1,19 @@
+pkgname=libssh2
+pkgver=1.10.0
+pkgrel=1
+arch=('x86_64')
+depends=('openssl' 'zlib')
+source=("https://www.libssh2.org/download/$pkgname-$pkgver.tar.gz")
+
+build() {
+	cd "$pkgname-$pkgver"
+
+	./configure --prefix=/usr
+
+	make
+}
+package() {
+	cd "$pkgname-$pkgver"
+
+	make DESTDIR="$pkgdir" install
+}

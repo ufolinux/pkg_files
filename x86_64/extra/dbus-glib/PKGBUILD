@@ -1,0 +1,22 @@
+pkgname=dbus-glib
+pkgver=0.112
+pkgrel=1
+arch=('x86_64')
+depends=('dbus' 'glib2')
+source=(https://dbus.freedesktop.org/releases/$pkgname/$pkgname-$pkgver.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr		\
+	--sysconfdir=/etc
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

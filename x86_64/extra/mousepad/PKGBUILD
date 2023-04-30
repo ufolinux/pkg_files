@@ -1,0 +1,27 @@
+pkgname=mousepad
+pkgver=0.5.8
+xver=0.5
+pkgrel=2
+arch=('x86_64')
+depends=(glib2 gtk+ gtksourceview)
+source=(https://archive.xfce.org/src/apps/$pkgname/$xver/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr		\
+	--sysconfdir=/etc LIBS=-lX11
+
+	export IN=/usr/include
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+
+	# Premake plugins path
+	mkdir -p $pkgdir/usr/lib/mousepad/plugins
+}

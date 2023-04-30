@@ -1,0 +1,43 @@
+pkgname=coreutils
+pkgver=9.0
+pkgrel=4
+pkgdesc='The basic file, shell and text manipulation utilities of the GNU operating system'
+arch=('x86_64')
+license=('GPL3')
+url='https://www.gnu.org/software/coreutils/'
+depends=('glibc' 'acl' 'attr' 'gmp' 'libcap' 'openssl')
+source=("https://ftp.gnu.org/gnu/$pkgname/$pkgname-$pkgver.tar.xz"
+        '01-fix-fs72253.patch')
+
+prepare() {
+	cd $pkgname-$pkgver
+	# apply patch from the source array (should be a pacman feature)
+	local filename
+	for filename in "${source[@]}"; do
+		if [[ "$filename" =~ \.patch$ ]]; then
+			echo "Applying patch ${filename##*/}"
+			patch -Np1 -i "$srcdir/${filename##*/}"
+		fi
+	done
+}
+
+build() {
+	cd $pkgname-$pkgver
+	./configure \
+	--prefix=/usr \
+	--libexecdir=/usr/lib \
+	--with-openssl \
+	--enable-no-install-program=groups,hostname,kill,uptime
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR="$pkgdir" install
+
+	# Compatability for hardcoded shit that needs cp, echo, cat, rm at /bin
+	mkdir -p $pkgdir/bin
+	cd $pkgdir/bin
+	cp -f ../usr/bin/* .
+}

@@ -1,0 +1,38 @@
+pkgname=libcdio
+pkgver=2.1.0
+dpkgver=2.0.1
+pkgrel=1
+arch=('x86_64')
+depends=(libcddb)
+makedepends=(gcc)
+source=(https://ftp.gnu.org/gnu/libcdio/libcdio-$pkgver.tar.bz2
+	https://ftp.gnu.org/gnu/libcdio/libcdio-paranoia-10.2+$dpkgver.tar.bz2)
+
+build() {
+	# Main pkg
+	cd $pkgname-$pkgver
+
+	./configure	\
+	--prefix=/usr
+
+	make
+
+	# Extra dep
+	cd $srcdir/libcdio-paranoia-10.2+$dpkgver
+	./configure	\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	# Main pkg
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+
+	# Extra dep
+	cd $srcdir/libcdio-paranoia-10.2+$dpkgver
+
+	make DESTDIR=$pkgdir install
+}

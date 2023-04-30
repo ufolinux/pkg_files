@@ -1,0 +1,36 @@
+pkgname=jsoncpp
+pkgver=1.9.5
+pkgrel=1
+arch=(x86_64)
+depends=(glibc gcc)
+makedepends=(gcc)
+source=(https://github.com/open-source-parsers/$pkgname/archive/$pkgver/$pkgname-$pkgver.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	echo $pkgver > version
+
+	# Shared
+	meson \
+	--prefix=/usr \
+	--default-library shared \
+	build-shared
+
+	ninja -C build-shared
+
+	# Static
+	meson \
+	--prefix=/usr \
+	--default-library static \
+	build-static
+
+	ninja -C build-static
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	DESTDIR=$pkgdir ninja -C build-static install
+	DESTDIR=$pkgdir ninja -C build-shared install
+}

@@ -1,0 +1,21 @@
+pkgname=xorg-xkbcomp
+pkgver=1.4.5
+pkgrel=2
+arch=('x86_64')
+depends=(fontconfig libxcb libxkbfile)
+source=(https://xorg.freedesktop.org/archive/individual/app/xkbcomp-$pkgver.tar.bz2)
+
+build() {
+	cd xkbcomp-$pkgver
+
+	./configure			\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd xkbcomp-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

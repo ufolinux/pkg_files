@@ -1,0 +1,43 @@
+pkgname=vulkan-icd-loader
+pkgver=1.3.240
+pkgrel=1
+arch=(x86_64)
+makedepends=('mesa' 'cmake' 'libx11' 'libxrandr' 'wayland' 'vulkan-headers')
+depends=('glibc')
+source=(https://github.com/KhronosGroup/Vulkan-Loader/archive/v$pkgver.tar.gz)
+
+prepare() {
+	cd Vulkan-Loader*
+
+	# Fix segfault with mesa drivers
+	# patch -Np1 -i ../0001-Dont-call-ToolProps-on-drivers-without-support.patch
+}
+
+build() {
+	cd Vulkan-Loader*
+
+	rm -rf build; mkdir -p build; cd build
+
+	cmake \
+	-D CMAKE_INSTALL_PREFIX=/usr \
+	-D VULKAN_HEADERS_INSTALL_DIR=/usr \
+	-D CMAKE_INSTALL_LIBDIR=/lib \
+	-D CMAKE_INSTALL_SYSCONFDIR=/etc \
+	-D CMALE_INSTALL_DATADIR=/share \
+	-D CMAKE_SKIP_RPATH=True \
+	-D BUILD_TESTS=Off \
+	-D BUILD_WSI_XCB_SUPPORT=On \
+	-D BUILD_WSI_XLIB_SUPPORT=On \
+	-D BUILD_WSI_WAYLAND_SUPPORT=On \
+	-D BUILD_WSI_DIRECTFB_SUPPORT=Off \
+	-D CMAKE_BUILD_TYPE=Release \
+	..
+
+	make
+}
+
+package() {
+	cd Vulkan-Loader*/build
+
+	make DESTDIR=$pkgdir install
+}

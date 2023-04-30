@@ -1,0 +1,47 @@
+pkgname=ghostscript
+pkgver=10.0.0
+pkgrel=1
+arch=(x86_64)
+depends=(libxt cups fontconfig zlib libpng libjpeg libtiff
+	lcms dbus libpaper openjpeg libidn jbig2dec)
+makedepends=(gtk3+ gnutls glu freeglut)
+source=(https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs${pkgver//./}/ghostpdl-$pkgver.tar.xz)
+
+prepare() {
+    cd ghostpdl-$pkgver
+
+    # Force usage of system libs
+    rm -rf tesseract leptonica cups/libs expat ijs jbig2dec jpeg lcms2mt libpng openjpeg tiff zlib
+    rm -rf gpdl
+
+    # https://bugs.ghostscript.com/show_bug.cgi?id=704405
+    sed -i "s/gscms_transformm_color_const/gscms_transform_color_const/" base/gsicc_lcms2.c
+
+    ./configure \
+    --prefix=/usr \
+    --enable-dynamic \
+    --with-ijs \
+    --with-jbig2dec \
+    --with-x \
+    --with-drivers=ALL \
+    --with-fontpath=/usr/share/fonts/gsfonts \
+    --without-versioned-path \
+    --enable-fontconfig \
+    --enable-freetype \
+    --enable-openjpeg \
+    --with-system-libtiff \
+    --with-libpaper \
+    --disable-compile-inits
+}
+
+build() {
+    cd ghostpdl-$pkgver
+
+    make
+}
+
+package() {
+    cd ghostpdl-$pkgver
+
+    make DESTDIR=$pkgdir install install-gs install-so-gs install-gxps install-so-gxps install-gpcl6 install-so-gpcl6
+}

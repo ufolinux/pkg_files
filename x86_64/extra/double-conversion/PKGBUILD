@@ -1,0 +1,24 @@
+pkgname=double-conversion
+pkgver=3.1.7
+pkgrel=1
+arch=('x86_64')
+makedepends=(cmake)
+source=(https://github.com/google/$pkgname/archive/v$pkgver/$pkgname-$pkgver.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	mkdir -p build && cd build
+
+	cmake	-DCMAKE_INSTALL_PREFIX=/usr \
+		-DBUILD_SHARED_LIBS=ON      \
+		-DBUILD_TESTING=ON          \
+		..
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+
+	DESTDIR=$pkgdir make install
+}

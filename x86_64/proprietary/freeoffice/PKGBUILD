@@ -1,0 +1,66 @@
+pkgname=freeoffice
+pkgver=1046
+pkgrel=1
+pkgdesc="A complete, reliable, lightning-fast and Microsoft Office-compatible office suite with a word processor, spreadsheet, and presentation graphics software."
+arch=('x86_64')
+url="http://www.freeoffice.com/"
+depends=('libxrandr' 'libglvnd' 'xdg-utils' 'gtk3+'
+         'desktop-file-utils' 'curl')
+makedepends=('chrpath')
+source=("http://www.softmaker.net/down/softmaker-${pkgname}-2021-${pkgver}-amd64.tgz"
+    "${pkgname}-textmaker"
+    "${pkgname}-planmaker"
+    "${pkgname}-presentations"
+    "${pkgname}-textmaker.desktop"
+    "${pkgname}-planmaker.desktop"
+    "${pkgname}-presentations.desktop")
+
+prepare() {
+    xz -d "freeoffice2021.tar.lzma"
+}
+
+build() {
+    mkdir -p "${pkgname}"
+    tar x -f "freeoffice2021.tar" -C "${pkgname}"
+
+    cd "${pkgname}"
+    chrpath --delete "textmaker"
+    chrpath --delete "planmaker"
+    chrpath --delete "presentations"
+}
+
+package() {
+    # Install package files
+    install -d "${pkgdir}/usr/lib"
+    cp -r "${srcdir}/${pkgname}" "${pkgdir}/usr/lib"
+
+    # Install program executables
+    install -d "${pkgdir}/usr/bin"
+    install -m 755 -t "${pkgdir}/usr/bin" "${srcdir}/${pkgname}-planmaker"
+    install -m 755 -t "${pkgdir}/usr/bin" "${srcdir}/${pkgname}-textmaker"
+    install -m 755 -t "${pkgdir}/usr/bin" "${srcdir}/${pkgname}-presentations"
+
+    # Installing icons
+    for size in 16 32 48
+    do
+        install -d "${pkgdir}/usr/share/icons/hicolor/${size}x${size}/apps"
+        ln -s "/usr/lib/${pkgname}/icons/pml_${size}.png" "${pkgdir}/usr/share/icons/hicolor/${size}x${size}/apps/${pkgname}-planmaker.png"
+        ln -s "/usr/lib/${pkgname}/icons/prl_${size}.png" "${pkgdir}/usr/share/icons/hicolor/${size}x${size}/apps/${pkgname}-presentations.png"
+        ln -s "/usr/lib/${pkgname}/icons/tml_${size}.png" "${pkgdir}/usr/share/icons/hicolor/${size}x${size}/apps/${pkgname}-textmaker.png"
+
+        install -d "${pkgdir}/usr/share/icons/hicolor/${size}x${size}/mimetypes"
+        ln -s "/usr/lib/${pkgname}/icons/pmd_${size}.png" "${pkgdir}/usr/share/icons/hicolor/${size}x${size}/mimetypes/application-x-pmd.png"
+        ln -s "/usr/lib/${pkgname}/icons/prd_${size}.png" "${pkgdir}/usr/share/icons/hicolor/${size}x${size}/mimetypes/application-x-prd.png"
+        ln -s "/usr/lib/${pkgname}/icons/tmd_${size}.png" "${pkgdir}/usr/share/icons/hicolor/${size}x${size}/mimetypes/application-x-tmd.png"
+    done
+
+    # Install desktop files
+    install -d "${pkgdir}/usr/share/applications"
+    install -m 755 -t "${pkgdir}/usr/share/applications" "${pkgname}-textmaker.desktop"
+    install -m 755 -t "${pkgdir}/usr/share/applications" "${pkgname}-planmaker.desktop"
+    install -m 755 -t "${pkgdir}/usr/share/applications" "${pkgname}-presentations.desktop"
+
+    # Installing mime file
+    install -d "${pkgdir}/usr/share/mime/packages"
+    install -m 644 -t "${pkgdir}/usr/share/mime/packages" "${srcdir}/${pkgname}/mime/softmaker-freeoffice21.xml"
+}

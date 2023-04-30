@@ -1,0 +1,32 @@
+pkgname=maven
+pkgver=3.8.5
+pkgrel=1
+pkgdesc='Java project management and project comprehension tool'
+arch=('x86_64')
+depends=('openjdk-17' 'bash' 'procps-ng')
+makedepends=('maven' 'openjdk-17')
+backup=('opt/maven/conf/settings.xml')
+source=(https://downloads.apache.org/maven/maven-3/${pkgver}/source/apache-maven-${pkgver}-src.tar.gz)
+
+build() {
+    cd apache-maven-${pkgver}
+
+    mvn package \
+    -Dline.separator=$'\r\n' \
+    -Dproject.build.sourceEncoding=UTF-8 -e \
+    -Dmaven.repo.local="${srcdir}/repo" \
+    -DskipTests
+}
+
+package() {
+    cd apache-maven-${pkgver}
+
+    install -d "${pkgdir}/opt/maven"
+    bsdtar xf apache-maven/target/apache-maven-${pkgver}-bin.tar.gz \
+    --strip-components=1 \
+    -C "${pkgdir}/opt/maven"
+
+    install -d "${pkgdir}/usr/bin"
+    ln -s /opt/maven/bin/mvn "${pkgdir}/usr/bin/mvn"
+    ln -s /opt/maven/bin/mvnDebug "${pkgdir}/usr/bin/mvnDebug"
+}

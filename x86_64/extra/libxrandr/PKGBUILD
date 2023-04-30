@@ -1,0 +1,19 @@
+pkgname=libxrandr
+pkgver=1.5.2
+pkgrel=1
+arch=('x86_64')
+depends=('libx11' 'libxext' 'libxrender')
+makedepends=('util-macros' 'xorgproto' 'libx11' 'libxrender')
+source=(https://xorg.freedesktop.org/releases/individual/lib/libXrandr-$pkgver.tar.bz2)
+
+build() {
+	cd libXrandr-$pkgver
+
+	./configure --prefix=/usr --sysconfdir=/etc
+}
+
+package() {
+	cd libXrandr-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

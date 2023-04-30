@@ -1,0 +1,40 @@
+pkgname=noto-fonts
+pkgver=20220518
+commitid=0288738a4eb56671e7abe246f44e22792be39845
+pkgrel=1
+arch=(x86_64)
+makedepends=(python3-pip)
+source=($pkgname-$commitid.tar.gz::https://github.com/googlefonts/noto-fonts/archive/$commitid.tar.gz
+	66-noto-sans.conf 66-noto-serif.conf 66-noto-mono.conf
+	46-noto-sans.conf 46-noto-serif.conf 46-noto-mono.conf)
+
+prepare() {
+	pip3 install fonttools
+}
+
+build() {
+	echo "Nothing to make here"
+}
+
+package() {
+	cd $pkgbase-*/
+
+	# Remove duplicated fonts
+	rm {un,}hinted/ttf/NotoSansTifinagh/NotoSansTifinagh[AGHRST]*.ttf
+
+	install -Dm644 unhinted/ttf/Noto*/*.tt[fc] -t "$pkgdir"/usr/share/fonts/noto
+	install -Dm644 hinted/ttf/Noto*/*.tt[fc] -t "$pkgdir"/usr/share/fonts/noto
+	install -Dm644 LICENSE -t "$pkgdir"/usr/share/licenses/noto-fonts
+
+	# Move to noto-fonts-extra
+	rm -f "$pkgdir"/usr/share/fonts/noto/Noto*{Condensed,SemiBold,Extra}*.ttf
+
+	# Install fontconfig files
+	install -Dm644 "$srcdir"/*.conf -t "$pkgdir"/usr/share/fontconfig/conf.avail/
+	install -d "$pkgdir"/usr/share/fontconfig/conf.default
+	ln -rs "$pkgdir"/usr/share/fontconfig/conf.avail/* "$pkgdir"/usr/share/fontconfig/conf.default
+
+	cp hinted/ttf/Noto*/*{Condensed,SemiBold,Extra}*.tt[fc] "$pkgdir"/usr/share/fonts/noto
+	install -Dm644 hinted/ttf/{Arimo,Cousine,Tinos}/*.ttf -t "$pkgdir"/usr/share/fonts/croscore
+
+}

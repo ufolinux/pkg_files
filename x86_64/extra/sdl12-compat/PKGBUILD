@@ -1,0 +1,25 @@
+pkgname=sdl12-compat
+pkgver=1.2.52
+pkgrel=1
+arch=(x86_64)
+depends=(sdl2 glu)
+makedepends=(cmake)
+source=(https://github.com/libsdl-org/sdl12-compat/archive/refs/tags/release-$pkgver.tar.gz)
+
+build() {
+	cd $pkgname-release-$pkgver
+
+	mkdir -p build && cd build
+
+	cmake \
+	-D CMAKE_INSTALL_PREFIX=/usr \
+	..
+
+	make
+}
+
+package() {
+	cd $pkgname-release-$pkgver/build
+
+	make DESTDIR=$pkgdir install
+}

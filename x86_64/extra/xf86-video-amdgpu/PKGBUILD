@@ -1,0 +1,21 @@
+pkgname=xf86-video-amdgpu
+pkgver=21.0.0
+pkgrel=4
+arch=('x86_64')
+depends=(xorg-server)
+source=(https://x.org/pub/individual/driver/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+	mkdir -p $pkgdir/etc/X11/xorg.conf.d
+}

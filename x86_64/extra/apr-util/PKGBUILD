@@ -1,0 +1,39 @@
+pkgname=apr-util
+pkgver=1.6.1
+pkgrel=1
+arch=(x86_64)
+depends=(apr expat)
+makedepends=(openldap gdbm openssl nss sqlite3 python3)
+source=(https://www.apache.org/dist/apr/apr-util-${pkgver}.tar.bz2
+	https://github.com/archlinux/svntogit-packages/raw/packages/apr-util/trunk/buildconf_config.guess_sub_location.patch)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	patch -Np1 < ../buildconf_config.guess_sub_location.patch 
+
+	./buildconf --with-apr=`apr-1-config --srcdir`
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure \
+	--prefix=/usr \
+	--with-apr=/usr \
+	--with-ldap \
+	--with-crypto \
+	--with-gdbm=/usr \
+	--with-sqlite3 \
+	--with-nss=/usr \
+	--with-odbc=/usr \
+	--with-openssl=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

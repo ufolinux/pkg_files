@@ -1,0 +1,39 @@
+pkgname=lib32-glu
+pkgver=9.0.2
+pkgrel=1
+arch=('x86_64')
+depends=('lib32-libglvnd' 'glu')
+makedepends=('gcc' 'lib32-libglvnd' 'meson')
+source=(ftp://ftp.freedesktop.org/pub/mesa/glu/glu-$pkgver.tar.xz{,.sig}
+        0001-pkgconfig-Depend-on-opengl-when-built-with-libglvnd.patch
+        0002-pkgconfig-Drop-unneeded-lines-from-autotools-build.patch
+        0003-pkgconfig-meson-build-should-match-autotools-require.patch)
+
+prepare() {
+	cd glu-$pkgver
+
+	# merged upstream
+	patch -Np1 -i ../0001-pkgconfig-Depend-on-opengl-when-built-with-libglvnd.patch
+	patch -Np1 -i ../0002-pkgconfig-Drop-unneeded-lines-from-autotools-build.patch
+	patch -Np1 -i ../0003-pkgconfig-meson-build-should-match-autotools-require.patch
+}
+
+build() {
+	export CC="gcc -m32"
+	export CXX="g++ -m32"
+	export PKG_CONFIG_PATH="/usr/lib32/pkgconfig"
+
+	meson glu-$pkgver build \
+	--prefix=/usr \
+	--libdir=/usr/lib32 \
+	-D default_library=shared
+
+	ninja -C build
+	meson compile -C build
+}
+
+package() {
+	DESTDIR="$pkgdir" meson install -C build
+
+	rm -rf "${pkgdir}"/usr/include
+}

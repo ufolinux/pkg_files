@@ -1,0 +1,21 @@
+pkgname=libxtrans
+pkgver=1.4.0
+pkgrel=2
+arch=('x86_64')
+depends=('libxau' 'xcb-proto')
+source=(https://x.org/releases/individual/lib/xtrans-$pkgver.tar.gz)
+
+build() {
+        cd xtrans-$pkgver
+
+	PYTHON=python3 ./configure --prefix=/usr --without-doxygen
+	make
+}
+
+package() {
+	cd xtrans-$pkgver
+	make DESTDIR=$pkgdir install
+
+	install -m755 -d $pkgdir/usr/lib
+	mv $pkgdir/usr/share/pkgconfig $pkgdir/usr/lib/pkgconfig
+}

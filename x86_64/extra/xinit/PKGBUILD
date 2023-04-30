@@ -1,0 +1,18 @@
+pkgname=xinit
+pkgver=1.4.1
+pkgrel=2
+arch=('x86_64')
+depends=('libxau' 'xcb-proto' 'libxtrans' 'xorgproto')
+source=(https://x.org/releases/individual/app/$pkgname-$pkgver.tar.bz2)
+
+build() {
+        cd $pkgname-$pkgver
+
+	./configure --prefix=/usr
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+}

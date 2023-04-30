@@ -1,0 +1,22 @@
+<Layout Ufo>
+	prefix:          /opt/httpd
+	exec_prefix:     /usr
+	libdir:          /usr/lib/httpd
+	libexecdir:      /usr/libexec/httpd/modules
+	installbuilddir: /usr/lib/httpd/build
+	bindir:          /usr/bin
+	sbindir:         /usr/sbin
+	sysconfdir:      /etc/httpd/conf
+	datadir:         /usr/share/httpd
+	errordir:        /usr/share/httpd/error
+	iconsdir:        /usr/share/httpd/icons
+	htdocsdir:       /srv/http
+	manualdir:       /usr/share/httpd/manual
+	cgidir:          /srv/http/cgi-bin
+	includedir:      /usr/include/httpd
+	localstatedir:   /var
+	runtimedir:      /run/httpd
+	logfiledir:      /var/log/httpd
+	proxycachedir:   /var/cache/httpd
+    mandir:          /usr/share/man
+</Layout>

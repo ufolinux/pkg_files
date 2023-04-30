@@ -1,0 +1,32 @@
+_pkgname=zstd
+pkgname=lib32-zstd
+pkgver=1.5.0
+pkgrel=2
+pkgdesc='Zstandard - Fast real-time compression algorithm (32-bit)'
+url='https://facebook.github.io/zstd/'
+arch=('x86_64')
+depends=('zstd')
+source=(https://github.com/facebook/zstd/releases/download/v${pkgver}/zstd-${pkgver}.tar.zst)
+
+build() {
+	cd ${_pkgname}-${pkgver}
+	export CC="gcc -m32"
+	export CXX="g++ -m32"
+	export PKG_CONFIG_PATH="/usr/lib32/pkgconfig"
+	make
+	make zstdmt
+	make -C contrib/pzstd
+}
+
+package() {
+	cd ${_pkgname}-${pkgver}
+
+	make \
+	PREFIX=/usr \
+	LIBDIR=/usr/lib32 \
+	PKGCONFIGDIR=/usr/lib32/pkgconfig \
+	DESTDIR="${pkgdir}" \
+	install
+
+	rm -rf "${pkgdir}"/usr/{share,include,bin}
+}

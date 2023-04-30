@@ -1,0 +1,20 @@
+pkgname=xfce4-screenshooter
+pkgver=1.9.7
+pkgrel=1
+arch=('x86_64')
+depends=(libxfce4ui xfce4-panel libsoup)
+source=(https://archive.xfce.org/src/apps/$pkgname/1.9/$pkgname-$pkgver.tar.bz2)
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

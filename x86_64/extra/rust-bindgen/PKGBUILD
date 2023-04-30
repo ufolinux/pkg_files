@@ -1,0 +1,25 @@
+pkgname=rust-bindgen
+pkgver=0.63.0
+pkgrel=1
+arch=(x86_64)
+depends=(llvm clang)
+makedepends=(rust)
+source=($pkgname-$pkgver.tar.gz::https://github.com/rust-lang/rust-bindgen/archive/v$pkgver.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	cargo build --release --frozen
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	install -Dm755 target/release/bindgen "$pkgdir"/usr/bin/bindgen
+}

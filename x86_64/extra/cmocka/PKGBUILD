@@ -1,0 +1,30 @@
+pkgname=cmocka
+pkgver=1.1.5
+pkgrel=1
+arch=('x86_64')
+depends=('glibc')
+makedepends=('cmake')
+source=(https://cmocka.org/files/1.1/cmocka-${pkgver}.tar.xz)
+
+prepare() {
+	cd ${pkgname}-${pkgver}
+	mkdir build
+}
+
+build() {
+	cd ${pkgname}-${pkgver}/build
+
+	cmake .. \
+	-DCMAKE_INSTALL_PREFIX=/usr \
+	-DCMAKE_INSTALL_LIBDIR=lib \
+	-DCMAKE_BUILD_TYPE=Release \
+	-DUNIT_TESTING=ON
+
+	make
+}
+
+package() {
+	cd ${pkgname}-${pkgver}/build
+
+	make install DESTDIR="${pkgdir}"
+}

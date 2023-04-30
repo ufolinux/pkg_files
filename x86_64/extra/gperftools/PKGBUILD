@@ -1,0 +1,19 @@
+pkgname=gperftools
+pkgver=2.9.1
+pkgrel=1
+arch=('x86_64')
+depends=('perl')
+source=(https://github.com/gperftools/gperftools/releases/download/$pkgname-$pkgver/$pkgname-$pkgver.tar.gz)
+
+build() {
+    cd $pkgname-$pkgver
+
+    ./configure --prefix=/usr --enable-frame-pointers
+    make
+}
+
+package() {
+    cd $pkgname-$pkgver
+
+    make DESTDIR="$pkgdir" install
+}

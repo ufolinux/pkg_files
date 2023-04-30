@@ -1,0 +1,23 @@
+pkgname=libxcomposite
+pkgver=0.4.5
+pkgrel=4
+arch=('x86_64')
+depends=('libx11')
+source=(https://x.org/releases/individual/lib/libXcomposite-$pkgver.tar.gz)
+
+build() {
+        cd libXcomposite-$pkgver
+
+	./configure --prefix=/usr --disable-xf86bigfont
+	make
+}
+
+check() {
+	cd libXcomposite-$pkgver
+	make check
+}
+
+package() {
+	cd libXcomposite-$pkgver
+	make DESTDIR=$pkgdir install
+}

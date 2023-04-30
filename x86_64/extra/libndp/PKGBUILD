@@ -1,0 +1,31 @@
+pkgname=libndp
+pkgver=1.8
+pkgrel=1
+arch=('x86_64')
+depends=(glibc)
+commit=009ce9cd9b950ffa1f4f94c9436027b936850d0c
+makedepends=(gcc git)
+source=(git+https://github.com/jpirko/libndp#commit=$commit)
+
+prepare() {
+	cd $pkgname
+	./autogen.sh
+}
+
+build() {
+	cd $pkgname
+	./configure		\
+	--prefix=/usr		\
+	--sysconfdir=/etc	\
+	--localstatedir=/var	\
+	--libexecdir=/usr/lib
+
+	make
+	
+}
+
+package() {
+	cd $pkgname
+
+	make DESTDIR="$pkgdir" install
+}

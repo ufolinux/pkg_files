@@ -1,0 +1,29 @@
+pkgname=xf86-video-fbdev
+pkgver=0.5.0
+pkgrel=4
+arch=('x86_64')
+depends=(xorg-server libxxf86vm)
+makedepends=(clang)
+source=(https://x.org/pub/individual/driver/$pkgname-$pkgver.tar.bz2
+	gcc8.diff)
+
+prepare() {
+	cd $pkgname-$pkgver
+	
+	patch -Np0 -i ../gcc8.diff
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	CC=clang CXX=clang+ ./configure		\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+	mkdir -p $pkgdir/etc/X11/xorg.conf.d
+}

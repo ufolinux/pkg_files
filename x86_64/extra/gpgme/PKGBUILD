@@ -1,0 +1,32 @@
+pkgname=gpgme
+pkgver=1.16.0
+pkgrel=1
+pkgdesc="A C wrapper library for GnuPG"
+arch=('x86_64')
+url='https://www.gnupg.org/related_software/gpgme/'
+makedepends=('libgpg-error' 'python3')
+source=(https://www.gnupg.org/ftp/gcrypt/${pkgname}/${pkgname}-${pkgver}.tar.bz2
+	python310.patch)
+
+prepare() {
+	cd ${pkgbase}-${pkgver}
+
+	patch -Np1 -i ../python310.patch
+}
+
+build() {
+	cd ${pkgbase}-${pkgver}
+
+	./configure			\
+	--prefix=/usr		\
+	--disable-fd-passing	\
+	--disable-gpgsm-test
+
+	make
+}
+
+package_gpgme() {
+	cd ${pkgbase}-${pkgver}/
+
+	make DESTDIR="${pkgdir}" install
+}

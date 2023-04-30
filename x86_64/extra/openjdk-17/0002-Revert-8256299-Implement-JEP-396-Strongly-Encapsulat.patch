@@ -1,0 +1,451 @@
+From 10b90662e5e81a2b065a159c025764b770e15233 Mon Sep 17 00:00:00 2001
+From: Martin Valba <kailing2@live.com>
+Date: Tue, 10 May 2022 21:32:07 +0300
+Subject: [PATCH] Revert "8256299: Implement JEP 396: Strongly Encapsulate JDK
+ Internals by Default
+
+---
+ src/hotspot/share/runtime/arguments.cpp       |  1 -
+ .../internal/module/ArchivedBootLayer.java    | 16 +++-
+ .../internal/module/ArchivedModuleGraph.java  | 28 +++++-
+ .../jdk/internal/module/ModuleBootstrap.java  | 88 ++++++++++++-------
+ .../illegalaccess/IllegalAccessTest.java      | 75 ++++++++--------
+ 5 files changed, 129 insertions(+), 79 deletions(-)
+
+diff --git a/src/hotspot/share/runtime/arguments.cpp b/src/hotspot/share/runtime/arguments.cpp
+index 9beae74a0a2..02dbe4ce315 100644
+--- a/src/hotspot/share/runtime/arguments.cpp
++++ b/src/hotspot/share/runtime/arguments.cpp
+@@ -2435,7 +2435,6 @@ jint Arguments::parse_each_vm_init_arg(const JavaVMInitArgs* args, bool* patch_m
+         return res;
+       }
+     } else if (match_option(option, "--illegal-access=", &tail)) {
+-      warning("Option --illegal-access is deprecated and will be removed in a future release.");
+       if (!create_module_property("jdk.module.illegalAccess", tail, ExternalProperty)) {
+         return JNI_ENOMEM;
+       }
+diff --git a/src/java.base/share/classes/jdk/internal/module/ArchivedBootLayer.java b/src/java.base/share/classes/jdk/internal/module/ArchivedBootLayer.java
+index 5c806f81dcd..decf27e8cb7 100644
+--- a/src/java.base/share/classes/jdk/internal/module/ArchivedBootLayer.java
++++ b/src/java.base/share/classes/jdk/internal/module/ArchivedBootLayer.java
+@@ -27,27 +27,35 @@ package jdk.internal.module;
+ import jdk.internal.misc.CDS;
+ 
+ /**
+- * Used by ModuleBootstrap for archiving the boot layer.
++ * Used by ModuleBootstrap for archiving the boot layer and the builder needed to
++ * set the IllegalAccessLogger.
+  */
+ class ArchivedBootLayer {
+     private static ArchivedBootLayer archivedBootLayer;
+ 
+     private final ModuleLayer bootLayer;
++    private final IllegalAccessLogger.Builder builder;
+ 
+-    private ArchivedBootLayer(ModuleLayer bootLayer) {
++    private ArchivedBootLayer(ModuleLayer bootLayer,
++                              IllegalAccessLogger.Builder builder) {
+         this.bootLayer = bootLayer;
++        this.builder = builder;
+     }
+ 
+     ModuleLayer bootLayer() {
+         return bootLayer;
+     }
+ 
++    IllegalAccessLogger.Builder illegalAccessLoggerBuilder() {
++        return builder;
++    }
++
+     static ArchivedBootLayer get() {
+         return archivedBootLayer;
+     }
+ 
+-    static void archive(ModuleLayer layer) {
+-        archivedBootLayer = new ArchivedBootLayer(layer);
++    static void archive(ModuleLayer layer, IllegalAccessLogger.Builder builder) {
++        archivedBootLayer = new ArchivedBootLayer(layer, builder);
+     }
+ 
+     static {
+diff --git a/src/java.base/share/classes/jdk/internal/module/ArchivedModuleGraph.java b/src/java.base/share/classes/jdk/internal/module/ArchivedModuleGraph.java
+index d3e5dff08c2..4d9f5eb7f62 100644
+--- a/src/java.base/share/classes/jdk/internal/module/ArchivedModuleGraph.java
++++ b/src/java.base/share/classes/jdk/internal/module/ArchivedModuleGraph.java
+@@ -24,6 +24,8 @@
+  */
+ package jdk.internal.module;
+ 
++import java.util.Map;
++import java.util.Set;
+ import java.util.function.Function;
+ import java.lang.module.Configuration;
+ import java.lang.module.ModuleFinder;
+@@ -31,7 +33,7 @@ import jdk.internal.misc.CDS;
+ 
+ /**
+  * Used by ModuleBootstrap for archiving the configuration for the boot layer,
+- * and the system module finder.
++ * the system module finder, and the maps used to create the IllegalAccessLogger.
+  */
+ class ArchivedModuleGraph {
+     private static ArchivedModuleGraph archivedModuleGraph;
+@@ -41,17 +43,23 @@ class ArchivedModuleGraph {
+     private final ModuleFinder finder;
+     private final Configuration configuration;
+     private final Function<String, ClassLoader> classLoaderFunction;
++    private final Map<String, Set<String>> concealedPackagesToOpen;
++    private final Map<String, Set<String>> exportedPackagesToOpen;
+ 
+     private ArchivedModuleGraph(boolean hasSplitPackages,
+                                 boolean hasIncubatorModules,
+                                 ModuleFinder finder,
+                                 Configuration configuration,
+-                                Function<String, ClassLoader> classLoaderFunction) {
++                                Function<String, ClassLoader> classLoaderFunction,
++                                Map<String, Set<String>> concealedPackagesToOpen,
++                                Map<String, Set<String>> exportedPackagesToOpen) {
+         this.hasSplitPackages = hasSplitPackages;
+         this.hasIncubatorModules = hasIncubatorModules;
+         this.finder = finder;
+         this.configuration = configuration;
+         this.classLoaderFunction = classLoaderFunction;
++        this.concealedPackagesToOpen = concealedPackagesToOpen;
++        this.exportedPackagesToOpen = exportedPackagesToOpen;
+     }
+ 
+     ModuleFinder finder() {
+@@ -66,6 +74,14 @@ class ArchivedModuleGraph {
+         return classLoaderFunction;
+     }
+ 
++    Map<String, Set<String>> concealedPackagesToOpen() {
++        return concealedPackagesToOpen;
++    }
++
++    Map<String, Set<String>> exportedPackagesToOpen() {
++        return exportedPackagesToOpen;
++    }
++
+     boolean hasSplitPackages() {
+         return hasSplitPackages;
+     }
+@@ -94,12 +110,16 @@ class ArchivedModuleGraph {
+                         boolean hasIncubatorModules,
+                         ModuleFinder finder,
+                         Configuration configuration,
+-                        Function<String, ClassLoader> classLoaderFunction) {
++                        Function<String, ClassLoader> classLoaderFunction,
++                        Map<String, Set<String>> concealedPackagesToOpen,
++                        Map<String, Set<String>> exportedPackagesToOpen) {
+         archivedModuleGraph = new ArchivedModuleGraph(hasSplitPackages,
+                                                       hasIncubatorModules,
+                                                       finder,
+                                                       configuration,
+-                                                      classLoaderFunction);
++                                                      classLoaderFunction,
++                                                      concealedPackagesToOpen,
++                                                      exportedPackagesToOpen);
+     }
+ 
+     static {
+diff --git a/src/java.base/share/classes/jdk/internal/module/ModuleBootstrap.java b/src/java.base/share/classes/jdk/internal/module/ModuleBootstrap.java
+index e42a93aa0c4..8e1fbfe456c 100644
+--- a/src/java.base/share/classes/jdk/internal/module/ModuleBootstrap.java
++++ b/src/java.base/share/classes/jdk/internal/module/ModuleBootstrap.java
+@@ -173,6 +173,12 @@ public final class ModuleBootstrap {
+             // assume boot layer has at least one module providing a service
+             // that is mapped to the application class loader.
+             JLA.bindToLoader(bootLayer, ClassLoaders.appClassLoader());
++
++            // IllegalAccessLogger needs to be set
++            var illegalAccessLoggerBuilder = archivedBootLayer.illegalAccessLoggerBuilder();
++            if (illegalAccessLoggerBuilder != null) {
++                illegalAccessLoggerBuilder.complete();
++            }
+         } else {
+             bootLayer = boot2();
+         }
+@@ -190,7 +196,6 @@ public final class ModuleBootstrap {
+         String mainModule = System.getProperty("jdk.module.main");
+         Set<String> addModules = addModules();
+         Set<String> limitModules = limitModules();
+-        String illegalAccess = getAndRemoveProperty("jdk.module.illegalAccess");
+ 
+         PrintStream traceOutput = null;
+         String trace = getAndRemoveProperty("jdk.module.showModuleResolution");
+@@ -222,8 +227,7 @@ public final class ModuleBootstrap {
+                 && !haveModulePath
+                 && addModules.isEmpty()
+                 && limitModules.isEmpty()
+-                && !isPatched
+-                && illegalAccess == null) {
++                && !isPatched {
+             systemModuleFinder = archivedModuleGraph.finder();
+             hasSplitPackages = archivedModuleGraph.hasSplitPackages();
+             hasIncubatorModules = archivedModuleGraph.hasIncubatorModules();
+@@ -462,14 +466,21 @@ public final class ModuleBootstrap {
+         addExtraReads(bootLayer);
+         boolean extraExportsOrOpens = addExtraExportsAndOpens(bootLayer);
+ 
+-        if (illegalAccess != null) {
+-            assert systemModules != null;
+-            addIllegalAccess(illegalAccess,
+-                             systemModules,
+-                             upgradeModulePath,
++        Map<String, Set<String>> concealedPackagesToOpen;
++        Map<String, Set<String>> exportedPackagesToOpen;
++        if (archivedModuleGraph != null) {
++            concealedPackagesToOpen = archivedModuleGraph.concealedPackagesToOpen();
++            exportedPackagesToOpen = archivedModuleGraph.exportedPackagesToOpen();
++        } else {
++            concealedPackagesToOpen = systemModules.concealedPackagesToOpen();
++            exportedPackagesToOpen = systemModules.exportedPackagesToOpen();
++        }
++        IllegalAccessLogger.Builder builder =
++            addIllegalAccess(upgradeModulePath,
++                             concealedPackagesToOpen,
++                             exportedPackagesToOpen,
+                              bootLayer,
+                              extraExportsOrOpens);
+-        }
+ 
+         Counters.add("jdk.module.boot.7.adjustModulesTime");
+ 
+@@ -487,9 +498,11 @@ public final class ModuleBootstrap {
+                                         hasIncubatorModules,
+                                         systemModuleFinder,
+                                         cf,
+-                                        clf);
++                                        clf,
++                                        concealedPackagesToOpen,
++                                        exportedPackagesToOpen);
+             if (!hasSplitPackages && !hasIncubatorModules) {
+-                ArchivedBootLayer.archive(bootLayer);
++                ArchivedBootLayer.archive(bootLayer, builder);
+             }
+         }
+ 
+@@ -783,35 +796,41 @@ public final class ModuleBootstrap {
+     }
+ 
+     /**
+-     * Process the --illegal-access option to open packages of system modules
+-     * in the boot layer to code in unnamed modules.
++     * Process the --illegal-access option to open packages of system modules (and its default) to open packages
++     * of system modules in the boot layer to code in unnamed modules.
+      */
+-    private static void addIllegalAccess(String illegalAccess,
+-                                        SystemModules systemModules,
+-                                        ModuleFinder upgradeModulePath,
+-                                        ModuleLayer bootLayer,
+-                                        boolean extraExportsOrOpens) {
+-
+-    if (illegalAccess.equals("deny"))
+-        return;  // nothing to do
+-
+-    IllegalAccessLogger.Mode mode = switch (illegalAccess) {
+-        case "permit" -> IllegalAccessLogger.Mode.ONESHOT;
+-        case "warn"   -> IllegalAccessLogger.Mode.WARN;
+-        case "debug"  -> IllegalAccessLogger.Mode.DEBUG;
+-        default -> {
+-            fail("Value specified to --illegal-access not recognized:"
+-                    + " '" + illegalAccess + "'");
+-            yield null;
++    private static IllegalAccessLogger.Builder
++        addIllegalAccess(ModuleFinder upgradeModulePath,
++                         Map<String, Set<String>> concealedPackagesToOpen,
++                         Map<String, Set<String>> exportedPackagesToOpen,
++                         ModuleLayer bootLayer,
++                         boolean extraExportsOrOpens) {
++        String value = getAndRemoveProperty("jdk.module.illegalAccess");
++        IllegalAccessLogger.Mode mode = IllegalAccessLogger.Mode.ONESHOT;
++        if (value != null) {
++            switch (value) {
++                case "deny":
++                    return null;
++                case "permit":
++                    break;
++                case "warn":
++                    mode = IllegalAccessLogger.Mode.WARN;
++                    break;
++                case "debug":
++                    mode = IllegalAccessLogger.Mode.DEBUG;
++                    break;
++                default:
++                    fail("Value specified to --illegal-access not recognized:"
++                            + " '" + value + "'");
++                    return null;
+             }
+-        };
++        }
++        IllegalAccessLogger.Builder builder
++            = new IllegalAccessLogger.Builder(mode, System.err);
+ 
+     /**
+      * Returns the set of module names specified by --enable-native-access options.
+      */
+-    var builder = new IllegalAccessLogger.Builder(mode, System.err);
+-        Map<String, Set<String>> concealedPackagesToOpen = systemModules.concealedPackagesToOpen();
+-        Map<String, Set<String>> exportedPackagesToOpen = systemModules.exportedPackagesToOpen();
+         if (concealedPackagesToOpen.isEmpty() && exportedPackagesToOpen.isEmpty()) {
+             // need to generate (exploded build)
+             IllegalAccessMaps maps = IllegalAccessMaps.generate(limitedFinder());
+@@ -870,6 +889,7 @@ public final class ModuleBootstrap {
+             JLA.addOpensToAllUnnamed(m, concealedPackages, exportedPackages);
+         }
+         builder.complete();
++        return builder;
+     }
+ 
+     /**
+diff --git a/test/jdk/tools/launcher/modules/illegalaccess/IllegalAccessTest.java b/test/jdk/tools/launcher/modules/illegalaccess/IllegalAccessTest.java
+index a1f6939a541..3fa8d1364ec 100644
+--- a/test/jdk/tools/launcher/modules/illegalaccess/IllegalAccessTest.java
++++ b/test/jdk/tools/launcher/modules/illegalaccess/IllegalAccessTest.java
+@@ -238,16 +238,16 @@ public class IllegalAccessTest {
+                                                 .errorTo(System.out));
+     }
+ 
+-    @Test(dataProvider = "denyCases")
+-    public void testDefault(String action, Result expectedResult) throws Exception {
+-        run(action, expectedResult);
+-    }
+-
+     @Test(dataProvider = "denyCases")
+     public void testDeny(String action, Result expectedResult) throws Exception {
+         run(action, expectedResult, "--illegal-access=deny");
+     }
+ 
++    @Test(dataProvider = "permitCases")
++    public void testDefault(String action, Result expectedResult) throws Exception {
++        run(action, expectedResult);
++    }
++
+     @Test(dataProvider = "permitCases")
+     public void testPermit(String action, Result expectedResult) throws Exception {
+         run(action, expectedResult, "--illegal-access=permit");
+@@ -271,38 +271,39 @@ public class IllegalAccessTest {
+      * Specify --add-exports to export a package
+      */
+     public void testWithAddExportsOption() throws Exception {
+-        // not accessible
+-        run("reflectPublicMemberNonExportedPackage", fail("IllegalAccessException"));
++        // warning
++        run("reflectPublicMemberNonExportedPackage", successWithWarning());
+ 
+-        // should succeed with --add-exports
++        // no warning due to --add-exports --add-exports
+         run("reflectPublicMemberNonExportedPackage", successNoWarning(),
+                 "--add-exports", "java.base/sun.security.x509=ALL-UNNAMED");
+ 
+-        // not accessible
+-        run("setAccessibleNonPublicMemberNonExportedPackage", fail("InaccessibleObjectException"));
+-
+-        // should fail as --add-exports does not open package
+-        run("setAccessibleNonPublicMemberNonExportedPackage", fail("InaccessibleObjectException"),
+-                "--add-exports", "java.base/sun.nio.ch=ALL-UNNAMED");
++        // attempt two illegal accesses, one allowed by --add-exports
++        run("reflectPublicMemberNonExportedPackage"
++                + ",setAccessibleNonPublicMemberExportedPackage",
++            successWithWarning(),
++            "--add-exports", "java.base/sun.security.x509=ALL-UNNAMED");
+     }
+ 
+     /**
+      * Specify --add-open to open a package
+      */
+     public void testWithAddOpensOption() throws Exception {
+-        // not accessible
+-        run("reflectPublicMemberNonExportedPackage", fail("IllegalAccessException"));
+-
+-        // should succeed with --add-opens
+-        run("reflectPublicMemberNonExportedPackage", successNoWarning(),
+-                "--add-opens", "java.base/sun.security.x509=ALL-UNNAMED");
++        // warning
++        run("setAccessibleNonPublicMemberExportedPackage", successWithWarning());
+ 
+         // not accessible
+         run("setAccessibleNonPublicMemberExportedPackage", fail("InaccessibleObjectException"));
+ 
+-        // should succeed with --add-opens
++        // no warning due to --add-opens
+         run("setAccessibleNonPublicMemberExportedPackage", successNoWarning(),
+                 "--add-opens", "java.base/java.lang=ALL-UNNAMED");
++
++        // attempt two illegal accesses, one allowed by --add-opens
++        run("reflectPublicMemberNonExportedPackage"
++                + ",setAccessibleNonPublicMemberExportedPackage",
++            successWithWarning(),
++            "--add-opens", "java.base/java.lang=ALL-UNNAMED");
+     }
+ 
+     /**
+@@ -374,20 +375,19 @@ public class IllegalAccessTest {
+         Attributes attrs = man.getMainAttributes();
+         attrs.put(Attributes.Name.MANIFEST_VERSION, "1.0");
+         attrs.put(Attributes.Name.MAIN_CLASS, "TryAccess");
+-        attrs.put(new Attributes.Name("Add-Exports"),
+-                  "java.base/sun.security.x509 java.base/sun.nio.ch");
++        attrs.put(new Attributes.Name("Add-Exports"), "java.base/sun.security.x509");
+         Path jarfile = Paths.get("x.jar");
+         Path classes = Paths.get(TEST_CLASSES);
+         JarUtils.createJarFile(jarfile, man, classes, Paths.get("TryAccess.class"));
+ 
+         run(jarfile, "reflectPublicMemberNonExportedPackage", successNoWarning());
+ 
+-        run(jarfile, "reflectPublicMemberNonExportedPackage", successNoWarning(),
+-                "--illegal-access=permit");
++        run(jarfile, "setAccessibleNonPublicMemberExportedPackage", successWithWarning());
+ 
+-        // should fail as Add-Exports does not open package
+-        run(jarfile, "setAccessibleNonPublicMemberNonExportedPackage",
+-            fail("InaccessibleObjectException"));
++        // attempt two illegal accesses, one allowed by Add-Exports
++        run(jarfile, "reflectPublicMemberNonExportedPackage,"
++                + "setAccessibleNonPublicMemberExportedPackage",
++            successWithWarning());
+     }
+ 
+     /**
+@@ -405,26 +405,29 @@ public class IllegalAccessTest {
+ 
+         run(jarfile, "setAccessibleNonPublicMemberExportedPackage", successNoWarning());
+ 
+-        run(jarfile, "setAccessibleNonPublicMemberExportedPackage", successNoWarning(),
+-                "--illegal-access=permit");
++        run(jarfile, "reflectPublicMemberNonExportedPackage", successWithWarning());
++
++        // attempt two illegal accesses, one allowed by Add-Opens
++        run(jarfile, "reflectPublicMemberNonExportedPackage,"
++                + "setAccessibleNonPublicMemberExportedPackage",
++            successWithWarning());
+     }
+ 
+     /**
+-     * Test that --illegal-access=permit behavior is to print a warning on the
+-     * first illegal access only.
++     * Test that default behavior is to print a warning on the first illegal
++     * access only.
+      */
+     public void testWarnOnFirstIllegalAccess() throws Exception {
+         String action1 = "reflectPublicMemberNonExportedPackage";
+         String action2 = "setAccessibleNonPublicMemberExportedPackage";
+-        int warningCount = count(run(action1, "--illegal-access=permit").asLines(), "WARNING");
+-        assertTrue(warningCount > 0);  // multi line warning
++        int warningCount = count(run(action1).asLines(), "WARNING");
+ 
+         // same illegal access
+-        List<String> output1 = run(action1 + "," + action1, "--illegal-access=permit").asLines();
++        List<String> output1 = run(action1 + "," + action1).asLines();
+         assertTrue(count(output1, "WARNING") == warningCount);
+ 
+         // different illegal access
+-        List<String> output2 = run(action1 + "," + action2, "--illegal-access=permit").asLines();
++        List<String> output2 = run(action1 + "," + action2).asLines();
+         assertTrue(count(output2, "WARNING") == warningCount);
+     }
+ 
+-- 
+2.34.1
+

@@ -1,0 +1,27 @@
+pkgname=libuninameslist
+pkgver=20211114
+pkgrel=1
+arch=('x86_64')
+source=("https://github.com/fontforge/${pkgname}/releases/download/${pkgver}/${pkgname}-dist-${pkgver}.tar.gz")
+
+prepare() {
+	cd ${pkgname}-${pkgver}
+
+	autoreconf -i
+	automake --foreign -Wall
+}
+
+build() {
+	cd ${pkgname}-${pkgver}
+
+	./configure \
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd ${pkgname}-${pkgver}
+
+	make DESTDIR="${pkgdir}" install
+}

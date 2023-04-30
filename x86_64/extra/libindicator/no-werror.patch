@@ -1,0 +1,321 @@
+diff -Naur libindicator-0.3.22-o/libindicator/Makefile.am libindicator-0.3.22/libindicator/Makefile.am
+--- libindicator-0.3.22-o/libindicator/Makefile.am	2011-02-16 23:37:42.000000000 +0200
++++ libindicator-0.3.22/libindicator/Makefile.am	2022-07-07 12:14:02.295024259 +0300
+@@ -44,8 +44,7 @@
+ 
+ libindicator_la_CFLAGS = \
+ 	$(LIBINDICATOR_CFLAGS) \
+-	-DG_LOG_DOMAIN=\"libindicator\" \
+-	-Wall -Werror
++	-DG_LOG_DOMAIN=\"libindicator\"
+ 
+ libindicator_la_LIBADD = \
+ 	$(LIBINDICATOR_LIBS)
+diff -Naur libindicator-0.3.22-o/libindicator/Makefile.in libindicator-0.3.22/libindicator/Makefile.in
+--- libindicator-0.3.22-o/libindicator/Makefile.in	2011-03-23 20:13:38.000000000 +0200
++++ libindicator-0.3.22/libindicator/Makefile.in	2022-07-07 12:14:28.110494008 +0300
+@@ -331,8 +331,7 @@
+ 
+ libindicator_la_CFLAGS = \
+ 	$(LIBINDICATOR_CFLAGS) \
+-	-DG_LOG_DOMAIN=\"libindicator\" \
+-	-Wall -Werror
++	-DG_LOG_DOMAIN=\"libindicator\"
+ 
+ libindicator_la_LIBADD = \
+ 	$(LIBINDICATOR_LIBS)
+diff -Naur libindicator-0.3.22-o/tests/Makefile.am libindicator-0.3.22/tests/Makefile.am
+--- libindicator-0.3.22-o/tests/Makefile.am	2011-02-16 22:46:22.000000000 +0200
++++ libindicator-0.3.22/tests/Makefile.am	2022-07-07 12:22:13.438658434 +0300
+@@ -35,7 +35,6 @@
+ 	test-loader.c
+ 
+ test_loader_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir) \
+ 	-DBUILD_DIR="\"$(builddir)\""
+ 
+@@ -54,7 +53,6 @@
+ 	test-desktop-shortcuts.c
+ 
+ test_desktop_shortcuts_CFLAGS = \
+-	-Wall -Werror \
+ 	-DSRCDIR="\"$(srcdir)\"" \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir) \
+ 	-DBUILD_DIR="\"$(abs_builddir)\""
+@@ -88,7 +86,6 @@
+ 	dummy-indicator-blank.c
+ 
+ libdummy_indicator_blank_la_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ libdummy_indicator_blank_la_LIBADD = \
+@@ -108,7 +105,6 @@
+ 	dummy-indicator-null.c
+ 
+ libdummy_indicator_null_la_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ libdummy_indicator_null_la_LIBADD = \
+@@ -128,7 +124,6 @@
+ 	dummy-indicator-signaler.c
+ 
+ libdummy_indicator_signaler_la_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ libdummy_indicator_signaler_la_LIBADD = \
+@@ -148,7 +143,6 @@
+ 	dummy-indicator-simple.c
+ 
+ libdummy_indicator_simple_la_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ libdummy_indicator_simple_la_LIBADD = \
+@@ -170,7 +164,6 @@
+ 	service-shutdown-timeout.c
+ 
+ service_shutdown_timeout_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ service_shutdown_timeout_LDADD = \
+@@ -196,7 +189,6 @@
+ 	service-manager-no-connect.c
+ 
+ service_manager_no_connect_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ service_manager_no_connect_LDADD = \
+@@ -228,7 +220,6 @@
+ 	service-manager-connect.c
+ 
+ service_manager_connect_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ service_manager_connect_LDADD = \
+@@ -242,7 +233,6 @@
+ 	service-manager-connect-service.c
+ 
+ service_manager_connect_service_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ service_manager_connect_service_LDADD = \
+@@ -275,7 +265,6 @@
+ 	service-version-manager.c
+ 
+ service_version_manager_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ service_version_manager_LDADD = \
+@@ -290,7 +279,6 @@
+ 	service-version-bad-service.c
+ 
+ service_version_bad_service_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ service_version_bad_service_LDADD = \
+@@ -305,7 +293,6 @@
+ 	service-version-good-service.c
+ 
+ service_version_good_service_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ service_version_good_service_LDADD = \
+@@ -332,7 +319,6 @@
+ 	service-version-multiwatch-manager.c
+ 
+ service_version_multiwatch_manager_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ service_version_multiwatch_manager_LDADD = \
+@@ -347,7 +333,6 @@
+ 	service-version-multiwatch-manager-impolite.c
+ 
+ service_version_multiwatch_manager_impolite_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ service_version_multiwatch_manager_impolite_LDADD = \
+@@ -362,7 +347,6 @@
+ 	service-version-multiwatch-service.c
+ 
+ service_version_multiwatch_service_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ service_version_multiwatch_service_LDADD = \
+@@ -388,7 +372,6 @@
+ 	service-manager-nostart-connect.c
+ 
+ service_manager_nostart_connect_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ service_manager_nostart_connect_LDADD = \
+diff -Naur libindicator-0.3.22-o/tests/Makefile.in libindicator-0.3.22/tests/Makefile.in
+--- libindicator-0.3.22-o/tests/Makefile.in	2011-03-23 20:13:38.000000000 +0200
++++ libindicator-0.3.22/tests/Makefile.in	2022-07-07 12:22:12.030641851 +0300
+@@ -460,7 +460,6 @@
+ 	test-loader.c
+ 
+ test_loader_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir) \
+ 	-DBUILD_DIR="\"$(builddir)\""
+ 
+@@ -473,7 +472,6 @@
+ 	test-desktop-shortcuts.c
+ 
+ test_desktop_shortcuts_CFLAGS = \
+-	-Wall -Werror \
+ 	-DSRCDIR="\"$(srcdir)\"" \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir) \
+ 	-DBUILD_DIR="\"$(abs_builddir)\""
+@@ -493,7 +491,6 @@
+ 	dummy-indicator-blank.c
+ 
+ libdummy_indicator_blank_la_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ libdummy_indicator_blank_la_LIBADD = \
+@@ -513,7 +510,6 @@
+ 	dummy-indicator-null.c
+ 
+ libdummy_indicator_null_la_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ libdummy_indicator_null_la_LIBADD = \
+@@ -533,7 +529,6 @@
+ 	dummy-indicator-signaler.c
+ 
+ libdummy_indicator_signaler_la_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ libdummy_indicator_signaler_la_LIBADD = \
+@@ -553,7 +548,6 @@
+ 	dummy-indicator-simple.c
+ 
+ libdummy_indicator_simple_la_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ libdummy_indicator_simple_la_LIBADD = \
+@@ -569,7 +563,6 @@
+ 	service-shutdown-timeout.c
+ 
+ service_shutdown_timeout_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ service_shutdown_timeout_LDADD = \
+@@ -581,7 +574,6 @@
+ 	service-manager-no-connect.c
+ 
+ service_manager_no_connect_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ service_manager_no_connect_LDADD = \
+@@ -593,7 +585,6 @@
+ 	service-manager-connect.c
+ 
+ service_manager_connect_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ service_manager_connect_LDADD = \
+@@ -605,7 +596,6 @@
+ 	service-manager-connect-service.c
+ 
+ service_manager_connect_service_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ service_manager_connect_service_LDADD = \
+@@ -618,7 +608,6 @@
+ 	service-version-multiwatch-manager.c
+ 
+ service_version_manager_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ service_version_manager_LDADD = \
+@@ -631,7 +620,6 @@
+ 	service-version-bad-service.c
+ 
+ service_version_bad_service_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ service_version_bad_service_LDADD = \
+@@ -644,7 +632,6 @@
+ 	service-version-good-service.c
+ 
+ service_version_good_service_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ service_version_good_service_LDADD = \
+@@ -653,7 +640,6 @@
+ 	$(INDICATOR_LIB)
+ 
+ service_version_multiwatch_manager_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ service_version_multiwatch_manager_LDADD = \
+@@ -666,7 +652,6 @@
+ 	service-version-multiwatch-manager-impolite.c
+ 
+ service_version_multiwatch_manager_impolite_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ service_version_multiwatch_manager_impolite_LDADD = \
+@@ -679,7 +664,6 @@
+ 	service-version-multiwatch-service.c
+ 
+ service_version_multiwatch_service_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ service_version_multiwatch_service_LDADD = \
+@@ -691,7 +675,6 @@
+ 	service-manager-nostart-connect.c
+ 
+ service_manager_nostart_connect_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir)
+ 
+ service_manager_nostart_connect_LDADD = \
+diff -Naur libindicator-0.3.22-o/tools/.Makefile.am.kate-swp libindicator-0.3.22/tools/.Makefile.am.kate-swp
+--- libindicator-0.3.22-o/tools/.Makefile.am.kate-swp	1970-01-01 03:00:00.000000000 +0300
++++ libindicator-0.3.22/tools/.Makefile.am.kate-swp	2022-07-07 12:23:24.627385530 +0300
+@@ -0,0 +1 @@
++   Kate Swap File 2.0   (}4¸≈%¢'ôçÉ“üB†SR          U   E
+\ No newline at end of file
+diff -Naur libindicator-0.3.22-o/tools/Makefile.in libindicator-0.3.22/tools/Makefile.in
+--- libindicator-0.3.22-o/tools/Makefile.in	2011-03-23 20:13:38.000000000 +0200
++++ libindicator-0.3.22/tools/Makefile.in	2022-07-07 12:23:32.775455502 +0300
+@@ -261,7 +261,6 @@
+ 	indicator-loader.c
+ 
+ indicator_loader_CFLAGS = \
+-	-Wall -Werror \
+ 	$(LIBINDICATOR_CFLAGS) -I$(top_srcdir) \
+ 	-DBUILD_DIR="\"$(builddir)\""
+ 

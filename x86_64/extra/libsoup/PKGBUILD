@@ -1,0 +1,26 @@
+pkgname=libsoup
+pkgver=2.74.2
+pkgrel=1
+arch=('x86_64')
+depends=(glib-networking libpsl libxml2 sqlite3)
+source=(https://download.gnome.org/sources/$pkgname/2.74/$pkgname-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	mkdir -p build && cd build
+
+	meson			\
+	--prefix=/usr		\
+	--buildtype=release	\
+	-D vapi=enabled		\
+	..
+
+	ninja
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+	
+	DESTDIR=$pkgdir ninja install
+}

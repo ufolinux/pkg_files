@@ -1,0 +1,12 @@
+polkit.addRule(function(action, subject) {
+	if (
+	action.id == "org.xfce.PowerManager"		||
+	action.id == "org.freedesktop.PowerManagement"	||
+	action.id == "org.freedesktop.login1.power-off" ||
+	action.id == "org.freedesktop.login1.reboot"	||
+	action.id == "org.freedesktop.login1.hibernate" ||
+	action.id == "org.freedesktop.login1.suspend"	||
+	action.id == "org.xfce.power.xfce4-pm-helper") {
+	return polkit.Result.YES;
+	}
+});

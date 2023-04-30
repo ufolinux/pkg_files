@@ -1,0 +1,62 @@
+opkgname=gtk+
+pkgname=gtk3+
+pkgver=3.24.36
+pkgrel=1
+arch=('x86_64')
+install=gtk3.install
+depends=(atk cairo libxcursor libxinerama libxrandr libxi libepoxy gdk-pixbuf
+	dconf libxcomposite libxdamage pango shared-mime-info at-spi2-atk
+	wayland libxkbcommon adwaita-icon-theme json-glib librsvg
+	desktop-file-utils mesa cantarell-fonts colord rest cups
+	fribidi iso-codes ibus)
+makedepends=(gobject-introspection gtk-doc git glib2 sassc meson
+	wayland-protocols python3-pygments)
+source=(https://download.gnome.org/sources/$opkgname/3.24/$opkgname-$pkgver.tar.xz
+	gtk-query-immodules-3.0.hook
+	la_support.tar.gz.patch)
+
+prepare() {
+	mkdir -p build la_support
+	cp -f la_support.tar.gz.patch la_support.tar.gz
+
+	# These .la files seem still be used by the xfce source code
+	# ( so lets add these back to the new gtk3 src which dosent add these anymore with meson build system )
+	tar xf $srcdir/la_support.tar.gz -C $srcdir/la_support
+}
+
+build() {
+	cd build
+
+	meson \
+	--prefix=/usr \
+	--sysconfdir=/etc \
+	-D x11_backend=true \
+	-D wayland_backend=true \
+	-D quartz_backend=true \
+	-D broadway_backend=true \
+	-D tracker3=false \
+	-D colord=yes \
+	-D man=true	 \
+	-D gtk_doc=true \
+	../$opkgname-$pkgver
+
+	meson compile
+}
+
+package() {
+	cd build
+
+	meson install --destdir=$pkgdir
+
+	install -Dm644 /dev/stdin "$pkgdir/usr/share/gtk-3.0/settings.ini" <<END
+[Settings]
+gtk-icon-theme-name = Adwaita
+gtk-theme-name = Adwaita
+gtk-font-name = Cantarell 11
+END
+
+	install -Dt "$pkgdir/usr/share/libalpm/hooks" -m644 $srcdir/gtk-query-immodules-3.0.hook
+
+	# Install .la files
+	cp -rf $srcdir/la_support/* $pkgdir/usr/lib/
+}

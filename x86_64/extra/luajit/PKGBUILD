@@ -1,0 +1,22 @@
+pkgname=luajit
+pkgver=2.1.0.beta3.r422
+pkgrel=1
+arch=(x86_64)
+depends=(gcc)
+makedepends=(make)
+commitid=4c2441c16ce3c4e312aaefecc6d40c4fe21de97c
+source=(https://repo.or.cz/luajit-2.0.git/snapshot/$commitid.tar.gz)
+
+build() {
+	cd $pkgname-2.0-${commitid::7}
+
+	make amalg PREFIX=/usr BUILDMODE=dynamic TARGET_STRIP=" @:"
+}
+
+package() {
+	cd $pkgname-2.0-${commitid::7}
+
+	make DESTDIR=$pkgdir PREFIX=/usr install
+
+	ln -sf luajit-2.1.0-beta3 "$pkgdir/usr/bin/luajit"
+}

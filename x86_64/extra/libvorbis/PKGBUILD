@@ -1,0 +1,21 @@
+pkgname=libvorbis
+pkgver=1.3.7
+pkgrel=1
+arch=('x86_64')
+depends=(libogg)
+source=(https://downloads.xiph.org/releases/vorbis/$pkgname-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

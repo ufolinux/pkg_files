@@ -1,0 +1,17 @@
+pkgname=xmlto
+pkgver=0.0.28
+pkgrel=1
+arch=('x86_64')
+depends=(docbook-xml docbook-xsl libxslt)
+source=(https://releases.pagure.org/$pkgname/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+	./configure --prefix=/usr --libdir=/usr/lib
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+}

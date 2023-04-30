@@ -1,0 +1,18 @@
+pkgname=gtk-doc
+pkgver=1.33.2
+pkgrel=3
+arch=('x86_64')
+makedepends=(git meson docbook-xml docbook-xsl)
+source=(https://download-fallback.gnome.org/sources/gtk-doc/1.33/gtk-doc-1.33.2.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+	./autogen.sh
+	./configure --prefix=/usr
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+}

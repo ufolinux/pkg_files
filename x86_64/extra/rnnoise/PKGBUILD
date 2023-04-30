@@ -1,0 +1,34 @@
+pkgname=rnnoise
+pkgver=0.4.1
+pkgrel=1
+arch=(x86_64)
+depends=(glibc gcc)
+makedepends=(gcc)
+commitid=(7f449bf8bd3b933891d12c30112268c4090e4d59)
+source=(https://gitlab.xiph.org/xiph/rnnoise/-/archive/$commitid/rnnoise-$commitid.tar.gz
+
+	# Create SIMD-accelerated version of `compute_gru` function
+	https://gitlab.xiph.org/xiph/rnnoise/-/merge_requests/2.patch)
+
+prepare() {
+	cd $pkgname-$commitid
+
+	patch -p1 -i ../2.patch
+
+	./autogen.sh
+
+	./configure \
+	--prefix=/usr
+}
+
+build() {
+	cd $pkgname-$commitid
+
+	make
+}
+
+package() {
+	cd $pkgname-$commitid
+
+	make DESTDIR=$pkgdir install
+}

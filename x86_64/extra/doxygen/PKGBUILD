@@ -1,0 +1,24 @@
+pkgname=doxygen
+pkgver=1.9.2
+pkgrel=1
+arch=('x86_64')
+makedepends=(cmake git)
+source=(https://doxygen.nl/files/doxygen-1.9.2.src.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+	mkdir -p build
+	cd build
+
+	cmake -G "Unix Makefiles"		\
+	-D CMAKE_BUILD_TYPE=Release		\
+	-D CMAKE_INSTALL_PREFIX=/usr		\
+	-Wno-dev ..
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+	make DESTDIR=$pkgdir install
+}

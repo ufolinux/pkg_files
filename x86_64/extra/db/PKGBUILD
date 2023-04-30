@@ -1,0 +1,31 @@
+pkgname=db
+pkgver=5.3.28
+pkgrel=1
+pkgdesc="The Berkeley DB embedded database system"
+arch=('x86_64')
+depends=('glibc' 'bash' 'gnutls')
+source=(https://download.oracle.com/berkeley-db/db-${pkgver}.tar.gz
+	atomic.patch)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	patch -p0 -i ../atomic.patch # Fix build
+}
+
+build() {
+	cd "${srcdir}"/$pkgname-${pkgver}/build_unix
+
+	../dist/configure --prefix=/usr --enable-compat185 \
+    --enable-shared --enable-static --enable-cxx --enable-dbm \
+    --enable-stl
+
+    make LIBSO_LIBS=-lpthread
+}
+
+package() {
+	cd "${srcdir}"/$pkgname-${pkgver}/build_unix
+
+	make DESTDIR="${pkgdir}" install
+	rm -r "${pkgdir}"/usr/docs
+}

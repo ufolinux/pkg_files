@@ -1,0 +1,39 @@
+_name=expat
+pkgname=lib32-expat
+pkgver=2.4.2
+pkgrel=1
+pkgdesc='An XML Parser library'
+arch=(x86_64)
+url=https://libexpat.github.io/
+license=(MIT)
+depends=(
+  "expat"
+)
+makedepends=(cmake)
+source=("https://github.com/libexpat/libexpat/releases/download/R_${pkgver//./_}/${_name}-${pkgver}.tar.bz2")
+
+prepare() {
+	mv -v "${_name}-$pkgver" "$pkgname-$pkgver"
+}
+
+build() {
+	cd "$pkgname-$pkgver"
+	export CC='gcc -m32'
+	export CXX='c++ -m32'
+	export PKG_CONFIG_PATH=/usr/lib32/pkgconfig
+	cmake -DCMAKE_INSTALL_PREFIX=/usr \
+	-DCMAKE_INSTALL_LIBDIR=lib32 \
+	-DCMAKE_BUILD_TYPE='None' \
+	-W no-dev \
+	-B build \
+	-S .
+
+	make VERBOSE=1 -C build
+}
+
+package() {
+	cd "$pkgname-$pkgver"
+	make VERBOSE=1 DESTDIR="$pkgdir" -C build install
+	ln -sf libexpat.so.1.8.2 $pkgdir/usr/lib32/libexpat.so
+	rm -rf "${pkgdir}"/usr/{bin,include,share/man,share/doc}
+}

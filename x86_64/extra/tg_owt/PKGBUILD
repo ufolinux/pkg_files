@@ -1,0 +1,47 @@
+pkgname=tg_owt
+pkgver=2022.05.08
+pkgrel=2
+pkgdesc='WebRTC library'
+arch=(x86_64)
+depends=(libdrm)
+commitid=(a5fbc9123e056e611e69acf0ceb4252ddd838adb)
+depends=('unzip' 'protobuf' 'libxrandr' 'libxcomposite' 'openssl' 'glibc'
+	'ffmpeg' 'libva' 'opus' 'yasm' 'libjpeg' 'pipewire' 'libxtst' 'abseil-cpp' 'libepoxy')
+makedepends=('git' 'ninja' 'cmake')
+source=("git+https://github.com/desktop-app/tg_owt.git#commit=${commitid}"
+	"git+https://chromium.googlesource.com/webm/libvpx.git"
+	"git+https://chromium.googlesource.com/libyuv/libyuv.git"
+	https://patch-diff.githubusercontent.com/raw/desktop-app/tg_owt/pull/101.patch)
+
+prepare() {
+	cd $pkgname
+
+	git submodule init
+
+	git config submodule.src/third_party/libvpx/source/libvpx.url $srcdir/libvpx
+	git config submodule.src/third_party/libyuv.url $srcdir/libyuv
+	git config submodule.src/third_party/pipewire.url $srcdir/pipewire
+
+	git submodule sync
+	git submodule update
+
+	patch -Np1 -i "$srcdir"/101.patch
+}
+
+build() {
+	cd $pkgname
+
+	cmake \
+	-B build -G Ninja \
+	-D CMAKE_INSTALL_PREFIX=/usr \
+	-D CMAKE_BUILD_TYPE=Release \
+	-D BUILD_SHARED_LIBS=ON
+
+	ninja -C build
+}
+
+package() {
+	cd $pkgname
+
+	DESTDIR=${pkgdir} ninja -C build install
+}

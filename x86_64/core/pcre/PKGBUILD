@@ -1,0 +1,28 @@
+pkgname=pcre
+pkgver=8.45
+pkgrel=2
+arch=('x86_64')
+depends=(valgrind)
+source=(https://sourceforge.net/projects/pcre/files/pcre/8.45/pcre-8.45.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure			\
+	--prefix=/usr			\
+	--enable-unicode-properties	\
+	--enable-pcre16			\
+	--enable-pcre21			\
+	--enable-pcre32			\
+	--enable-pcregrep-libz		\
+	--enable-pcregrep-libbz2	\
+	--enable-pcretest-libreadline
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

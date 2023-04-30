@@ -1,0 +1,17 @@
+pkgname=zip
+pkgver=30
+pkgrel=1
+arch=('x86_64')
+source=(https://downloads.sourceforge.net/infozip/$pkgname$pkgver.tar.gz)
+
+build() {
+	cd $pkgname$pkgver
+
+	make -f unix/Makefile generic
+}
+
+package() {
+	cd $pkgname$pkgver
+
+	make prefix=$pkgdir/usr MANDIR=$pkgdir/usr/share/man/man1 -f unix/Makefile install
+}

@@ -1,0 +1,20 @@
+pkgname=libmtp
+pkgver=1.1.19
+pkgrel=1
+arch=(x86_64)
+depends=(libusb)
+source=(https://downloads.sourceforge.net/$pkgname/$pkgname-$pkgver.tar.gz{,.asc})
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure --prefix=/usr --with-udev=/usr/lib/udev
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR="$pkgdir" install
+}

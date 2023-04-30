@@ -1,0 +1,46 @@
+pkgname=opensc
+pkgver=0.22.0
+pkgrel=1
+arch=(x86_64)
+depends=(readline glib2 pcsc-lite openssl)
+makedepends=(docbook-xml docbook-xsl)
+options=(!lto)
+source=(https://github.com/OpenSC/OpenSC/releases/download/$pkgver/opensc-$pkgver.tar.gz
+	https://github.com/OpenSC/OpenSC/commit/0f7082ea46562b15221f428860b993e0519c6cbd.patch)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	# Fix usage of pointer after realloc
+	patch -p1 -i ../0f7082ea46562b15221f428860b993e0519c6cbd.patch
+
+	./bootstrap
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	sheetdir=(/usr/share/xml/docbook/xsl-stylesheets-*-nons)
+
+	./configure \
+	--prefix=/usr \
+	--with-completiondir=/usr/share/bash-completion/completions \
+	--enable-doc \
+	--enable-man \
+	--enable-readline \
+	--enable-openssl \
+	--enable-pcsc \
+	--enable-zlib \
+	--enable-sm \
+	--with-xsl-stylesheetsdir="$sheetdir"
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR="$pkgdir" install
+
+	install -D -m644 etc/opensc.conf $pkgdir/etc/opensc.conf
+}

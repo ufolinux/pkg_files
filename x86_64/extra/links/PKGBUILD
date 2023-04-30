@@ -1,0 +1,20 @@
+pkgname=links
+pkgver=2.25
+pkgrel=1
+arch=('x86_64')
+depends=(brotli bzip2 gpm libevent openssl pcre xz zstd)
+source=(http://links.twibright.com/download/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure --prefix=/usr --mandir=/usr/share/man
+
+	make
+}
+
+package() {
+        cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

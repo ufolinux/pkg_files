@@ -1,0 +1,20 @@
+pkgname=libxdmcp
+pkgver=1.1.3
+pkgrel=1
+arch=('x86_64')
+depends=('libxau' 'xcb-proto' 'libxaw')
+source=(https://gitlab.freedesktop.org/xorg/lib/libxdmcp/-/archive/libXdmcp-$pkgver/libXdmcp-$pkgver.tar.gz)
+
+build() {
+        cd libxdm*
+
+	NOCONFIGURE=1 ./autogen.sh
+
+	./configure --prefix=/usr
+	make
+}
+
+package() {
+	cd libxdm*
+	make DESTDIR=$pkgdir install
+}

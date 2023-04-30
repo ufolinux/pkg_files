@@ -1,0 +1,36 @@
+pkgname=bzip2
+pkgver=1.0.8
+pkgrel=2
+arch=('x86_64')
+depends=(glibc)
+source=(https://www.sourceware.org/pub/bzip2/$pkgname-$pkgver.tar.gz)
+
+build() {
+        cd $pkgname-$pkgver
+
+        sed -i 's@\(ln -s -f \)$(PREFIX)/bin/@\1@' Makefile
+        sed -i "s@(PREFIX)/man@(PREFIX)/share/man@g" Makefile
+
+        # use our optimization
+        [[ -n ${CFLAGS} ]] && sed -i "s|-O2|${CFLAGS}|g" Makefile
+        [[ -n ${CFLAGS} ]] && sed -i "s|-O2|${CFLAGS}|g" Makefile-libbz2_so
+
+        make -f Makefile-libbz2_so
+        make clean
+        make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+        make PREFIX=$pkgdir/usr install
+
+        mkdir -pv $pkgdir/{bin,lib,usr/lib}
+
+        cp -v bzip2-shared $pkgdir/bin/bzip2
+        cp -av libbz2.so* $pkgdir/lib
+        ln -sv ../../lib/libbz2.so.1.0 $pkgdir/usr/lib/libbz2.so
+        rm -v $pkgdir/usr/bin/{bunzip2,bzcat,bzip2}
+        ln -sv bzip2 $pkgdir/bin/bunzip2
+        ln -sv bzip2 $pkgdir/bin/bzcat
+}

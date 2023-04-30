@@ -1,0 +1,24 @@
+pkgname=libavtp
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Open source implementation of Audio Video Transport Protocol"
+arch=('x86_64')
+depends=('glibc')
+makedepends=('meson' 'cmocka')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/Avnu/${pkgname}/archive/v${pkgver}.tar.gz")
+
+build() {
+	cd "$pkgname-$pkgver"
+
+	meson \
+	--prefix=/usr \
+	build
+
+	ninja -C build
+}
+
+package() {
+	cd "$pkgname-$pkgver"
+
+	DESTDIR="${pkgdir}" meson install -C build
+}

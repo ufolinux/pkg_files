@@ -1,0 +1,28 @@
+pkgname=sassc
+pkgver=3.6.2
+pkgrel=1
+arch=('x86_64')
+depends=(libsass)
+makedepends=(base-devel)
+source=(https://github.com/sass/sassc/archive/$pkgver/sassc-$pkgver.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	autoreconf -fi
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

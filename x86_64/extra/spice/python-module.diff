@@ -1,0 +1,13 @@
+diff --git a/meson.build b/meson.build
+index aff62438f1c0d27de0defd42625db06f13519ac9..eeccecd5270055611550dc50cc8c69cda8e9a8c4 100644
+--- a/meson.build
++++ b/meson.build
+@@ -132,7 +132,7 @@ if spice_common_generate_client_code or spice_common_generate_server_code
+   if get_option('python-checks')
+     foreach module : ['six', 'pyparsing']
+       message('Checking for python module @0@'.format(module))
+-      cmd = run_command(python, '-m', module)
++      cmd = run_command(python, '-c', 'import @0@'.format(module))
+       if cmd.returncode() != 0
+         error('Python module @0@ not found'.format(module))
+       endif

@@ -1,0 +1,21 @@
+pkgname=xbacklight
+pkgver=1.2.3
+pkgrel=1
+arch=('x86_64')
+depends=(xcb-util)
+source=(https://xorg.freedesktop.org/archive/individual/app/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

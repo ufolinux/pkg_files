@@ -1,0 +1,33 @@
+pkgname=nftables
+pkgver=1.0.1
+pkgrel=1
+arch=('x86_64')
+depends=(gmp jansson libnftnl ncurses readline python3)
+makedepends=(asciidoc)
+source=(https://www.netfilter.org/pub/nftables/nftables-$pkgver.tar.bz2
+	nftables.conf
+	nftables.service)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr		\
+	--with-json		\
+	--with-cli=readline	\
+	--disable-debug
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+
+	# basic safe firewall config
+	install -Dm644 ../nftables.conf $pkgdir/etc/nftables.conf
+
+	# Systemd
+	install -Dm644 ../nftables.service $pkgdir/usr/lib/systemd/system/nftables.service
+}

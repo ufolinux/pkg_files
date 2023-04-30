@@ -1,0 +1,46 @@
+pkgname=emacs
+pkgver=27.2
+pkgrel=2
+pkgdesc="The extensible, customizable, self-documenting real-time display editor"
+arch=('x86_64')
+url="https://www.gnu.org/software/emacs/emacs.html"
+license=('GPL3')
+depends=('librsvg' 'gpm' 'libxpm' 'gtk+' 'hicolor-icon-theme' 'jansson'
+	'alsa-lib' 'gnutls' 'cairo' 'harfbuzz' 'giflib' 'desktop-file-utils'
+	'librsvg')
+source=(https://ftp.gnu.org/gnu/emacs/$pkgname-$pkgver.tar.xz)
+
+build() {
+	cd "$srcdir"/$pkgname-$pkgver
+
+	ac_cv_lib_gif_EGifPutExtensionLast=yes ./configure	\
+	--prefix=/usr						\
+	--sysconfdir=/etc					\
+	--libexecdir=/usr/lib					\
+	--localstatedir=/var					\
+	--with-gif=ifavailable					\
+	--with-x-toolkit=gtk3					\
+	--with-xft						\
+	--with-wide-int						\
+	--with-modules						\
+	--with-cairo						\
+	--with-harfbuzz
+
+	# Fix pwd location from bin to usr/bin
+        sed -i -e 's#bin/pwd#usr/bin/pwd#g' Makefile*
+        sed -i -e 's#bin/pwd#usr/bin/pwd#g' */Makefile*
+
+	make
+}
+
+package() {
+	cd "$srcdir"/$pkgname-$pkgver
+	make DESTDIR="$pkgdir" install
+
+	# remove conflict with ctags package
+	mv "$pkgdir"/usr/bin/{ctags,ctags.emacs}
+	mv "$pkgdir"/usr/share/man/man1/{ctags.1.gz,ctags.emacs.1}
+
+	# fix user/root permissions on usr/share files
+	find "$pkgdir"/usr/share/emacs/$pkgver -exec chown root:root {} \;
+}

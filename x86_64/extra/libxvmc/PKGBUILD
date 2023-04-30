@@ -1,0 +1,22 @@
+pkgname=libxvmc
+pkgver=1.0.13
+pkgrel=1
+arch=(x86_64)
+depends=(libxext libxv)
+makedepends=(meson)
+source=(https://xorg.freedesktop.org/releases/individual/lib/libXvMC-${pkgver}.tar.xz)
+
+build() {
+	meson \
+	--prefix=/usr \
+	libXvMC-$pkgver \
+	build
+
+	meson compile -C build
+
+	
+}
+
+package() {
+	DESTDIR=$pkgdir meson install -C build
+}

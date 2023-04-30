@@ -1,0 +1,14 @@
+pkgname=base-devel
+pkgver=2023.1
+pkgrel=1
+arch=('x86_64')
+depends=('autoconf' 'automake' 'make' 'm4' 'bison' 'meson' 'ninja' 'perl' 'ruby3' 'git' 'patch' 'cmake' 'fakeroot')
+
+build() {
+	mkdir -p $pkgname-$pkgver
+        cd $pkgname-$pkgver
+}
+
+package() {
+	cd $pkgname-$pkgver
+}

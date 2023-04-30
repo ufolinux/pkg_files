@@ -1,0 +1,24 @@
+pkgname=libnet
+pkgver=1.1.6
+pkgrel=1
+arch=('x86_64')
+depends=(glibc coreutils)
+makedepends=(doxygen)
+source=(https://github.com/libnet/libnet/releases/download/v${pkgver}/libnet-${pkgver}.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure	\
+	CFLAGS=-w \
+	CXXFLAGS=-w \
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

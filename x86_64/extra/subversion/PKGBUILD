@@ -1,0 +1,28 @@
+pkgname=subversion
+pkgver=1.14.2
+pkgrel=1
+arch=(x86_64)
+depends=(file sqlite3 systemd python3 ruby3 kwallet)
+makedepends=(python3-pip perl swig openjdk-17 kwallet swig kdelibs4support)
+source=(https://www.apache.org/dist/subversion/subversion-${pkgver}.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure \
+	--prefix=/usr \
+	--enable-javahl \
+	--with-kwallet
+
+	# Make base
+	make LT_LDFLAGS="-L$Fdestdir/usr/lib" -j2
+
+	# Make extras
+	make swig-py swig-pl javahl swig-rb
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	
+}

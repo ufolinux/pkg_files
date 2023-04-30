@@ -1,0 +1,20 @@
+pkgname=npth
+pkgver=1.6
+pkgrel=1
+arch=('x86_64')
+depends=(glibc)
+source=(https://www.gnupg.org/ftp/gcrypt/npth/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure --prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

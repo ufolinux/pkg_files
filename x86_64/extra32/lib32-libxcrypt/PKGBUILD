@@ -1,0 +1,44 @@
+pkgname=lib32-libxcrypt
+pkgver=4.4.28
+pkgrel=2
+pkgdesc='Modern library for one-way hashing of passwords (32-bit)'
+arch=('x86_64')
+depends=('glibc' 'libxcrypt')
+source=("https://github.com/besser82/libxcrypt/releases/download/v${pkgver}/libxcrypt-${pkgver}.tar.xz")
+
+
+build() {
+	cd "${srcdir}/libxcrypt-${pkgver}"
+
+	export CC="gcc -m32"
+	export PKG_CONFIG_PATH="/usr/lib32/pkgconfig"
+
+	mkdir build build-compat
+
+	cd build
+	./../configure \
+	--prefix=/usr \
+	--libdir=/usr/lib32 \
+	--enable-hashes=strong,glibc \
+	--enable-obsolete-api=no \
+	--disable-failure-tokens
+
+	make -j4
+
+	cd ../build-compat
+	./../configure \
+	--prefix=/usr \
+	--libdir=/usr/lib32 \
+	--enable-hashes=strong,glibc \
+	--enable-obsolete-api=glibc \
+	--disable-failure-tokens
+}
+
+package() {
+	cd "${srcdir}/libxcrypt-${pkgver}"
+
+	make -C build DESTDIR="${pkgdir}" install
+	make -C build-compat DESTDIR="${pkgdir}" install
+
+	rm -rf "${pkgdir}"/usr/{bin,include,share}
+}

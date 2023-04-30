@@ -1,0 +1,29 @@
+pkgname=geoip
+pkgver=1.6.12
+pkgrel=1
+arch=(x86_64)
+depends=(geoip-database zlib)
+makedepends=(autoconf libtool)
+source=($pkgname-$pkgver.tar.gz::https://github.com/maxmind/${pkgname}-api-c/archive/v${pkgver}.tar.gz)
+
+prepare() {
+	cd geoip-api-c-$pkgver
+
+	./bootstrap
+}
+
+build() {
+	cd geoip-api-c-$pkgver
+
+	./configure \
+	--prefix=/usr \
+	--sysconfdir=/etc/geoip
+
+	make
+}
+
+package() {
+	cd geoip-api-c-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

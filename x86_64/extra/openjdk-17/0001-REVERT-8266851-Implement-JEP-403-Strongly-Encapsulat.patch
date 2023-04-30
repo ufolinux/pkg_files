@@ -1,0 +1,3303 @@
+From 76288cc9dd93dc3dfcb0ab4c92b0e9305ed5ab60 Mon Sep 17 00:00:00 2001
+From: Martin Valba <kailing2@live.com>
+Date: Tue, 10 May 2022 21:17:53 +0300
+Subject: [PATCH] [REVERT]: 8266851: Implement JEP 403: Strongly Encapsulate
+ JDK
+
+---
+ src/hotspot/share/runtime/arguments.cpp       |   11 +-
+ .../share/classes/java/lang/Module.java       |   23 +-
+ .../java/lang/invoke/MethodHandles.java       |    8 +
+ .../java/lang/reflect/AccessibleObject.java   |   31 +
+ .../module/ExplodedSystemModules.java         |   10 +
+ .../internal/module/IllegalAccessLogger.java  |  407 +++++
+ .../internal/module/IllegalAccessMaps.java    |  130 ++
+ .../jdk/internal/module/ModuleBootstrap.java  |  125 +-
+ .../jdk/internal/module/SystemModules.java    |   12 +
+ .../jdk/internal/module/jdk8_packages.dat     | 1340 +++++++++++++++++
+ .../launcher/resources/launcher.properties    |    5 +
+ .../internal/plugins/SystemModulesPlugin.java |   14 +
+ .../lang/ModuleTests/BasicModuleTest.java     |    2 +-
+ .../lang/instrument/RedefineModuleTest.java   |    2 +-
+ .../lang/invoke/CallerSensitiveAccess.java    |    2 +-
+ .../AccessibleObject/CanAccessTest.java       |    2 +-
+ .../ModuleSetAccessibleTest.java              |    2 +-
+ .../TrySetAccessibleTest.java                 |    2 +-
+ .../modules/cache/CacheTest.java              |    2 +
+ test/jdk/jdk/modules/open/Basic.java          |    2 +-
+ .../AddExportsAndOpensInManifest.java         |    3 +-
+ .../illegalaccess/IllegalAccessTest.java      |  452 +++++-
+ .../modules/illegalaccess/TryAccess.java      |  188 +++
+ .../illegalaccess/modules/m/module-info.java  |   26 +
+ .../illegalaccess/modules/m/p/Type.java       |   31 +
+ .../patchsrc/java.base/java/lang/Helper.java  |   42 +
+ 26 files changed, 2811 insertions(+), 63 deletions(-)
+ create mode 100644 src/java.base/share/classes/jdk/internal/module/IllegalAccessLogger.java
+ create mode 100644 src/java.base/share/classes/jdk/internal/module/IllegalAccessMaps.java
+ create mode 100644 src/java.base/share/classes/jdk/internal/module/jdk8_packages.dat
+ create mode 100644 test/jdk/tools/launcher/modules/illegalaccess/TryAccess.java
+ create mode 100644 test/jdk/tools/launcher/modules/illegalaccess/modules/m/module-info.java
+ create mode 100644 test/jdk/tools/launcher/modules/illegalaccess/modules/m/p/Type.java
+ create mode 100644 test/jdk/tools/launcher/modules/illegalaccess/patchsrc/java.base/java/lang/Helper.java
+
+diff --git a/src/hotspot/share/runtime/arguments.cpp b/src/hotspot/share/runtime/arguments.cpp
+index 3587b08f309..9beae74a0a2 100644
+--- a/src/hotspot/share/runtime/arguments.cpp
++++ b/src/hotspot/share/runtime/arguments.cpp
+@@ -1333,6 +1333,7 @@ bool Arguments::add_property(const char* prop, PropertyWriteable writeable, Prop
+     log_info(cds)("optimized module handling: disabled due to incompatible property: %s=%s", key, value);
+   }
+   if (strcmp(key, "jdk.module.showModuleResolution") == 0 ||
++      strcmp(key, "jdk.module.illegalAccess") == 0 ||
+       strcmp(key, "jdk.module.validation") == 0 ||
+       strcmp(key, "java.system.class.loader") == 0) {
+     MetaspaceShared::disable_full_module_graph();
+@@ -2064,7 +2065,8 @@ bool Arguments::parse_uintx(const char* value,
+ }
+ 
+ bool Arguments::create_module_property(const char* prop_name, const char* prop_value, PropertyInternal internal) {
+-  assert(is_internal_module_property(prop_name), "unknown module property: '%s'", prop_name);
++  assert(is_internal_module_property(prop_name) ||
++    strcmp(prop_name, "jdk.module.illegalAccess") == 0, "unknown module property: '%s'", prop_name);
+   size_t prop_len = strlen(prop_name) + strlen(prop_value) + 2;
+   char* property = AllocateHeap(prop_len, mtArguments);
+   int ret = jio_snprintf(property, prop_len, "%s=%s", prop_name, prop_value);
+@@ -2433,9 +2435,10 @@ jint Arguments::parse_each_vm_init_arg(const JavaVMInitArgs* args, bool* patch_m
+         return res;
+       }
+     } else if (match_option(option, "--illegal-access=", &tail)) {
+-      char version[256];
+-      JDK_Version::jdk(17).to_string(version, sizeof(version));
+-      warning("Ignoring option %s; support was removed in %s", option->optionString, version);
++      warning("Option --illegal-access is deprecated and will be removed in a future release.");
++      if (!create_module_property("jdk.module.illegalAccess", tail, ExternalProperty)) {
++        return JNI_ENOMEM;
++      }
+     // -agentlib and -agentpath
+     } else if (match_option(option, "-agentlib:", &tail) ||
+           (is_absolute_path = match_option(option, "-agentpath:", &tail))) {
+diff --git a/src/java.base/share/classes/java/lang/Module.java b/src/java.base/share/classes/java/lang/Module.java
+index ab7d2103850..b63d6e96126 100644
+--- a/src/java.base/share/classes/java/lang/Module.java
++++ b/src/java.base/share/classes/java/lang/Module.java
+@@ -56,6 +56,8 @@ import jdk.internal.loader.BuiltinClassLoader;
+ import jdk.internal.loader.BootLoader;
+ import jdk.internal.loader.ClassLoaders;
+ import jdk.internal.misc.CDS;
++import jdk.internal.misc.VM;
++import jdk.internal.module.IllegalAccessLogger;
+ import jdk.internal.module.ModuleLoaderMap;
+ import jdk.internal.module.ServicesCatalog;
+ import jdk.internal.module.Resources;
+@@ -932,8 +934,27 @@ public final class Module implements AnnotatedElement {
+             return;
+ 
+         // check if the package is already exported/open to other
+-        if (implIsExportedOrOpen(pn, other, open))
++        if (implIsExportedOrOpen(pn, other, open)) {
++
++        // if the package is exported/open for illegal access then we need
++        // to record that it has also been exported/opened reflectively so
++        // that the IllegalAccessLogger doesn't emit a warning.
++        boolean needToAdd = false;
++        if (!other.isNamed()) {
++            IllegalAccessLogger l = IllegalAccessLogger.illegalAccessLogger();
++            if (l != null) {
++                if (open) {
++                    needToAdd = l.isOpenForIllegalAccess(this, pn);
++                } else {
++                    needToAdd = l.isExportedForIllegalAccess(this, pn);
++                }
++            }
++        }
++        if (!needToAdd) {
++            // nothing to do
+             return;
++        }
++    }
+ 
+         // can only export a package in the module
+         if (!descriptor.packages().contains(pn)) {
+diff --git a/src/java.base/share/classes/java/lang/invoke/MethodHandles.java b/src/java.base/share/classes/java/lang/invoke/MethodHandles.java
+index 9dcdef62dad..f71d40d7bfc 100644
+--- a/src/java.base/share/classes/java/lang/invoke/MethodHandles.java
++++ b/src/java.base/share/classes/java/lang/invoke/MethodHandles.java
+@@ -28,6 +28,7 @@ package java.lang.invoke;
+ import jdk.internal.access.SharedSecrets;
+ import jdk.internal.misc.Unsafe;
+ import jdk.internal.misc.VM;
++import jdk.internal.module.IllegalAccessLogger;
+ import jdk.internal.org.objectweb.asm.ClassReader;
+ import jdk.internal.org.objectweb.asm.Opcodes;
+ import jdk.internal.org.objectweb.asm.Type;
+@@ -262,6 +263,13 @@ public class MethodHandles {
+             // M2 != M1, set previous lookup class to M1 and drop MODULE access
+             newPreviousClass = callerClass;
+             newModes &= ~Lookup.MODULE;
++
++            if (!callerModule.isNamed() && targetModule.isNamed()) {
++                IllegalAccessLogger logger = IllegalAccessLogger.illegalAccessLogger();
++                if (logger != null) {
++                    logger.logIfOpenedForIllegalAccess(caller, targetClass);
++                }
++            }
+         }
+         return Lookup.newLookup(targetClass, newPreviousClass, newModes);
+     }
+diff --git a/src/java.base/share/classes/java/lang/reflect/AccessibleObject.java b/src/java.base/share/classes/java/lang/reflect/AccessibleObject.java
+index 19dbce14b75..3813eddf3d7 100644
+--- a/src/java.base/share/classes/java/lang/reflect/AccessibleObject.java
++++ b/src/java.base/share/classes/java/lang/reflect/AccessibleObject.java
+@@ -32,6 +32,7 @@ import java.security.AccessController;
+ 
+ import jdk.internal.access.SharedSecrets;
+ import jdk.internal.misc.VM;
++import jdk.internal.module.IllegalAccessLogger;
+ import jdk.internal.reflect.CallerSensitive;
+ import jdk.internal.reflect.Reflection;
+ import jdk.internal.reflect.ReflectionFactory;
+@@ -324,6 +325,7 @@ public class AccessibleObject implements AnnotatedElement {
+         if (isClassPublic && declaringModule.isExported(pn, callerModule)) {
+             // member is public
+             if (Modifier.isPublic(modifiers)) {
++                logIfExportedForIllegalAccess(caller, declaringClass);
+                 return true;
+             }
+ 
+@@ -331,12 +333,14 @@ public class AccessibleObject implements AnnotatedElement {
+             if (Modifier.isProtected(modifiers)
+                 && Modifier.isStatic(modifiers)
+                 && isSubclassOf(caller, declaringClass)) {
++                logIfExportedForIllegalAccess(caller, declaringClass);
+                 return true;
+             }
+         }
+ 
+         // package is open to caller
+         if (declaringModule.isOpen(pn, callerModule)) {
++            logIfOpenedForIllegalAccess(caller, declaringClass);
+             return true;
+         }
+ 
+@@ -370,6 +374,30 @@ public class AccessibleObject implements AnnotatedElement {
+         return false;
+     }
+ 
++    private void logIfOpenedForIllegalAccess(Class<?> caller, Class<?> declaringClass) {
++        Module callerModule = caller.getModule();
++        Module targetModule = declaringClass.getModule();
++        // callerModule is null during early startup
++        if (callerModule != null && !callerModule.isNamed() && targetModule.isNamed()) {
++            IllegalAccessLogger logger = IllegalAccessLogger.illegalAccessLogger();
++            if (logger != null) {
++                logger.logIfOpenedForIllegalAccess(caller, declaringClass, this::toShortString);
++            }
++        }
++    }
++
++    private void logIfExportedForIllegalAccess(Class<?> caller, Class<?> declaringClass) {
++        Module callerModule = caller.getModule();
++        Module targetModule = declaringClass.getModule();
++        // callerModule is null during early startup
++        if (callerModule != null && !callerModule.isNamed() && targetModule.isNamed()) {
++            IllegalAccessLogger logger = IllegalAccessLogger.illegalAccessLogger();
++            if (logger != null) {
++                logger.logIfExportedForIllegalAccess(caller, declaringClass, this::toShortString);
++            }
++        }
++    }
++
+     /**
+      * Returns a short descriptive string to describe this object in log messages.
+      */
+@@ -717,6 +745,9 @@ public class AccessibleObject implements AnnotatedElement {
+             return false;
+         }
+ 
++        // access okay
++        logIfExportedForIllegalAccess(caller, memberClass);
++
+         // Success: Update the cache.
+         Object cache = (targetClass != null
+                         && Modifier.isProtected(modifiers)
+diff --git a/src/java.base/share/classes/jdk/internal/module/ExplodedSystemModules.java b/src/java.base/share/classes/jdk/internal/module/ExplodedSystemModules.java
+index c276647e3b1..e44a407dcb8 100644
+--- a/src/java.base/share/classes/jdk/internal/module/ExplodedSystemModules.java
++++ b/src/java.base/share/classes/jdk/internal/module/ExplodedSystemModules.java
+@@ -68,4 +68,14 @@ class ExplodedSystemModules implements SystemModules {
+     public Map<String, Set<String>> moduleReads() {
+         throw new InternalError();
+     }
++
++    @Override
++    public  Map<String, Set<String>> concealedPackagesToOpen() {
++        return Map.of();
++    }
++
++    @Override
++    public  Map<String, Set<String>> exportedPackagesToOpen() {
++        return Map.of();
++    }
+ }
+diff --git a/src/java.base/share/classes/jdk/internal/module/IllegalAccessLogger.java b/src/java.base/share/classes/jdk/internal/module/IllegalAccessLogger.java
+new file mode 100644
+index 00000000000..ebbcffd77d9
+--- /dev/null
++++ b/src/java.base/share/classes/jdk/internal/module/IllegalAccessLogger.java
+@@ -0,0 +1,407 @@
++/*
++ * Copyright (c) 2017, 2020, Oracle and/or its affiliates. All rights reserved.
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ *
++ * This code is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License version 2 only, as
++ * published by the Free Software Foundation.  Oracle designates this
++ * particular file as subject to the "Classpath" exception as provided
++ * by Oracle in the LICENSE file that accompanied this code.
++ *
++ * This code is distributed in the hope that it will be useful, but WITHOUT
++ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
++ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++ * version 2 for more details (a copy is included in the LICENSE file that
++ * accompanied this code).
++ *
++ * You should have received a copy of the GNU General Public License version
++ * 2 along with this work; if not, write to the Free Software Foundation,
++ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
++ *
++ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
++ * or visit www.oracle.com if you need additional information or have any
++ * questions.
++ */
++
++package jdk.internal.module;
++
++import java.io.PrintStream;
++import java.lang.invoke.MethodHandles;
++import java.net.URL;
++import java.security.AccessController;
++import java.security.CodeSource;
++import java.security.PrivilegedAction;
++import java.security.ProtectionDomain;
++import java.util.HashMap;
++import java.util.LinkedHashMap;
++import java.util.List;
++import java.util.Map;
++import java.util.Objects;
++import java.util.Set;
++import java.util.StringJoiner;
++import java.util.WeakHashMap;
++import java.util.function.Supplier;
++import static java.util.Collections.*;
++
++import jdk.internal.access.JavaLangAccess;
++import jdk.internal.access.SharedSecrets;
++
++/**
++ * Supports logging of access to members of exported and concealed packages
++ * that are opened to code in unnamed modules for illegal access.
++ */
++
++public final class IllegalAccessLogger {
++
++    /**
++     * Logger modes
++     */
++    public enum Mode {
++        /**
++         * Prints a warning when an illegal access succeeds and then
++         * discards the logger so that there is no further output.
++         */
++        ONESHOT,
++        /**
++         * Print warnings when illegal access succeeds
++         */
++        WARN,
++        /**
++         * Prints warnings and a stack trace when illegal access succeeds
++         */
++        DEBUG,
++    }
++
++    /**
++     * A builder for IllegalAccessLogger objects.
++     */
++    public static class Builder {
++        private final Mode mode;
++        private final PrintStream warningStream;
++        private final Map<Module, Set<String>> moduleToConcealedPackages;
++        private final Map<Module, Set<String>> moduleToExportedPackages;
++        private boolean complete;
++
++        private void ensureNotComplete() {
++            if (complete) throw new IllegalStateException();
++        }
++
++        /**
++         * Creates a builder.
++         */
++        public Builder(Mode mode, PrintStream warningStream) {
++            this.mode = mode;
++            this.warningStream = warningStream;
++            this.moduleToConcealedPackages = new HashMap<>();
++            this.moduleToExportedPackages = new HashMap<>();
++        }
++
++        /**
++         * Adding logging of reflective-access to any member of a type in
++         * otherwise concealed packages.
++         */
++        public Builder logAccessToConcealedPackages(Module m, Set<String> packages) {
++            ensureNotComplete();
++            moduleToConcealedPackages.put(m, unmodifiableSet(packages));
++            return this;
++        }
++
++        /**
++         * Adding logging of reflective-access to non-public members/types in
++         * otherwise exported (not open) packages.
++         */
++        public Builder logAccessToExportedPackages(Module m, Set<String> packages) {
++            ensureNotComplete();
++            moduleToExportedPackages.put(m, unmodifiableSet(packages));
++            return this;
++        }
++
++        /**
++         * Builds the IllegalAccessLogger and sets it as the system-wide logger.
++         */
++        public void complete() {
++            Map<Module, Set<String>> map1 = unmodifiableMap(moduleToConcealedPackages);
++            Map<Module, Set<String>> map2 = unmodifiableMap(moduleToExportedPackages);
++            logger = new IllegalAccessLogger(mode, warningStream, map1, map2);
++            complete = true;
++        }
++    }
++
++    // need access to java.lang.Module
++    private static final JavaLangAccess JLA = SharedSecrets.getJavaLangAccess();
++
++    // system-wide IllegalAccessLogger
++    private static volatile IllegalAccessLogger logger;
++
++    // logger mode
++    private final Mode mode;
++
++    // the print stream to send the warnings
++    private final PrintStream warningStream;
++
++    // module -> packages open for illegal access
++    private final Map<Module, Set<String>> moduleToConcealedPackages;
++    private final Map<Module, Set<String>> moduleToExportedPackages;
++
++    // caller -> usages
++    private final Map<Class<?>, Usages> callerToUsages = new WeakHashMap<>();
++
++    private IllegalAccessLogger(Mode mode,
++                                PrintStream warningStream,
++                                Map<Module, Set<String>> moduleToConcealedPackages,
++                                Map<Module, Set<String>> moduleToExportedPackages)
++    {
++        this.mode = mode;
++        this.warningStream = warningStream;
++        this.moduleToConcealedPackages = moduleToConcealedPackages;
++        this.moduleToExportedPackages = moduleToExportedPackages;
++    }
++
++    /**
++     * Returns the system-wide IllegalAccessLogger or {@code null} if there is
++     * no logger.
++     */
++    public static IllegalAccessLogger illegalAccessLogger() {
++        return logger;
++    }
++
++    /**
++     * Returns true if the module exports a concealed package for illegal
++     * access.
++     */
++    public boolean isExportedForIllegalAccess(Module module, String pn) {
++        Set<String> packages = moduleToConcealedPackages.get(module);
++        if (packages != null && packages.contains(pn))
++            return true;
++        return false;
++    }
++
++    /**
++     * Returns true if the module opens a concealed or exported package for
++     * illegal access.
++     */
++    public boolean isOpenForIllegalAccess(Module module, String pn) {
++        if (isExportedForIllegalAccess(module, pn))
++            return true;
++        Set<String> packages = moduleToExportedPackages.get(module);
++        if (packages != null && packages.contains(pn))
++            return true;
++        return false;
++    }
++
++    /**
++     * Logs access to the member of a target class by a caller class if the class
++     * is in a package that is exported for illegal access.
++     *
++     * The {@code whatSupplier} supplies the message that describes the member.
++     */
++    public void logIfExportedForIllegalAccess(Class<?> caller,
++                                              Class<?> target,
++                                              Supplier<String> whatSupplier) {
++        Module targetModule = target.getModule();
++        String targetPackage = target.getPackageName();
++        if (isExportedForIllegalAccess(targetModule, targetPackage)) {
++            Module callerModule = caller.getModule();
++            if (!JLA.isReflectivelyExported(targetModule, targetPackage, callerModule)) {
++                log(caller, whatSupplier.get());
++            }
++        }
++    }
++
++    /**
++     * Logs access to the member of a target class by a caller class if the class
++     * is in a package that is opened for illegal access.
++     *
++     * The {@code what} parameter supplies the message that describes the member.
++     */
++    public void logIfOpenedForIllegalAccess(Class<?> caller,
++                                            Class<?> target,
++                                            Supplier<String> whatSupplier) {
++        Module targetModule = target.getModule();
++        String targetPackage = target.getPackageName();
++        if (isOpenForIllegalAccess(targetModule, targetPackage)) {
++            Module callerModule = caller.getModule();
++            if (!JLA.isReflectivelyOpened(targetModule, targetPackage, callerModule)) {
++                log(caller, whatSupplier.get());
++            }
++        }
++    }
++
++    /**
++     * Logs access by caller lookup if the target class is in a package that is
++     * opened for illegal access.
++     */
++    public void logIfOpenedForIllegalAccess(MethodHandles.Lookup caller, Class<?> target) {
++        Module targetModule = target.getModule();
++        String targetPackage = target.getPackageName();
++        if (isOpenForIllegalAccess(targetModule, targetPackage)) {
++            Class<?> callerClass = caller.lookupClass();
++            Module callerModule = callerClass.getModule();
++            if (!JLA.isReflectivelyOpened(targetModule, targetPackage, callerModule)) {
++                URL url = codeSource(callerClass);
++                final String source;
++                if (url == null) {
++                    source = callerClass.getName();
++                } else {
++                    source = callerClass.getName() + " (" + url + ")";
++                }
++                log(callerClass, target.getName(), () ->
++                    "WARNING: Illegal reflective access using Lookup on " + source
++                    + " to " + target);
++            }
++        }
++    }
++
++    /**
++     * Logs access by a caller class. The {@code what} parameter describes
++     * the member being accessed.
++     */
++    private void log(Class<?> caller, String what) {
++        log(caller, what, () -> {
++            URL url = codeSource(caller);
++            String source = caller.getName();
++            if (url != null)
++                source += " (" + url + ")";
++            return "WARNING: Illegal reflective access by " + source + " to " + what;
++        });
++    }
++
++    /**
++     * Log access by a caller. The {@code what} parameter describes the class or
++     * member that is being accessed. The {@code msgSupplier} supplies the log
++     * message.
++     *
++     * To reduce output, this method only logs the access if it hasn't been seen
++     * previously. "Seen previously" is implemented as a map of caller class -> Usage,
++     * where a Usage is the "what" and a hash of the stack trace. The map has weak
++     * keys so it can be expunged when the caller is GC'ed/unloaded.
++     */
++    private void log(Class<?> caller, String what, Supplier<String> msgSupplier) {
++        if (mode == Mode.ONESHOT) {
++            synchronized (IllegalAccessLogger.class) {
++                // discard the system wide logger
++                if (logger == null)
++                    return;
++                logger = null;
++            }
++            warningStream.println(loudWarning(caller, msgSupplier));
++            return;
++        }
++
++        // stack trace without the top-most frames in java.base
++        List<StackWalker.StackFrame> stack = StackWalkerHolder.INSTANCE.walk(s ->
++            s.dropWhile(this::isJavaBase)
++             .limit(32)
++             .toList()
++        );
++
++        // record usage if this is the first (or not recently recorded)
++        Usage u = new Usage(what, hash(stack));
++        boolean added;
++        synchronized (this) {
++            added = callerToUsages.computeIfAbsent(caller, k -> new Usages()).add(u);
++        }
++
++        // print warning if this is the first (or not a recent) usage
++        if (added) {
++            String msg = msgSupplier.get();
++            if (mode == Mode.DEBUG) {
++                StringBuilder sb = new StringBuilder(msg);
++                stack.forEach(f ->
++                    sb.append(System.lineSeparator()).append("\tat " + f)
++                );
++                msg = sb.toString();
++            }
++            warningStream.println(msg);
++        }
++    }
++
++    /**
++     * Returns the code source for the given class or null if there is no code source
++     */
++    private URL codeSource(Class<?> clazz) {
++        PrivilegedAction<ProtectionDomain> pa = clazz::getProtectionDomain;
++        CodeSource cs = AccessController.doPrivileged(pa).getCodeSource();
++        return (cs != null) ? cs.getLocation() : null;
++    }
++
++    private String loudWarning(Class<?> caller,  Supplier<String> msgSupplier) {
++        StringJoiner sj = new StringJoiner(System.lineSeparator());
++        sj.add("WARNING: An illegal reflective access operation has occurred");
++        sj.add(msgSupplier.get());
++        sj.add("WARNING: Please consider reporting this to the maintainers of "
++                + caller.getName());
++        sj.add("WARNING: Use --illegal-access=warn to enable warnings of further"
++                + " illegal reflective access operations");
++        sj.add("WARNING: All illegal access operations will be denied in a"
++                + " future release");
++        return sj.toString();
++    }
++
++    private static class StackWalkerHolder {
++        static final StackWalker INSTANCE;
++        static {
++            PrivilegedAction<StackWalker> pa = () ->
++                StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
++            INSTANCE = AccessController.doPrivileged(pa);
++        }
++    }
++
++    /**
++     * Returns true if the stack frame is for a class in java.base.
++     */
++    private boolean isJavaBase(StackWalker.StackFrame frame) {
++        Module caller = frame.getDeclaringClass().getModule();
++        return "java.base".equals(caller.getName());
++    }
++
++    /**
++     * Computes a hash code for the give stack frames. The hash code is based
++     * on the class, method name, and BCI.
++     */
++    private int hash(List<StackWalker.StackFrame> stack) {
++        int hash = 0;
++        for (StackWalker.StackFrame frame : stack) {
++            hash = (31 * hash) + Objects.hash(frame.getDeclaringClass(),
++                                              frame.getMethodName(),
++                                              frame.getByteCodeIndex());
++        }
++        return hash;
++    }
++
++    private static class Usage {
++        private final String what;
++        private final int stack;
++        Usage(String what, int stack) {
++            this.what = what;
++            this.stack = stack;
++        }
++        @Override
++        public int hashCode() {
++            return what.hashCode() ^ stack;
++        }
++        @Override
++        public boolean equals(Object ob) {
++            if (ob instanceof Usage) {
++                Usage that = (Usage)ob;
++                return what.equals(that.what) && stack == (that.stack);
++            } else {
++                return false;
++            }
++        }
++    }
++
++    @SuppressWarnings("serial")
++    private static class Usages extends LinkedHashMap<Usage, Boolean> {
++        Usages() { }
++        boolean add(Usage u) {
++            return (putIfAbsent(u, Boolean.TRUE) == null);
++        }
++        @Override
++        protected boolean removeEldestEntry(Map.Entry<Usage, Boolean> oldest) {
++            // prevent map growing too big, say where a utility class
++            // is used by generated code to do illegal access
++            return size() > 16;
++        }
++    }
++}
+diff --git a/src/java.base/share/classes/jdk/internal/module/IllegalAccessMaps.java b/src/java.base/share/classes/jdk/internal/module/IllegalAccessMaps.java
+new file mode 100644
+index 00000000000..bec2841af83
+--- /dev/null
++++ b/src/java.base/share/classes/jdk/internal/module/IllegalAccessMaps.java
+@@ -0,0 +1,130 @@
++/*
++ * Copyright (c) 2017, 2019, Oracle and/or its affiliates. All rights reserved.
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ *
++ * This code is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License version 2 only, as
++ * published by the Free Software Foundation.  Oracle designates this
++ * particular file as subject to the "Classpath" exception as provided
++ * by Oracle in the LICENSE file that accompanied this code.
++ *
++ * This code is distributed in the hope that it will be useful, but WITHOUT
++ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
++ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++ * version 2 for more details (a copy is included in the LICENSE file that
++ * accompanied this code).
++ *
++ * You should have received a copy of the GNU General Public License version
++ * 2 along with this work; if not, write to the Free Software Foundation,
++ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
++ *
++ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
++ * or visit www.oracle.com if you need additional information or have any
++ * questions.
++ */
++package jdk.internal.module;
++
++import sun.nio.cs.UTF_8;
++
++import java.io.BufferedReader;
++import java.io.IOException;
++import java.io.InputStream;
++import java.io.InputStreamReader;
++import java.io.UncheckedIOException;
++import java.lang.module.ModuleDescriptor;
++import java.lang.module.ModuleFinder;
++import java.lang.module.ModuleReference;
++import java.util.HashMap;
++import java.util.HashSet;
++import java.util.Map;
++import java.util.Set;
++
++/**
++ * Generates the maps of concealed and exported packages to open at run-time.
++ *
++ * This is used at run-time for exploded builds, and at link-time to generate
++ * the maps for the system modules in the run-time image.
++ */
++
++public class IllegalAccessMaps {
++    private final Map<String, Set<String>> concealedPackagesToOpen;
++    private final Map<String, Set<String>> exportedPackagesToOpen;
++
++    private IllegalAccessMaps(Map<String, Set<String>> map1,
++                              Map<String, Set<String>> map2) {
++        this.concealedPackagesToOpen = map1;
++        this.exportedPackagesToOpen = map2;
++    }
++
++    /**
++     * Returns the map of concealed packages to open. The map key is the
++     * module name, the value is the set of concealed packages to open.
++     */
++    public Map<String, Set<String>> concealedPackagesToOpen() {
++        return concealedPackagesToOpen;
++    }
++
++    /**
++     * Returns the map of exported packages to open. The map key is the
++     * module name, the value is the set of exported packages to open.
++     */
++    public Map<String, Set<String>> exportedPackagesToOpen() {
++        return exportedPackagesToOpen;
++    }
++
++    /**
++     * Generate the maps of module to concealed and exported packages for
++     * the system modules that are observable with the given module finder.
++     */
++    public static IllegalAccessMaps generate(ModuleFinder finder) {
++        Map<String, ModuleDescriptor> map = new HashMap<>();
++        finder.findAll().stream()
++            .map(ModuleReference::descriptor)
++            .forEach(md -> md.packages().forEach(pn -> map.putIfAbsent(pn, md)));
++
++        Map<String, Set<String>> concealedPackagesToOpen = new HashMap<>();
++        Map<String, Set<String>> exportedPackagesToOpen = new HashMap<>();
++
++        String rn = "jdk8_packages.dat";
++        InputStream in = IllegalAccessMaps.class.getResourceAsStream(rn);
++        if (in == null) {
++            throw new InternalError(rn + " not found");
++        }
++        try (BufferedReader br = new BufferedReader(
++                new InputStreamReader(in, UTF_8.INSTANCE)))
++        {
++            br.lines()
++                .filter(line -> !line.isEmpty() && !line.startsWith("#"))
++                .forEach(pn -> {
++                    ModuleDescriptor descriptor = map.get(pn);
++                    if (descriptor != null && !isOpen(descriptor, pn)) {
++                        String name = descriptor.name();
++                        if (isExported(descriptor, pn)) {
++                            exportedPackagesToOpen.computeIfAbsent(name,
++                                    k -> new HashSet<>()).add(pn);
++                        } else {
++                            concealedPackagesToOpen.computeIfAbsent(name,
++                                    k -> new HashSet<>()).add(pn);
++                        }
++                    }
++                });
++
++        } catch (IOException ioe) {
++            throw new UncheckedIOException(ioe);
++        }
++
++        return new IllegalAccessMaps(concealedPackagesToOpen, exportedPackagesToOpen);
++    }
++
++    private static boolean isExported(ModuleDescriptor descriptor, String pn) {
++        return descriptor.exports()
++                .stream()
++                .anyMatch(e -> e.source().equals(pn) && !e.isQualified());
++    }
++
++    private static boolean isOpen(ModuleDescriptor descriptor, String pn) {
++        return descriptor.opens()
++                .stream()
++                .anyMatch(e -> e.source().equals(pn) && !e.isQualified());
++    }
++}
+diff --git a/src/java.base/share/classes/jdk/internal/module/ModuleBootstrap.java b/src/java.base/share/classes/jdk/internal/module/ModuleBootstrap.java
+index 37abc9819a9..e42a93aa0c4 100644
+--- a/src/java.base/share/classes/jdk/internal/module/ModuleBootstrap.java
++++ b/src/java.base/share/classes/jdk/internal/module/ModuleBootstrap.java
+@@ -148,6 +148,8 @@ public final class ModuleBootstrap {
+                getProperty("jdk.module.addreads.0") == null &&    // --add-reads
+                getProperty("jdk.module.addexports.0") == null &&  // --add-exports
+                getProperty("jdk.module.addopens.0") == null;      // --add-opens
++               getProperty("jdk.module.addopens.0") == null &&    // --add-opens
++               getProperty("jdk.module.illegalAccess") == null;   // --illegal-access
+     }
+ 
+     /**
+@@ -188,6 +190,7 @@ public final class ModuleBootstrap {
+         String mainModule = System.getProperty("jdk.module.main");
+         Set<String> addModules = addModules();
+         Set<String> limitModules = limitModules();
++        String illegalAccess = getAndRemoveProperty("jdk.module.illegalAccess");
+ 
+         PrintStream traceOutput = null;
+         String trace = getAndRemoveProperty("jdk.module.showModuleResolution");
+@@ -219,7 +222,8 @@ public final class ModuleBootstrap {
+                 && !haveModulePath
+                 && addModules.isEmpty()
+                 && limitModules.isEmpty()
+-                && !isPatched) {
++                && !isPatched
++                && illegalAccess == null) {
+             systemModuleFinder = archivedModuleGraph.finder();
+             hasSplitPackages = archivedModuleGraph.hasSplitPackages();
+             hasIncubatorModules = archivedModuleGraph.hasIncubatorModules();
+@@ -454,12 +458,18 @@ public final class ModuleBootstrap {
+             checkIncubatingStatus(cf);
+         }
+ 
+-        // --add-reads, --add-exports/--add-opens
++        // --add-reads, --add-exports/--add-opens, and --illegal-access
+         addExtraReads(bootLayer);
+         boolean extraExportsOrOpens = addExtraExportsAndOpens(bootLayer);
+ 
+-        // add enable native access
+-        addEnableNativeAccess(bootLayer);
++        if (illegalAccess != null) {
++            assert systemModules != null;
++            addIllegalAccess(illegalAccess,
++                             systemModules,
++                             upgradeModulePath,
++                             bootLayer,
++                             extraExportsOrOpens);
++        }
+ 
+         Counters.add("jdk.module.boot.7.adjustModulesTime");
+ 
+@@ -773,44 +783,93 @@ public final class ModuleBootstrap {
+     }
+ 
+     /**
+-     * Process the --enable-native-access option to grant access to restricted methods to selected modules.
++     * Process the --illegal-access option to open packages of system modules
++     * in the boot layer to code in unnamed modules.
+      */
+-    private static void addEnableNativeAccess(ModuleLayer layer) {
+-        for (String name : decodeEnableNativeAccess()) {
+-            if (name.equals("ALL-UNNAMED")) {
+-                JLA.addEnableNativeAccessAllUnnamed();
+-            } else {
+-                Optional<Module> module = layer.findModule(name);
+-                if (module.isPresent()) {
+-                    JLA.addEnableNativeAccess(module.get());
+-                } else {
+-                    warnUnknownModule(ENABLE_NATIVE_ACCESS, name);
+-                }
++    private static void addIllegalAccess(String illegalAccess,
++                                        SystemModules systemModules,
++                                        ModuleFinder upgradeModulePath,
++                                        ModuleLayer bootLayer,
++                                        boolean extraExportsOrOpens) {
++
++    if (illegalAccess.equals("deny"))
++        return;  // nothing to do
++
++    IllegalAccessLogger.Mode mode = switch (illegalAccess) {
++        case "permit" -> IllegalAccessLogger.Mode.ONESHOT;
++        case "warn"   -> IllegalAccessLogger.Mode.WARN;
++        case "debug"  -> IllegalAccessLogger.Mode.DEBUG;
++        default -> {
++            fail("Value specified to --illegal-access not recognized:"
++                    + " '" + illegalAccess + "'");
++            yield null;
+             }
+-        }
+-    }
++        };
+ 
+     /**
+      * Returns the set of module names specified by --enable-native-access options.
+      */
+-    private static Set<String> decodeEnableNativeAccess() {
+-        String prefix = "jdk.module.enable.native.access.";
+-        int index = 0;
+-        // the system property is removed after decoding
+-        String value = getAndRemoveProperty(prefix + index);
+-        Set<String> modules = new HashSet<>();
+-        if (value == null) {
+-            return modules;
++    var builder = new IllegalAccessLogger.Builder(mode, System.err);
++        Map<String, Set<String>> concealedPackagesToOpen = systemModules.concealedPackagesToOpen();
++        Map<String, Set<String>> exportedPackagesToOpen = systemModules.exportedPackagesToOpen();
++        if (concealedPackagesToOpen.isEmpty() && exportedPackagesToOpen.isEmpty()) {
++            // need to generate (exploded build)
++            IllegalAccessMaps maps = IllegalAccessMaps.generate(limitedFinder());
++            concealedPackagesToOpen = maps.concealedPackagesToOpen();
++            exportedPackagesToOpen = maps.exportedPackagesToOpen();
+         }
+-        while (value != null) {
+-            for (String s : value.split(",")) {
+-                if (!s.isEmpty())
+-                    modules.add(s);
++
++        // open specific packages in the system modules
++        Set<String> emptySet = Set.of();
++        for (Module m : bootLayer.modules()) {
++            ModuleDescriptor descriptor = m.getDescriptor();
++            String name = m.getName();
++
++            // skip open modules
++            if (descriptor.isOpen()) {
++                continue;
++            // skip modules loaded from the upgrade module path
++            if (upgradeModulePath != null
++                && upgradeModulePath.find(name).isPresent()) {
++                continue;
+             }
+-            index++;
+-            value = getAndRemoveProperty(prefix + index);
++
++            Set<String> concealedPackages = concealedPackagesToOpen.getOrDefault(name, emptySet);
++            Set<String> exportedPackages = exportedPackagesToOpen.getOrDefault(name, emptySet);
++
++            // refresh the set of concealed and exported packages if needed
++            if (extraExportsOrOpens) {
++                concealedPackages = new HashSet<>(concealedPackages);
++                exportedPackages = new HashSet<>(exportedPackages);
++                Iterator<String> iterator = concealedPackages.iterator();
++                while (iterator.hasNext()) {
++                    String pn = iterator.next();
++                    if (m.isExported(pn, BootLoader.getUnnamedModule())) {
++                        // concealed package is exported to ALL-UNNAMED
++                        iterator.remove();
++                        exportedPackages.add(pn);
++                    }
++                }
++                iterator = exportedPackages.iterator();
++                while (iterator.hasNext()) {
++                    String pn = iterator.next();
++                    if (m.isOpen(pn, BootLoader.getUnnamedModule())) {
++                        // exported package is opened to ALL-UNNAMED
++                        iterator.remove();
++                    }
++                }
++            }
++
++            // log reflective access to all types in concealed packages
++            builder.logAccessToConcealedPackages(m, concealedPackages);
++
++            // log reflective access to non-public members/types in exported packages
++            builder.logAccessToExportedPackages(m, exportedPackages);
++
++            // open the packages to unnamed modules
++            JLA.addOpensToAllUnnamed(m, concealedPackages, exportedPackages);
+         }
+-        return modules;
++        builder.complete();
+     }
+ 
+     /**
+diff --git a/src/java.base/share/classes/jdk/internal/module/SystemModules.java b/src/java.base/share/classes/jdk/internal/module/SystemModules.java
+index 4c74068acc8..1d2ee0a45b4 100644
+--- a/src/java.base/share/classes/jdk/internal/module/SystemModules.java
++++ b/src/java.base/share/classes/jdk/internal/module/SystemModules.java
+@@ -83,4 +83,16 @@ interface SystemModules {
+      * by this SystemModules object.
+      */
+     Map<String, Set<String>> moduleReads();
++
++    /**
++     * Returns the map of module concealed packages to open. The map key is the
++     * module name, the value is the set of concealed packages to open.
++     */
++    Map<String, Set<String>> concealedPackagesToOpen();
++
++    /**
++     * Returns the map of module exported packages to open. The map key is the
++     * module name, the value is the set of exported packages to open.
++     */
++    Map<String, Set<String>> exportedPackagesToOpen();
+ }
+diff --git a/src/java.base/share/classes/jdk/internal/module/jdk8_packages.dat b/src/java.base/share/classes/jdk/internal/module/jdk8_packages.dat
+new file mode 100644
+index 00000000000..2774f2bb492
+--- /dev/null
++++ b/src/java.base/share/classes/jdk/internal/module/jdk8_packages.dat
+@@ -0,0 +1,1340 @@
++# Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
++# DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++#
++# This code is free software; you can redistribute it and/or modify it
++# under the terms of the GNU General Public License version 2 only, as
++# published by the Free Software Foundation.  Oracle designates this
++# particular file as subject to the "Classpath" exception as provided
++# by Oracle in the LICENSE file that accompanied this code.
++#
++# This code is distributed in the hope that it will be useful, but WITHOUT
++# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
++# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++# version 2 for more details (a copy is included in the LICENSE file that
++# accompanied this code).
++#
++# You should have received a copy of the GNU General Public License version
++# 2 along with this work; if not, write to the Free Software Foundation,
++# Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
++#
++# Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
++# or visit www.oracle.com if you need additional information or have any
++# questions.
++#
++apple.applescript
++apple.laf
++apple.launcher
++apple.security
++com.apple.concurrent
++com.apple.eawt
++com.apple.eawt.event
++com.apple.eio
++com.apple.laf
++com.apple.laf.resources
++com.oracle.jrockit.jfr
++com.oracle.jrockit.jfr.client
++com.oracle.jrockit.jfr.management
++com.oracle.security.ucrypto
++com.oracle.util
++com.oracle.webservices.internal.api
++com.oracle.webservices.internal.api.databinding
++com.oracle.webservices.internal.api.message
++com.oracle.webservices.internal.impl.encoding
++com.oracle.webservices.internal.impl.internalspi.encoding
++com.oracle.xmlns.internal.webservices.jaxws_databinding
++com.sun.accessibility.internal.resources
++com.sun.activation.registries
++com.sun.awt
++com.sun.beans
++com.sun.beans.decoder
++com.sun.beans.editors
++com.sun.beans.finder
++com.sun.beans.infos
++com.sun.beans.util
++com.sun.codemodel.internal
++com.sun.codemodel.internal.fmt
++com.sun.codemodel.internal.util
++com.sun.codemodel.internal.writer
++com.sun.corba.se.impl.activation
++com.sun.corba.se.impl.copyobject
++com.sun.corba.se.impl.corba
++com.sun.corba.se.impl.dynamicany
++com.sun.corba.se.impl.encoding
++com.sun.corba.se.impl.interceptors
++com.sun.corba.se.impl.io
++com.sun.corba.se.impl.ior
++com.sun.corba.se.impl.ior.iiop
++com.sun.corba.se.impl.javax.rmi
++com.sun.corba.se.impl.javax.rmi.CORBA
++com.sun.corba.se.impl.legacy.connection
++com.sun.corba.se.impl.logging
++com.sun.corba.se.impl.monitoring
++com.sun.corba.se.impl.naming.cosnaming
++com.sun.corba.se.impl.naming.namingutil
++com.sun.corba.se.impl.naming.pcosnaming
++com.sun.corba.se.impl.oa
++com.sun.corba.se.impl.oa.poa
++com.sun.corba.se.impl.oa.toa
++com.sun.corba.se.impl.orb
++com.sun.corba.se.impl.orbutil
++com.sun.corba.se.impl.orbutil.closure
++com.sun.corba.se.impl.orbutil.concurrent
++com.sun.corba.se.impl.orbutil.fsm
++com.sun.corba.se.impl.orbutil.graph
++com.sun.corba.se.impl.orbutil.threadpool
++com.sun.corba.se.impl.presentation.rmi
++com.sun.corba.se.impl.protocol
++com.sun.corba.se.impl.protocol.giopmsgheaders
++com.sun.corba.se.impl.resolver
++com.sun.corba.se.impl.transport
++com.sun.corba.se.impl.util
++com.sun.corba.se.internal.CosNaming
++com.sun.corba.se.internal.Interceptors
++com.sun.corba.se.internal.POA
++com.sun.corba.se.internal.corba
++com.sun.corba.se.internal.iiop
++com.sun.corba.se.org.omg.CORBA
++com.sun.corba.se.pept.broker
++com.sun.corba.se.pept.encoding
++com.sun.corba.se.pept.protocol
++com.sun.corba.se.pept.transport
++com.sun.corba.se.spi.activation
++com.sun.corba.se.spi.activation.InitialNameServicePackage
++com.sun.corba.se.spi.activation.LocatorPackage
++com.sun.corba.se.spi.activation.RepositoryPackage
++com.sun.corba.se.spi.copyobject
++com.sun.corba.se.spi.encoding
++com.sun.corba.se.spi.extension
++com.sun.corba.se.spi.ior
++com.sun.corba.se.spi.ior.iiop
++com.sun.corba.se.spi.legacy.connection
++com.sun.corba.se.spi.legacy.interceptor
++com.sun.corba.se.spi.logging
++com.sun.corba.se.spi.monitoring
++com.sun.corba.se.spi.oa
++com.sun.corba.se.spi.orb
++com.sun.corba.se.spi.orbutil.closure
++com.sun.corba.se.spi.orbutil.fsm
++com.sun.corba.se.spi.orbutil.proxy
++com.sun.corba.se.spi.orbutil.threadpool
++com.sun.corba.se.spi.presentation.rmi
++com.sun.corba.se.spi.protocol
++com.sun.corba.se.spi.resolver
++com.sun.corba.se.spi.servicecontext
++com.sun.corba.se.spi.transport
++com.sun.crypto.provider
++com.sun.demo.jvmti.hprof
++com.sun.deploy.uitoolkit.impl.fx
++com.sun.deploy.uitoolkit.impl.fx.ui
++com.sun.deploy.uitoolkit.impl.fx.ui.resources
++com.sun.glass.events
++com.sun.glass.events.mac
++com.sun.glass.ui
++com.sun.glass.ui.delegate
++com.sun.glass.ui.gtk
++com.sun.glass.ui.mac
++com.sun.glass.ui.win
++com.sun.glass.utils
++com.sun.image.codec.jpeg
++com.sun.imageio.plugins.bmp
++com.sun.imageio.plugins.common
++com.sun.imageio.plugins.gif
++com.sun.imageio.plugins.jpeg
++com.sun.imageio.plugins.png
++com.sun.imageio.plugins.wbmp
++com.sun.imageio.spi
++com.sun.imageio.stream
++com.sun.istack.internal
++com.sun.istack.internal.localization
++com.sun.istack.internal.logging
++com.sun.istack.internal.tools
++com.sun.jarsigner
++com.sun.java.accessibility
++com.sun.java.accessibility.util
++com.sun.java.accessibility.util.java.awt
++com.sun.java.browser.dom
++com.sun.java.browser.net
++com.sun.java.swing
++com.sun.java.swing.plaf.gtk
++com.sun.java.swing.plaf.gtk.resources
++com.sun.java.swing.plaf.motif
++com.sun.java.swing.plaf.motif.resources
++com.sun.java.swing.plaf.nimbus
++com.sun.java.swing.plaf.windows
++com.sun.java.swing.plaf.windows.resources
++com.sun.java.util.jar.pack
++com.sun.java_cup.internal.runtime
++com.sun.javadoc
++com.sun.javafx
++com.sun.javafx.animation
++com.sun.javafx.applet
++com.sun.javafx.application
++com.sun.javafx.beans
++com.sun.javafx.beans.event
++com.sun.javafx.binding
++com.sun.javafx.charts
++com.sun.javafx.collections
++com.sun.javafx.css
++com.sun.javafx.css.converters
++com.sun.javafx.css.parser
++com.sun.javafx.cursor
++com.sun.javafx.effect
++com.sun.javafx.embed
++com.sun.javafx.event
++com.sun.javafx.font
++com.sun.javafx.font.coretext
++com.sun.javafx.font.directwrite
++com.sun.javafx.font.freetype
++com.sun.javafx.font.t2k
++com.sun.javafx.fxml
++com.sun.javafx.fxml.builder
++com.sun.javafx.fxml.expression
++com.sun.javafx.geom
++com.sun.javafx.geom.transform
++com.sun.javafx.geometry
++com.sun.javafx.iio
++com.sun.javafx.iio.bmp
++com.sun.javafx.iio.common
++com.sun.javafx.iio.gif
++com.sun.javafx.iio.ios
++com.sun.javafx.iio.jpeg
++com.sun.javafx.iio.png
++com.sun.javafx.image
++com.sun.javafx.image.impl
++com.sun.javafx.jmx
++com.sun.javafx.logging
++com.sun.javafx.media
++com.sun.javafx.menu
++com.sun.javafx.perf
++com.sun.javafx.print
++com.sun.javafx.property
++com.sun.javafx.property.adapter
++com.sun.javafx.robot
++com.sun.javafx.robot.impl
++com.sun.javafx.runtime
++com.sun.javafx.runtime.async
++com.sun.javafx.runtime.eula
++com.sun.javafx.scene
++com.sun.javafx.scene.control
++com.sun.javafx.scene.control.behavior
++com.sun.javafx.scene.control.skin
++com.sun.javafx.scene.control.skin.resources
++com.sun.javafx.scene.input
++com.sun.javafx.scene.layout.region
++com.sun.javafx.scene.paint
++com.sun.javafx.scene.shape
++com.sun.javafx.scene.text
++com.sun.javafx.scene.transform
++com.sun.javafx.scene.traversal
++com.sun.javafx.scene.web
++com.sun.javafx.scene.web.behavior
++com.sun.javafx.scene.web.skin
++com.sun.javafx.sg.prism
++com.sun.javafx.sg.prism.web
++com.sun.javafx.stage
++com.sun.javafx.text
++com.sun.javafx.tk
++com.sun.javafx.tk.quantum
++com.sun.javafx.util
++com.sun.javafx.webkit
++com.sun.javafx.webkit.drt
++com.sun.javafx.webkit.prism
++com.sun.javafx.webkit.prism.theme
++com.sun.javafx.webkit.theme
++com.sun.jdi
++com.sun.jdi.connect
++com.sun.jdi.connect.spi
++com.sun.jdi.event
++com.sun.jdi.request
++com.sun.jmx.defaults
++com.sun.jmx.interceptor
++com.sun.jmx.mbeanserver
++com.sun.jmx.remote.internal
++com.sun.jmx.remote.protocol.iiop
++com.sun.jmx.remote.protocol.rmi
++com.sun.jmx.remote.security
++com.sun.jmx.remote.util
++com.sun.jmx.snmp
++com.sun.jmx.snmp.IPAcl
++com.sun.jmx.snmp.agent
++com.sun.jmx.snmp.daemon
++com.sun.jmx.snmp.defaults
++com.sun.jmx.snmp.internal
++com.sun.jmx.snmp.mpm
++com.sun.jmx.snmp.tasks
++com.sun.jndi.cosnaming
++com.sun.jndi.dns
++com.sun.jndi.ldap
++com.sun.jndi.ldap.ext
++com.sun.jndi.ldap.pool
++com.sun.jndi.ldap.sasl
++com.sun.jndi.rmi.registry
++com.sun.jndi.toolkit.corba
++com.sun.jndi.toolkit.ctx
++com.sun.jndi.toolkit.dir
++com.sun.jndi.toolkit.url
++com.sun.jndi.url.corbaname
++com.sun.jndi.url.dns
++com.sun.jndi.url.iiop
++com.sun.jndi.url.iiopname
++com.sun.jndi.url.ldap
++com.sun.jndi.url.ldaps
++com.sun.jndi.url.rmi
++com.sun.management
++com.sun.management.jmx
++com.sun.media.jfxmedia
++com.sun.media.jfxmedia.control
++com.sun.media.jfxmedia.effects
++com.sun.media.jfxmedia.events
++com.sun.media.jfxmedia.locator
++com.sun.media.jfxmedia.logging
++com.sun.media.jfxmedia.track
++com.sun.media.jfxmediaimpl
++com.sun.media.jfxmediaimpl.platform
++com.sun.media.jfxmediaimpl.platform.gstreamer
++com.sun.media.jfxmediaimpl.platform.ios
++com.sun.media.jfxmediaimpl.platform.java
++com.sun.media.jfxmediaimpl.platform.osx
++com.sun.media.sound
++com.sun.naming.internal
++com.sun.net.httpserver
++com.sun.net.httpserver.spi
++com.sun.net.ssl
++com.sun.net.ssl.internal.ssl
++com.sun.net.ssl.internal.www.protocol.https
++com.sun.nio.file
++com.sun.nio.sctp
++com.sun.nio.zipfs
++com.sun.openpisces
++com.sun.org.apache.bcel.internal
++com.sun.org.apache.bcel.internal.classfile
++com.sun.org.apache.bcel.internal.generic
++com.sun.org.apache.bcel.internal.util
++com.sun.org.apache.regexp.internal
++com.sun.org.apache.xalan.internal
++com.sun.org.apache.xalan.internal.extensions
++com.sun.org.apache.xalan.internal.lib
++com.sun.org.apache.xalan.internal.res
++com.sun.org.apache.xalan.internal.templates
++com.sun.org.apache.xalan.internal.utils
++com.sun.org.apache.xalan.internal.xslt
++com.sun.org.apache.xalan.internal.xsltc
++com.sun.org.apache.xalan.internal.xsltc.cmdline
++com.sun.org.apache.xalan.internal.xsltc.cmdline.getopt
++com.sun.org.apache.xalan.internal.xsltc.compiler
++com.sun.org.apache.xalan.internal.xsltc.compiler.util
++com.sun.org.apache.xalan.internal.xsltc.dom
++com.sun.org.apache.xalan.internal.xsltc.runtime
++com.sun.org.apache.xalan.internal.xsltc.runtime.output
++com.sun.org.apache.xalan.internal.xsltc.trax
++com.sun.org.apache.xalan.internal.xsltc.util
++com.sun.org.apache.xerces.internal.dom
++com.sun.org.apache.xerces.internal.dom.events
++com.sun.org.apache.xerces.internal.impl
++com.sun.org.apache.xerces.internal.impl.dtd
++com.sun.org.apache.xerces.internal.impl.dtd.models
++com.sun.org.apache.xerces.internal.impl.dv
++com.sun.org.apache.xerces.internal.impl.dv.dtd
++com.sun.org.apache.xerces.internal.impl.dv.util
++com.sun.org.apache.xerces.internal.impl.dv.xs
++com.sun.org.apache.xerces.internal.impl.io
++com.sun.org.apache.xerces.internal.impl.msg
++com.sun.org.apache.xerces.internal.impl.validation
++com.sun.org.apache.xerces.internal.impl.xpath
++com.sun.org.apache.xerces.internal.impl.xpath.regex
++com.sun.org.apache.xerces.internal.impl.xs
++com.sun.org.apache.xerces.internal.impl.xs.identity
++com.sun.org.apache.xerces.internal.impl.xs.models
++com.sun.org.apache.xerces.internal.impl.xs.opti
++com.sun.org.apache.xerces.internal.impl.xs.traversers
++com.sun.org.apache.xerces.internal.impl.xs.util
++com.sun.org.apache.xerces.internal.jaxp
++com.sun.org.apache.xerces.internal.jaxp.datatype
++com.sun.org.apache.xerces.internal.jaxp.validation
++com.sun.org.apache.xerces.internal.parsers
++com.sun.org.apache.xerces.internal.util
++com.sun.org.apache.xerces.internal.utils
++com.sun.org.apache.xerces.internal.xinclude
++com.sun.org.apache.xerces.internal.xni
++com.sun.org.apache.xerces.internal.xni.grammars
++com.sun.org.apache.xerces.internal.xni.parser
++com.sun.org.apache.xerces.internal.xpointer
++com.sun.org.apache.xerces.internal.xs
++com.sun.org.apache.xerces.internal.xs.datatypes
++com.sun.org.apache.xml.internal.dtm
++com.sun.org.apache.xml.internal.dtm.ref
++com.sun.org.apache.xml.internal.dtm.ref.dom2dtm
++com.sun.org.apache.xml.internal.dtm.ref.sax2dtm
++com.sun.org.apache.xml.internal.res
++com.sun.org.apache.xml.internal.resolver
++com.sun.org.apache.xml.internal.resolver.helpers
++com.sun.org.apache.xml.internal.resolver.readers
++com.sun.org.apache.xml.internal.resolver.tools
++com.sun.org.apache.xml.internal.security
++com.sun.org.apache.xml.internal.security.algorithms
++com.sun.org.apache.xml.internal.security.algorithms.implementations
++com.sun.org.apache.xml.internal.security.c14n
++com.sun.org.apache.xml.internal.security.c14n.helper
++com.sun.org.apache.xml.internal.security.c14n.implementations
++com.sun.org.apache.xml.internal.security.encryption
++com.sun.org.apache.xml.internal.security.exceptions
++com.sun.org.apache.xml.internal.security.keys
++com.sun.org.apache.xml.internal.security.keys.content
++com.sun.org.apache.xml.internal.security.keys.content.keyvalues
++com.sun.org.apache.xml.internal.security.keys.content.x509
++com.sun.org.apache.xml.internal.security.keys.keyresolver
++com.sun.org.apache.xml.internal.security.keys.keyresolver.implementations
++com.sun.org.apache.xml.internal.security.keys.storage
++com.sun.org.apache.xml.internal.security.keys.storage.implementations
++com.sun.org.apache.xml.internal.security.signature
++com.sun.org.apache.xml.internal.security.signature.reference
++com.sun.org.apache.xml.internal.security.transforms
++com.sun.org.apache.xml.internal.security.transforms.implementations
++com.sun.org.apache.xml.internal.security.transforms.params
++com.sun.org.apache.xml.internal.security.utils
++com.sun.org.apache.xml.internal.security.utils.resolver
++com.sun.org.apache.xml.internal.security.utils.resolver.implementations
++com.sun.org.apache.xml.internal.serialize
++com.sun.org.apache.xml.internal.serializer
++com.sun.org.apache.xml.internal.serializer.utils
++com.sun.org.apache.xml.internal.utils
++com.sun.org.apache.xml.internal.utils.res
++com.sun.org.apache.xpath.internal
++com.sun.org.apache.xpath.internal.axes
++com.sun.org.apache.xpath.internal.compiler
++com.sun.org.apache.xpath.internal.domapi
++com.sun.org.apache.xpath.internal.functions
++com.sun.org.apache.xpath.internal.jaxp
++com.sun.org.apache.xpath.internal.objects
++com.sun.org.apache.xpath.internal.operations
++com.sun.org.apache.xpath.internal.patterns
++com.sun.org.apache.xpath.internal.res
++com.sun.org.glassfish.external.amx
++com.sun.org.glassfish.external.arc
++com.sun.org.glassfish.external.probe.provider
++com.sun.org.glassfish.external.probe.provider.annotations
++com.sun.org.glassfish.external.statistics
++com.sun.org.glassfish.external.statistics.annotations
++com.sun.org.glassfish.external.statistics.impl
++com.sun.org.glassfish.gmbal
++com.sun.org.glassfish.gmbal.util
++com.sun.org.omg.CORBA
++com.sun.org.omg.CORBA.ValueDefPackage
++com.sun.org.omg.CORBA.portable
++com.sun.org.omg.SendingContext
++com.sun.org.omg.SendingContext.CodeBasePackage
++com.sun.pisces
++com.sun.prism
++com.sun.prism.d3d
++com.sun.prism.es2
++com.sun.prism.image
++com.sun.prism.impl
++com.sun.prism.impl.packrect
++com.sun.prism.impl.paint
++com.sun.prism.impl.ps
++com.sun.prism.impl.shape
++com.sun.prism.j2d
++com.sun.prism.j2d.paint
++com.sun.prism.j2d.print
++com.sun.prism.paint
++com.sun.prism.ps
++com.sun.prism.shader
++com.sun.prism.shape
++com.sun.prism.sw
++com.sun.rmi.rmid
++com.sun.rowset
++com.sun.rowset.internal
++com.sun.rowset.providers
++com.sun.scenario
++com.sun.scenario.animation
++com.sun.scenario.animation.shared
++com.sun.scenario.effect
++com.sun.scenario.effect.impl
++com.sun.scenario.effect.impl.es2
++com.sun.scenario.effect.impl.hw
++com.sun.scenario.effect.impl.hw.d3d
++com.sun.scenario.effect.impl.prism
++com.sun.scenario.effect.impl.prism.ps
++com.sun.scenario.effect.impl.prism.sw
++com.sun.scenario.effect.impl.state
++com.sun.scenario.effect.impl.sw
++com.sun.scenario.effect.impl.sw.java
++com.sun.scenario.effect.impl.sw.sse
++com.sun.scenario.effect.light
++com.sun.security.auth
++com.sun.security.auth.callback
++com.sun.security.auth.login
++com.sun.security.auth.module
++com.sun.security.cert.internal.x509
++com.sun.security.jgss
++com.sun.security.ntlm
++com.sun.security.sasl
++com.sun.security.sasl.digest
++com.sun.security.sasl.gsskerb
++com.sun.security.sasl.ntlm
++com.sun.security.sasl.util
++com.sun.source.doctree
++com.sun.source.tree
++com.sun.source.util
++com.sun.swing.internal.plaf.basic.resources
++com.sun.swing.internal.plaf.metal.resources
++com.sun.swing.internal.plaf.synth.resources
++com.sun.tools.attach
++com.sun.tools.attach.spi
++com.sun.tools.classfile
++com.sun.tools.corba.se.idl
++com.sun.tools.corba.se.idl.constExpr
++com.sun.tools.corba.se.idl.som.cff
++com.sun.tools.corba.se.idl.som.idlemit
++com.sun.tools.corba.se.idl.toJavaPortable
++com.sun.tools.doclets
++com.sun.tools.doclets.formats.html
++com.sun.tools.doclets.formats.html.markup
++com.sun.tools.doclets.formats.html.resources
++com.sun.tools.doclets.internal.toolkit
++com.sun.tools.doclets.internal.toolkit.builders
++com.sun.tools.doclets.internal.toolkit.resources
++com.sun.tools.doclets.internal.toolkit.taglets
++com.sun.tools.doclets.internal.toolkit.util
++com.sun.tools.doclets.internal.toolkit.util.links
++com.sun.tools.doclets.standard
++com.sun.tools.doclint
++com.sun.tools.doclint.resources
++com.sun.tools.example.debug.expr
++com.sun.tools.example.debug.tty
++com.sun.tools.extcheck
++com.sun.tools.hat
++com.sun.tools.hat.internal.model
++com.sun.tools.hat.internal.oql
++com.sun.tools.hat.internal.parser
++com.sun.tools.hat.internal.server
++com.sun.tools.hat.internal.util
++com.sun.tools.internal.jxc
++com.sun.tools.internal.jxc.ap
++com.sun.tools.internal.jxc.api
++com.sun.tools.internal.jxc.api.impl.j2s
++com.sun.tools.internal.jxc.gen.config
++com.sun.tools.internal.jxc.model.nav
++com.sun.tools.internal.ws
++com.sun.tools.internal.ws.api
++com.sun.tools.internal.ws.api.wsdl
++com.sun.tools.internal.ws.processor
++com.sun.tools.internal.ws.processor.generator
++com.sun.tools.internal.ws.processor.model
++com.sun.tools.internal.ws.processor.model.exporter
++com.sun.tools.internal.ws.processor.model.java
++com.sun.tools.internal.ws.processor.model.jaxb
++com.sun.tools.internal.ws.processor.modeler
++com.sun.tools.internal.ws.processor.modeler.annotation
++com.sun.tools.internal.ws.processor.modeler.wsdl
++com.sun.tools.internal.ws.processor.util
++com.sun.tools.internal.ws.resources
++com.sun.tools.internal.ws.spi
++com.sun.tools.internal.ws.util
++com.sun.tools.internal.ws.util.xml
++com.sun.tools.internal.ws.wscompile
++com.sun.tools.internal.ws.wscompile.plugin.at_generated
++com.sun.tools.internal.ws.wsdl.document
++com.sun.tools.internal.ws.wsdl.document.http
++com.sun.tools.internal.ws.wsdl.document.jaxws
++com.sun.tools.internal.ws.wsdl.document.mime
++com.sun.tools.internal.ws.wsdl.document.schema
++com.sun.tools.internal.ws.wsdl.document.soap
++com.sun.tools.internal.ws.wsdl.framework
++com.sun.tools.internal.ws.wsdl.parser
++com.sun.tools.internal.xjc
++com.sun.tools.internal.xjc.addon.accessors
++com.sun.tools.internal.xjc.addon.at_generated
++com.sun.tools.internal.xjc.addon.code_injector
++com.sun.tools.internal.xjc.addon.episode
++com.sun.tools.internal.xjc.addon.locator
++com.sun.tools.internal.xjc.addon.sync
++com.sun.tools.internal.xjc.api
++com.sun.tools.internal.xjc.api.impl.s2j
++com.sun.tools.internal.xjc.api.util
++com.sun.tools.internal.xjc.generator.annotation.spec
++com.sun.tools.internal.xjc.generator.bean
++com.sun.tools.internal.xjc.generator.bean.field
++com.sun.tools.internal.xjc.generator.util
++com.sun.tools.internal.xjc.model
++com.sun.tools.internal.xjc.model.nav
++com.sun.tools.internal.xjc.outline
++com.sun.tools.internal.xjc.reader
++com.sun.tools.internal.xjc.reader.dtd
++com.sun.tools.internal.xjc.reader.dtd.bindinfo
++com.sun.tools.internal.xjc.reader.gbind
++com.sun.tools.internal.xjc.reader.internalizer
++com.sun.tools.internal.xjc.reader.relaxng
++com.sun.tools.internal.xjc.reader.xmlschema
++com.sun.tools.internal.xjc.reader.xmlschema.bindinfo
++com.sun.tools.internal.xjc.reader.xmlschema.ct
++com.sun.tools.internal.xjc.reader.xmlschema.parser
++com.sun.tools.internal.xjc.runtime
++com.sun.tools.internal.xjc.util
++com.sun.tools.internal.xjc.writer
++com.sun.tools.javac
++com.sun.tools.javac.api
++com.sun.tools.javac.code
++com.sun.tools.javac.comp
++com.sun.tools.javac.file
++com.sun.tools.javac.jvm
++com.sun.tools.javac.main
++com.sun.tools.javac.model
++com.sun.tools.javac.nio
++com.sun.tools.javac.parser
++com.sun.tools.javac.processing
++com.sun.tools.javac.resources
++com.sun.tools.javac.sym
++com.sun.tools.javac.tree
++com.sun.tools.javac.util
++com.sun.tools.javadoc
++com.sun.tools.javadoc.api
++com.sun.tools.javadoc.resources
++com.sun.tools.javah
++com.sun.tools.javah.resources
++com.sun.tools.javap
++com.sun.tools.javap.resources
++com.sun.tools.jconsole
++com.sun.tools.jdeps
++com.sun.tools.jdeps.resources
++com.sun.tools.jdi
++com.sun.tools.jdi.resources
++com.sun.tools.script.shell
++com.sun.tracing
++com.sun.tracing.dtrace
++com.sun.webkit
++com.sun.webkit.dom
++com.sun.webkit.event
++com.sun.webkit.graphics
++com.sun.webkit.network
++com.sun.webkit.network.about
++com.sun.webkit.network.data
++com.sun.webkit.perf
++com.sun.webkit.plugin
++com.sun.webkit.text
++com.sun.xml.internal.bind
++com.sun.xml.internal.bind.annotation
++com.sun.xml.internal.bind.api
++com.sun.xml.internal.bind.api.impl
++com.sun.xml.internal.bind.marshaller
++com.sun.xml.internal.bind.unmarshaller
++com.sun.xml.internal.bind.util
++com.sun.xml.internal.bind.v2
++com.sun.xml.internal.bind.v2.bytecode
++com.sun.xml.internal.bind.v2.model.annotation
++com.sun.xml.internal.bind.v2.model.core
++com.sun.xml.internal.bind.v2.model.impl
++com.sun.xml.internal.bind.v2.model.nav
++com.sun.xml.internal.bind.v2.model.runtime
++com.sun.xml.internal.bind.v2.model.util
++com.sun.xml.internal.bind.v2.runtime
++com.sun.xml.internal.bind.v2.runtime.output
++com.sun.xml.internal.bind.v2.runtime.property
++com.sun.xml.internal.bind.v2.runtime.reflect
++com.sun.xml.internal.bind.v2.runtime.reflect.opt
++com.sun.xml.internal.bind.v2.runtime.unmarshaller
++com.sun.xml.internal.bind.v2.schemagen
++com.sun.xml.internal.bind.v2.schemagen.episode
++com.sun.xml.internal.bind.v2.schemagen.xmlschema
++com.sun.xml.internal.bind.v2.util
++com.sun.xml.internal.dtdparser
++com.sun.xml.internal.fastinfoset
++com.sun.xml.internal.fastinfoset.algorithm
++com.sun.xml.internal.fastinfoset.alphabet
++com.sun.xml.internal.fastinfoset.dom
++com.sun.xml.internal.fastinfoset.org.apache.xerces.util
++com.sun.xml.internal.fastinfoset.sax
++com.sun.xml.internal.fastinfoset.stax
++com.sun.xml.internal.fastinfoset.stax.events
++com.sun.xml.internal.fastinfoset.stax.factory
++com.sun.xml.internal.fastinfoset.stax.util
++com.sun.xml.internal.fastinfoset.tools
++com.sun.xml.internal.fastinfoset.util
++com.sun.xml.internal.fastinfoset.vocab
++com.sun.xml.internal.messaging.saaj
++com.sun.xml.internal.messaging.saaj.client.p2p
++com.sun.xml.internal.messaging.saaj.packaging.mime
++com.sun.xml.internal.messaging.saaj.packaging.mime.internet
++com.sun.xml.internal.messaging.saaj.packaging.mime.util
++com.sun.xml.internal.messaging.saaj.soap
++com.sun.xml.internal.messaging.saaj.soap.dynamic
++com.sun.xml.internal.messaging.saaj.soap.impl
++com.sun.xml.internal.messaging.saaj.soap.name
++com.sun.xml.internal.messaging.saaj.soap.ver1_1
++com.sun.xml.internal.messaging.saaj.soap.ver1_2
++com.sun.xml.internal.messaging.saaj.util
++com.sun.xml.internal.messaging.saaj.util.transform
++com.sun.xml.internal.org.jvnet.fastinfoset
++com.sun.xml.internal.org.jvnet.fastinfoset.sax
++com.sun.xml.internal.org.jvnet.fastinfoset.sax.helpers
++com.sun.xml.internal.org.jvnet.fastinfoset.stax
++com.sun.xml.internal.org.jvnet.mimepull
++com.sun.xml.internal.org.jvnet.staxex
++com.sun.xml.internal.rngom.ast.builder
++com.sun.xml.internal.rngom.ast.om
++com.sun.xml.internal.rngom.ast.util
++com.sun.xml.internal.rngom.binary
++com.sun.xml.internal.rngom.binary.visitor
++com.sun.xml.internal.rngom.digested
++com.sun.xml.internal.rngom.dt
++com.sun.xml.internal.rngom.dt.builtin
++com.sun.xml.internal.rngom.nc
++com.sun.xml.internal.rngom.parse
++com.sun.xml.internal.rngom.parse.compact
++com.sun.xml.internal.rngom.parse.host
++com.sun.xml.internal.rngom.parse.xml
++com.sun.xml.internal.rngom.util
++com.sun.xml.internal.rngom.xml.sax
++com.sun.xml.internal.rngom.xml.util
++com.sun.xml.internal.stream
++com.sun.xml.internal.stream.buffer
++com.sun.xml.internal.stream.buffer.sax
++com.sun.xml.internal.stream.buffer.stax
++com.sun.xml.internal.stream.dtd
++com.sun.xml.internal.stream.dtd.nonvalidating
++com.sun.xml.internal.stream.events
++com.sun.xml.internal.stream.util
++com.sun.xml.internal.stream.writers
++com.sun.xml.internal.txw2
++com.sun.xml.internal.txw2.annotation
++com.sun.xml.internal.txw2.output
++com.sun.xml.internal.ws
++com.sun.xml.internal.ws.addressing
++com.sun.xml.internal.ws.addressing.model
++com.sun.xml.internal.ws.addressing.policy
++com.sun.xml.internal.ws.addressing.v200408
++com.sun.xml.internal.ws.api
++com.sun.xml.internal.ws.api.addressing
++com.sun.xml.internal.ws.api.client
++com.sun.xml.internal.ws.api.config.management
++com.sun.xml.internal.ws.api.config.management.policy
++com.sun.xml.internal.ws.api.databinding
++com.sun.xml.internal.ws.api.fastinfoset
++com.sun.xml.internal.ws.api.ha
++com.sun.xml.internal.ws.api.handler
++com.sun.xml.internal.ws.api.message
++com.sun.xml.internal.ws.api.message.saaj
++com.sun.xml.internal.ws.api.message.stream
++com.sun.xml.internal.ws.api.model
++com.sun.xml.internal.ws.api.model.soap
++com.sun.xml.internal.ws.api.model.wsdl
++com.sun.xml.internal.ws.api.model.wsdl.editable
++com.sun.xml.internal.ws.api.pipe
++com.sun.xml.internal.ws.api.pipe.helper
++com.sun.xml.internal.ws.api.policy
++com.sun.xml.internal.ws.api.policy.subject
++com.sun.xml.internal.ws.api.server
++com.sun.xml.internal.ws.api.streaming
++com.sun.xml.internal.ws.api.wsdl.parser
++com.sun.xml.internal.ws.api.wsdl.writer
++com.sun.xml.internal.ws.assembler
++com.sun.xml.internal.ws.assembler.dev
++com.sun.xml.internal.ws.assembler.jaxws
++com.sun.xml.internal.ws.binding
++com.sun.xml.internal.ws.client
++com.sun.xml.internal.ws.client.dispatch
++com.sun.xml.internal.ws.client.sei
++com.sun.xml.internal.ws.commons.xmlutil
++com.sun.xml.internal.ws.config.management.policy
++com.sun.xml.internal.ws.config.metro.dev
++com.sun.xml.internal.ws.config.metro.util
++com.sun.xml.internal.ws.db
++com.sun.xml.internal.ws.db.glassfish
++com.sun.xml.internal.ws.developer
++com.sun.xml.internal.ws.dump
++com.sun.xml.internal.ws.encoding
++com.sun.xml.internal.ws.encoding.fastinfoset
++com.sun.xml.internal.ws.encoding.policy
++com.sun.xml.internal.ws.encoding.soap
++com.sun.xml.internal.ws.encoding.soap.streaming
++com.sun.xml.internal.ws.encoding.xml
++com.sun.xml.internal.ws.fault
++com.sun.xml.internal.ws.handler
++com.sun.xml.internal.ws.message
++com.sun.xml.internal.ws.message.jaxb
++com.sun.xml.internal.ws.message.saaj
++com.sun.xml.internal.ws.message.source
++com.sun.xml.internal.ws.message.stream
++com.sun.xml.internal.ws.model
++com.sun.xml.internal.ws.model.soap
++com.sun.xml.internal.ws.model.wsdl
++com.sun.xml.internal.ws.org.objectweb.asm
++com.sun.xml.internal.ws.policy
++com.sun.xml.internal.ws.policy.jaxws
++com.sun.xml.internal.ws.policy.jaxws.spi
++com.sun.xml.internal.ws.policy.privateutil
++com.sun.xml.internal.ws.policy.sourcemodel
++com.sun.xml.internal.ws.policy.sourcemodel.attach
++com.sun.xml.internal.ws.policy.sourcemodel.wspolicy
++com.sun.xml.internal.ws.policy.spi
++com.sun.xml.internal.ws.policy.subject
++com.sun.xml.internal.ws.protocol.soap
++com.sun.xml.internal.ws.protocol.xml
++com.sun.xml.internal.ws.resources
++com.sun.xml.internal.ws.runtime.config
++com.sun.xml.internal.ws.server
++com.sun.xml.internal.ws.server.provider
++com.sun.xml.internal.ws.server.sei
++com.sun.xml.internal.ws.spi
++com.sun.xml.internal.ws.spi.db
++com.sun.xml.internal.ws.streaming
++com.sun.xml.internal.ws.transport
++com.sun.xml.internal.ws.transport.http
++com.sun.xml.internal.ws.transport.http.client
++com.sun.xml.internal.ws.transport.http.server
++com.sun.xml.internal.ws.util
++com.sun.xml.internal.ws.util.exception
++com.sun.xml.internal.ws.util.pipe
++com.sun.xml.internal.ws.util.xml
++com.sun.xml.internal.ws.wsdl
++com.sun.xml.internal.ws.wsdl.parser
++com.sun.xml.internal.ws.wsdl.writer
++com.sun.xml.internal.ws.wsdl.writer.document
++com.sun.xml.internal.ws.wsdl.writer.document.http
++com.sun.xml.internal.ws.wsdl.writer.document.soap
++com.sun.xml.internal.ws.wsdl.writer.document.soap12
++com.sun.xml.internal.ws.wsdl.writer.document.xsd
++com.sun.xml.internal.xsom
++com.sun.xml.internal.xsom.impl
++com.sun.xml.internal.xsom.impl.parser
++com.sun.xml.internal.xsom.impl.parser.state
++com.sun.xml.internal.xsom.impl.scd
++com.sun.xml.internal.xsom.impl.util
++com.sun.xml.internal.xsom.parser
++com.sun.xml.internal.xsom.util
++com.sun.xml.internal.xsom.visitor
++java.applet
++java.awt
++java.awt.color
++java.awt.datatransfer
++java.awt.dnd
++java.awt.dnd.peer
++java.awt.event
++java.awt.font
++java.awt.geom
++java.awt.im
++java.awt.im.spi
++java.awt.image
++java.awt.image.renderable
++java.awt.peer
++java.awt.print
++java.beans
++java.beans.beancontext
++java.io
++java.lang
++java.lang.annotation
++java.lang.instrument
++java.lang.invoke
++java.lang.management
++java.lang.ref
++java.lang.reflect
++java.math
++java.net
++java.nio
++java.nio.channels
++java.nio.channels.spi
++java.nio.charset
++java.nio.charset.spi
++java.nio.file
++java.nio.file.attribute
++java.nio.file.spi
++java.rmi
++java.rmi.activation
++java.rmi.dgc
++java.rmi.registry
++java.rmi.server
++java.security
++java.security.acl
++java.security.cert
++java.security.interfaces
++java.security.spec
++java.sql
++java.text
++java.text.spi
++java.time
++java.time.chrono
++java.time.format
++java.time.temporal
++java.time.zone
++java.util
++java.util.concurrent
++java.util.concurrent.atomic
++java.util.concurrent.locks
++java.util.function
++java.util.jar
++java.util.logging
++java.util.prefs
++java.util.regex
++java.util.spi
++java.util.stream
++java.util.zip
++javafx.animation
++javafx.application
++javafx.beans
++javafx.beans.binding
++javafx.beans.property
++javafx.beans.property.adapter
++javafx.beans.value
++javafx.collections
++javafx.collections.transformation
++javafx.concurrent
++javafx.css
++javafx.embed.swing
++javafx.embed.swt
++javafx.event
++javafx.fxml
++javafx.geometry
++javafx.print
++javafx.scene
++javafx.scene.canvas
++javafx.scene.chart
++javafx.scene.control
++javafx.scene.control.cell
++javafx.scene.effect
++javafx.scene.image
++javafx.scene.input
++javafx.scene.layout
++javafx.scene.media
++javafx.scene.paint
++javafx.scene.shape
++javafx.scene.text
++javafx.scene.transform
++javafx.scene.web
++javafx.stage
++javafx.util
++javafx.util.converter
++javax.accessibility
++javax.activation
++javax.activity
++javax.annotation
++javax.annotation.processing
++javax.crypto
++javax.crypto.interfaces
++javax.crypto.spec
++javax.imageio
++javax.imageio.event
++javax.imageio.metadata
++javax.imageio.plugins.bmp
++javax.imageio.plugins.jpeg
++javax.imageio.spi
++javax.imageio.stream
++javax.jws
++javax.jws.soap
++javax.lang.model
++javax.lang.model.element
++javax.lang.model.type
++javax.lang.model.util
++javax.management
++javax.management.loading
++javax.management.modelmbean
++javax.management.monitor
++javax.management.openmbean
++javax.management.relation
++javax.management.remote
++javax.management.remote.rmi
++javax.management.timer
++javax.naming
++javax.naming.directory
++javax.naming.event
++javax.naming.ldap
++javax.naming.spi
++javax.net
++javax.net.ssl
++javax.print
++javax.print.attribute
++javax.print.attribute.standard
++javax.print.event
++javax.rmi
++javax.rmi.CORBA
++javax.rmi.ssl
++javax.script
++javax.security.auth
++javax.security.auth.callback
++javax.security.auth.kerberos
++javax.security.auth.login
++javax.security.auth.spi
++javax.security.auth.x500
++javax.security.cert
++javax.security.sasl
++javax.smartcardio
++javax.sound.midi
++javax.sound.midi.spi
++javax.sound.sampled
++javax.sound.sampled.spi
++javax.sql
++javax.sql.rowset
++javax.sql.rowset.serial
++javax.sql.rowset.spi
++javax.swing
++javax.swing.border
++javax.swing.colorchooser
++javax.swing.event
++javax.swing.filechooser
++javax.swing.plaf
++javax.swing.plaf.basic
++javax.swing.plaf.metal
++javax.swing.plaf.multi
++javax.swing.plaf.nimbus
++javax.swing.plaf.synth
++javax.swing.table
++javax.swing.text
++javax.swing.text.html
++javax.swing.text.html.parser
++javax.swing.text.rtf
++javax.swing.tree
++javax.swing.undo
++javax.tools
++javax.transaction
++javax.transaction.xa
++javax.xml
++javax.xml.bind
++javax.xml.bind.annotation
++javax.xml.bind.annotation.adapters
++javax.xml.bind.attachment
++javax.xml.bind.helpers
++javax.xml.bind.util
++javax.xml.crypto
++javax.xml.crypto.dom
++javax.xml.crypto.dsig
++javax.xml.crypto.dsig.dom
++javax.xml.crypto.dsig.keyinfo
++javax.xml.crypto.dsig.spec
++javax.xml.datatype
++javax.xml.namespace
++javax.xml.parsers
++javax.xml.soap
++javax.xml.stream
++javax.xml.stream.events
++javax.xml.stream.util
++javax.xml.transform
++javax.xml.transform.dom
++javax.xml.transform.sax
++javax.xml.transform.stax
++javax.xml.transform.stream
++javax.xml.validation
++javax.xml.ws
++javax.xml.ws.handler
++javax.xml.ws.handler.soap
++javax.xml.ws.http
++javax.xml.ws.soap
++javax.xml.ws.spi
++javax.xml.ws.spi.http
++javax.xml.ws.wsaddressing
++javax.xml.xpath
++jdk
++jdk.internal.cmm
++jdk.internal.dynalink
++jdk.internal.dynalink.beans
++jdk.internal.dynalink.linker
++jdk.internal.dynalink.support
++jdk.internal.instrumentation
++jdk.internal.org.objectweb.asm
++jdk.internal.org.objectweb.asm.commons
++jdk.internal.org.objectweb.asm.signature
++jdk.internal.org.objectweb.asm.tree
++jdk.internal.org.objectweb.asm.tree.analysis
++jdk.internal.org.objectweb.asm.util
++jdk.internal.org.xml.sax
++jdk.internal.org.xml.sax.helpers
++jdk.internal.util.xml
++jdk.internal.util.xml.impl
++jdk.jfr.events
++jdk.management.cmm
++jdk.management.resource
++jdk.management.resource.internal
++jdk.management.resource.internal.inst
++jdk.nashorn.api.scripting
++jdk.nashorn.internal
++jdk.nashorn.internal.codegen
++jdk.nashorn.internal.codegen.types
++jdk.nashorn.internal.ir
++jdk.nashorn.internal.ir.annotations
++jdk.nashorn.internal.ir.debug
++jdk.nashorn.internal.ir.visitor
++jdk.nashorn.internal.lookup
++jdk.nashorn.internal.objects
++jdk.nashorn.internal.objects.annotations
++jdk.nashorn.internal.parser
++jdk.nashorn.internal.runtime
++jdk.nashorn.internal.runtime.arrays
++jdk.nashorn.internal.runtime.events
++jdk.nashorn.internal.runtime.linker
++jdk.nashorn.internal.runtime.logging
++jdk.nashorn.internal.runtime.options
++jdk.nashorn.internal.runtime.regexp
++jdk.nashorn.internal.runtime.regexp.joni
++jdk.nashorn.internal.runtime.regexp.joni.ast
++jdk.nashorn.internal.runtime.regexp.joni.constants
++jdk.nashorn.internal.runtime.regexp.joni.encoding
++jdk.nashorn.internal.runtime.regexp.joni.exception
++jdk.nashorn.internal.scripts
++jdk.nashorn.tools
++jdk.net
++netscape.javascript
++oracle.jrockit.jfr
++oracle.jrockit.jfr.events
++oracle.jrockit.jfr.jdkevents
++oracle.jrockit.jfr.jdkevents.throwabletransform
++oracle.jrockit.jfr.openmbean
++oracle.jrockit.jfr.parser
++oracle.jrockit.jfr.settings
++oracle.jrockit.jfr.tools
++org.ietf.jgss
++org.jcp.xml.dsig.internal
++org.jcp.xml.dsig.internal.dom
++org.omg.CORBA
++org.omg.CORBA.DynAnyPackage
++org.omg.CORBA.ORBPackage
++org.omg.CORBA.TypeCodePackage
++org.omg.CORBA.portable
++org.omg.CORBA_2_3
++org.omg.CORBA_2_3.portable
++org.omg.CosNaming
++org.omg.CosNaming.NamingContextExtPackage
++org.omg.CosNaming.NamingContextPackage
++org.omg.Dynamic
++org.omg.DynamicAny
++org.omg.DynamicAny.DynAnyFactoryPackage
++org.omg.DynamicAny.DynAnyPackage
++org.omg.IOP
++org.omg.IOP.CodecFactoryPackage
++org.omg.IOP.CodecPackage
++org.omg.Messaging
++org.omg.PortableInterceptor
++org.omg.PortableInterceptor.ORBInitInfoPackage
++org.omg.PortableServer
++org.omg.PortableServer.CurrentPackage
++org.omg.PortableServer.POAManagerPackage
++org.omg.PortableServer.POAPackage
++org.omg.PortableServer.ServantLocatorPackage
++org.omg.PortableServer.portable
++org.omg.SendingContext
++org.omg.stub.java.rmi
++org.omg.stub.javax.management.remote.rmi
++org.relaxng.datatype
++org.relaxng.datatype.helpers
++org.w3c.dom
++org.w3c.dom.bootstrap
++org.w3c.dom.css
++org.w3c.dom.events
++org.w3c.dom.html
++org.w3c.dom.ls
++org.w3c.dom.ranges
++org.w3c.dom.stylesheets
++org.w3c.dom.traversal
++org.w3c.dom.views
++org.w3c.dom.xpath
++org.xml.sax
++org.xml.sax.ext
++org.xml.sax.helpers
++sun.applet
++sun.applet.resources
++sun.audio
++sun.awt
++sun.awt.X11
++sun.awt.datatransfer
++sun.awt.dnd
++sun.awt.event
++sun.awt.geom
++sun.awt.im
++sun.awt.image
++sun.awt.image.codec
++sun.awt.motif
++sun.awt.resources
++sun.awt.shell
++sun.awt.util
++sun.awt.windows
++sun.corba
++sun.dc
++sun.dc.path
++sun.dc.pr
++sun.font
++sun.instrument
++sun.invoke
++sun.invoke.empty
++sun.invoke.util
++sun.io
++sun.java2d
++sun.java2d.cmm
++sun.java2d.cmm.kcms
++sun.java2d.cmm.lcms
++sun.java2d.d3d
++sun.java2d.jules
++sun.java2d.loops
++sun.java2d.opengl
++sun.java2d.pipe
++sun.java2d.pipe.hw
++sun.java2d.pisces
++sun.java2d.windows
++sun.java2d.x11
++sun.java2d.xr
++sun.jvmstat.monitor
++sun.jvmstat.monitor.event
++sun.jvmstat.monitor.remote
++sun.jvmstat.perfdata.monitor
++sun.jvmstat.perfdata.monitor.protocol.file
++sun.jvmstat.perfdata.monitor.protocol.local
++sun.jvmstat.perfdata.monitor.protocol.rmi
++sun.jvmstat.perfdata.monitor.v1_0
++sun.jvmstat.perfdata.monitor.v2_0
++sun.launcher
++sun.launcher.resources
++sun.lwawt
++sun.lwawt.macosx
++sun.management
++sun.management.counter
++sun.management.counter.perf
++sun.management.jdp
++sun.management.jmxremote
++sun.management.resources
++sun.management.snmp
++sun.management.snmp.jvminstr
++sun.management.snmp.jvmmib
++sun.management.snmp.util
++sun.misc
++sun.misc.resources
++sun.net
++sun.net.dns
++sun.net.ftp
++sun.net.ftp.impl
++sun.net.httpserver
++sun.net.idn
++sun.net.sdp
++sun.net.smtp
++sun.net.spi
++sun.net.spi.nameservice
++sun.net.spi.nameservice.dns
++sun.net.util
++sun.net.www
++sun.net.www.content.audio
++sun.net.www.content.image
++sun.net.www.content.text
++sun.net.www.http
++sun.net.www.protocol.file
++sun.net.www.protocol.ftp
++sun.net.www.protocol.http
++sun.net.www.protocol.http.logging
++sun.net.www.protocol.http.ntlm
++sun.net.www.protocol.http.spnego
++sun.net.www.protocol.https
++sun.net.www.protocol.jar
++sun.net.www.protocol.mailto
++sun.net.www.protocol.netdoc
++sun.nio
++sun.nio.ch
++sun.nio.ch.sctp
++sun.nio.cs
++sun.nio.cs.ext
++sun.nio.fs
++sun.print
++sun.print.resources
++sun.reflect
++sun.reflect.annotation
++sun.reflect.generics.factory
++sun.reflect.generics.parser
++sun.reflect.generics.reflectiveObjects
++sun.reflect.generics.repository
++sun.reflect.generics.scope
++sun.reflect.generics.tree
++sun.reflect.generics.visitor
++sun.reflect.misc
++sun.rmi.log
++sun.rmi.registry
++sun.rmi.rmic
++sun.rmi.rmic.iiop
++sun.rmi.rmic.newrmic
++sun.rmi.rmic.newrmic.jrmp
++sun.rmi.runtime
++sun.rmi.server
++sun.rmi.transport
++sun.rmi.transport.proxy
++sun.rmi.transport.tcp
++sun.security.acl
++sun.security.action
++sun.security.ec
++sun.security.internal.interfaces
++sun.security.internal.spec
++sun.security.jca
++sun.security.jgss
++sun.security.jgss.krb5
++sun.security.jgss.spi
++sun.security.jgss.spnego
++sun.security.jgss.wrapper
++sun.security.krb5
++sun.security.krb5.internal
++sun.security.krb5.internal.ccache
++sun.security.krb5.internal.crypto
++sun.security.krb5.internal.crypto.dk
++sun.security.krb5.internal.ktab
++sun.security.krb5.internal.rcache
++sun.security.krb5.internal.tools
++sun.security.krb5.internal.util
++sun.security.mscapi
++sun.security.pkcs
++sun.security.pkcs10
++sun.security.pkcs11
++sun.security.pkcs11.wrapper
++sun.security.pkcs12
++sun.security.provider
++sun.security.provider.certpath
++sun.security.provider.certpath.ldap
++sun.security.provider.certpath.ssl
++sun.security.rsa
++sun.security.smartcardio
++sun.security.ssl
++sun.security.ssl.krb5
++sun.security.timestamp
++sun.security.tools
++sun.security.tools.jarsigner
++sun.security.tools.keytool
++sun.security.tools.policytool
++sun.security.util
++sun.security.validator
++sun.security.x509
++sun.swing
++sun.swing.icon
++sun.swing.plaf
++sun.swing.plaf.synth
++sun.swing.plaf.windows
++sun.swing.table
++sun.swing.text
++sun.swing.text.html
++sun.text
++sun.text.bidi
++sun.text.normalizer
++sun.text.resources
++sun.text.resources.en
++sun.tools.asm
++sun.tools.attach
++sun.tools.jar
++sun.tools.jar.resources
++sun.tools.java
++sun.tools.javac
++sun.tools.jcmd
++sun.tools.jconsole
++sun.tools.jconsole.inspector
++sun.tools.jinfo
++sun.tools.jmap
++sun.tools.jps
++sun.tools.jstack
++sun.tools.jstat
++sun.tools.jstatd
++sun.tools.native2ascii
++sun.tools.native2ascii.resources
++sun.tools.serialver
++sun.tools.tree
++sun.tools.util
++sun.tracing
++sun.tracing.dtrace
++sun.usagetracker
++sun.util
++sun.util.calendar
++sun.util.cldr
++sun.util.locale
++sun.util.locale.provider
++sun.util.logging
++sun.util.logging.resources
++sun.util.resources
++sun.util.resources.en
++sun.util.spi
++sun.util.xml
+diff --git a/src/java.base/share/classes/sun/launcher/resources/launcher.properties b/src/java.base/share/classes/sun/launcher/resources/launcher.properties
+index efcc4d69969..7ca105d0a55 100644
+--- a/src/java.base/share/classes/sun/launcher/resources/launcher.properties
++++ b/src/java.base/share/classes/sun/launcher/resources/launcher.properties
+@@ -188,6 +188,11 @@ java.launcher.X.usage=\n\
+ \    --add-opens <module>/<package>=<target-module>(,<target-module>)*\n\
+ \                      updates <module> to open <package> to\n\
+ \                      <target-module>, regardless of module declaration.\n\
++\    --illegal-access=<value>\n\
++\                      permit or deny access to members of types in named modules\n\
++\                      by code in unnamed modules.\n\
++\                      <value> is one of "deny", "permit", "warn", or "debug"\n\
++\                      This option will be removed in a future release.\n\
+ \    --limit-modules <module name>[,<module name>...]\n\
+ \                      limit the universe of observable modules\n\
+ \    --patch-module <module>=<file>({0}<file>)*\n\
+diff --git a/src/jdk.jlink/share/classes/jdk/tools/jlink/internal/plugins/SystemModulesPlugin.java b/src/jdk.jlink/share/classes/jdk/tools/jlink/internal/plugins/SystemModulesPlugin.java
+index 4d1129ac8dc..2770733a08f 100644
+--- a/src/jdk.jlink/share/classes/jdk/tools/jlink/internal/plugins/SystemModulesPlugin.java
++++ b/src/jdk.jlink/share/classes/jdk/tools/jlink/internal/plugins/SystemModulesPlugin.java
+@@ -60,6 +60,7 @@ import java.util.stream.Collectors;
+ 
+ import jdk.internal.module.Checks;
+ import jdk.internal.module.DefaultRoots;
++import jdk.internal.module.IllegalAccessMaps;
+ import jdk.internal.module.Modules;
+ import jdk.internal.module.ModuleHashes;
+ import jdk.internal.module.ModuleInfo.Attributes;
+@@ -621,6 +622,9 @@ public final class SystemModulesPlugin extends AbstractPlugin {
+             // generate moduleReads
+             genModuleReads(cw, cf);
+ 
++            // generate concealedPackagesToOpen and exportedPackagesToOpen
++            genXXXPackagesToOpenMethods(cw);
++
+             return cw;
+         }
+ 
+@@ -851,6 +855,16 @@ public final class SystemModulesPlugin extends AbstractPlugin {
+             generate(cw, "moduleReads", map, true);
+         }
+ 
++        /**
++         * Generate concealedPackagesToOpen and exportedPackagesToOpen methods.
++         */
++        private void genXXXPackagesToOpenMethods(ClassWriter cw) {
++            ModuleFinder finder = finderOf(moduleInfos);
++            IllegalAccessMaps maps = IllegalAccessMaps.generate(finder);
++            generate(cw, "concealedPackagesToOpen", maps.concealedPackagesToOpen(), false);
++            generate(cw, "exportedPackagesToOpen", maps.exportedPackagesToOpen(), false);
++        }
++
+         /**
+          * Generate method to return {@code Map<String, Set<String>>}.
+          *
+diff --git a/test/jdk/java/lang/ModuleTests/BasicModuleTest.java b/test/jdk/java/lang/ModuleTests/BasicModuleTest.java
+index 1a1f26f423e..6548379f4bb 100644
+--- a/test/jdk/java/lang/ModuleTests/BasicModuleTest.java
++++ b/test/jdk/java/lang/ModuleTests/BasicModuleTest.java
+@@ -35,7 +35,7 @@ import static org.testng.Assert.*;
+  * @test
+  * @summary Basic test of java.lang.Module
+  * @modules java.desktop java.xml
+- * @run testng/othervm BasicModuleTest
++ * @run testng/othervm --illegal-access=deny BasicModuleTest
+  */
+ 
+ public class BasicModuleTest {
+diff --git a/test/jdk/java/lang/instrument/RedefineModuleTest.java b/test/jdk/java/lang/instrument/RedefineModuleTest.java
+index b5b5b4fc31d..3434935349d 100644
+--- a/test/jdk/java/lang/instrument/RedefineModuleTest.java
++++ b/test/jdk/java/lang/instrument/RedefineModuleTest.java
+@@ -29,7 +29,7 @@
+  *        java.base/jdk.internal.test.TestProviderImpl1
+  *        java.base/jdk.internal.test.TestProviderImpl2
+  * @run shell MakeJAR3.sh RedefineModuleAgent
+- * @run testng/othervm -javaagent:RedefineModuleAgent.jar RedefineModuleTest
++ * @run testng/othervm --illegal-access=deny -javaagent:RedefineModuleAgent.jar RedefineModuleTest
+  */
+ 
+ import java.lang.TestProvider;
+diff --git a/test/jdk/java/lang/invoke/CallerSensitiveAccess.java b/test/jdk/java/lang/invoke/CallerSensitiveAccess.java
+index 2e904879a82..5dc1a588624 100644
+--- a/test/jdk/java/lang/invoke/CallerSensitiveAccess.java
++++ b/test/jdk/java/lang/invoke/CallerSensitiveAccess.java
+@@ -24,7 +24,7 @@
+ /* @test
+  * @bug 8196830 8235351
+  * @modules java.base/jdk.internal.reflect
+- * @run testng/othervm CallerSensitiveAccess
++ * @run testng/othervm --illegal-access=deny CallerSensitiveAccess
+  * @summary Check Lookup findVirtual, findStatic and unreflect behavior with
+  *          caller sensitive methods with focus on AccessibleObject.setAccessible
+  */
+diff --git a/test/jdk/java/lang/reflect/AccessibleObject/CanAccessTest.java b/test/jdk/java/lang/reflect/AccessibleObject/CanAccessTest.java
+index 45e2502b601..cb2c982e91b 100644
+--- a/test/jdk/java/lang/reflect/AccessibleObject/CanAccessTest.java
++++ b/test/jdk/java/lang/reflect/AccessibleObject/CanAccessTest.java
+@@ -25,7 +25,7 @@
+  * @test
+  * @build CanAccessTest
+  * @modules java.base/jdk.internal.misc:+open
+- * @run testng/othervm CanAccessTest
++ * @run testng/othervm --illegal-access=deny CanAccessTest
+  * @summary Test AccessibleObject::canAccess method
+  */
+ 
+diff --git a/test/jdk/java/lang/reflect/AccessibleObject/ModuleSetAccessibleTest.java b/test/jdk/java/lang/reflect/AccessibleObject/ModuleSetAccessibleTest.java
+index c7c57d2371c..0d744f26245 100644
+--- a/test/jdk/java/lang/reflect/AccessibleObject/ModuleSetAccessibleTest.java
++++ b/test/jdk/java/lang/reflect/AccessibleObject/ModuleSetAccessibleTest.java
+@@ -26,7 +26,7 @@
+  * @build ModuleSetAccessibleTest
+  * @modules java.base/java.lang:open
+  *          java.base/jdk.internal.misc:+open
+- * @run testng/othervm ModuleSetAccessibleTest
++ * @run testng/othervm --illegal-access=deny ModuleSetAccessibleTest
+  * @summary Test java.lang.reflect.AccessibleObject with modules
+  */
+ 
+diff --git a/test/jdk/java/lang/reflect/AccessibleObject/TrySetAccessibleTest.java b/test/jdk/java/lang/reflect/AccessibleObject/TrySetAccessibleTest.java
+index 22fcb2e01fa..d678ea667d1 100644
+--- a/test/jdk/java/lang/reflect/AccessibleObject/TrySetAccessibleTest.java
++++ b/test/jdk/java/lang/reflect/AccessibleObject/TrySetAccessibleTest.java
+@@ -28,7 +28,7 @@
+  *          java.base/jdk.internal.module
+  *          java.base/jdk.internal.perf
+  *          java.base/jdk.internal.misc:+open
+- * @run testng/othervm TrySetAccessibleTest
++ * @run testng/othervm --illegal-access=deny TrySetAccessibleTest
+  * @summary Test AccessibleObject::trySetAccessible method
+  */
+ 
+diff --git a/test/jdk/java/util/ResourceBundle/modules/cache/CacheTest.java b/test/jdk/java/util/ResourceBundle/modules/cache/CacheTest.java
+index 5655eb5de2d..95c1d5e34d5 100644
+--- a/test/jdk/java/util/ResourceBundle/modules/cache/CacheTest.java
++++ b/test/jdk/java/util/ResourceBundle/modules/cache/CacheTest.java
+@@ -87,6 +87,7 @@ public class CacheTest {
+         assertTrue(executeTestJava("--class-path", MODS_DIR.resolve(TEST_MODULE).toString(),
+                                    "--module-path", MODS_DIR.resolve(MAIN_BUNDLES_MODULE).toString(),
+                                    "--add-modules", MAIN_BUNDLES_MODULE,
++                                   "--add-modules", MAIN_BUNDLES_MODULE,
+                                    MAIN_CLASS, "cache")
+                         .outputTo(System.out)
+                         .errorTo(System.out)
+@@ -109,6 +110,7 @@ public class CacheTest {
+         assertTrue(executeTestJava("--class-path", MODS_DIR.resolve(TEST_MODULE).toString(),
+                                    "--module-path", MODS_DIR.resolve(MAIN_BUNDLES_MODULE).toString(),
+                                    "--add-modules", MAIN_BUNDLES_MODULE,
++                                   "--illegal-access=deny",
+                                    MAIN_CLASS)
+                         .outputTo(System.out)
+                         .errorTo(System.out)
+diff --git a/test/jdk/jdk/modules/open/Basic.java b/test/jdk/jdk/modules/open/Basic.java
+index 30101a34aa7..5ceb0c3ff49 100644
+--- a/test/jdk/jdk/modules/open/Basic.java
++++ b/test/jdk/jdk/modules/open/Basic.java
+@@ -25,7 +25,7 @@
+  * @test
+  * @library modules
+  * @build m1/* m2/*
+- * @run testng/othervm --add-modules=m1,m2 Basic
++ * @run testng/othervm --add-modules=m1,m2 --illegal-access=deny Basic
+  * @summary Basic test of open modules and open packages
+  */
+ 
+diff --git a/test/jdk/tools/launcher/modules/addexports/manifest/AddExportsAndOpensInManifest.java b/test/jdk/tools/launcher/modules/addexports/manifest/AddExportsAndOpensInManifest.java
+index 71d6a5b7bf9..80ba100db7d 100644
+--- a/test/jdk/tools/launcher/modules/addexports/manifest/AddExportsAndOpensInManifest.java
++++ b/test/jdk/tools/launcher/modules/addexports/manifest/AddExportsAndOpensInManifest.java
+@@ -88,7 +88,8 @@ public class AddExportsAndOpensInManifest {
+                 Paths.get("Test1.class"), Paths.get("Test2.class"));
+ 
+         // java -jar test.jar
+-        return ProcessTools.executeTestJava("-jar", jarfile.toString())
++        return ProcessTools.executeTestJava("--illegal-access=deny",
++                                            "-jar", jarfile.toString())
+                 .outputTo(System.out)
+                 .errorTo(System.out);
+     }
+diff --git a/test/jdk/tools/launcher/modules/illegalaccess/IllegalAccessTest.java b/test/jdk/tools/launcher/modules/illegalaccess/IllegalAccessTest.java
+index 94c77bd57df..a1f6939a541 100644
+--- a/test/jdk/tools/launcher/modules/illegalaccess/IllegalAccessTest.java
++++ b/test/jdk/tools/launcher/modules/illegalaccess/IllegalAccessTest.java
+@@ -23,36 +23,454 @@
+ 
+ /**
+  * @test
+- * @bug 8266851
+- * @library /test/lib
+- * @build IllegalAccessTest
+- * @run testng IllegalAccessTest
+- * @summary Make sure that --illegal-access=$VALUE is obsolete.
++ * @requires vm.compMode != "Xcomp"
++ * @modules java.base/jdk.internal.misc
++ *          java.base/sun.security.x509
++ * @library /test/lib modules
++ * @build IllegalAccessTest TryAccess
++ *        jdk.test.lib.compiler.CompilerUtils
++ *        jdk.test.lib.util.JarUtils
++ * @build m/*
++ * @run testng/othervm/timeout=180 IllegalAccessTest
++ * @summary Basic test for java --illegal-access=$VALUE
+  */
+ 
+-import jdk.test.lib.process.*;
+-import org.testng.annotations.*;
++import java.nio.file.Files;
++import java.nio.file.Path;
++import java.nio.file.Paths;
++import java.util.ArrayList;
++import java.util.List;
++import java.util.jar.Attributes;
++import java.util.jar.Manifest;
++import java.util.stream.Stream;
++
++import jdk.test.lib.compiler.CompilerUtils;
++import jdk.test.lib.process.ProcessTools;
++import jdk.test.lib.process.OutputAnalyzer;
++import jdk.test.lib.util.JarUtils;
++
++import org.testng.annotations.DataProvider;
++import org.testng.annotations.Test;
++import static org.testng.Assert.*;
+ 
+ /**
+- * Make sure that --illegal-access=$VALUE is obsolete.
++ * Basic test of --illegal-access=value to deny or permit access to JDK internals.
+  */
+ 
+ @Test
+ public class IllegalAccessTest {
+ 
+-    void run(String text, String... vmopts)
++    static final String TEST_SRC = System.getProperty("test.src");
++    static final String TEST_CLASSES = System.getProperty("test.classes");
++    static final String MODULE_PATH = System.getProperty("jdk.module.path");
++
++    /**
++     * Represents the expected result of a test.
++     */
++    static final class Result {
++        private final boolean success;
++        private final List<String> expectedOutput = new ArrayList<>();
++        private final List<String> notExpectedOutput = new ArrayList<>();
++
++        Result(boolean success) {
++            this.success = success;
++        }
++
++        Result expect(String msg) {
++            expectedOutput.add(msg);
++            return this;
++        }
++
++        Result doNotExpect(String msg) {
++            notExpectedOutput.add(msg);
++            return this;
++        }
++
++        boolean shouldSucceed() {
++            return success;
++        }
++
++        Stream<String> expectedOutput() {
++            return expectedOutput.stream();
++        }
++
++        Stream<String> notExpectedOutput() {
++            return notExpectedOutput.stream();
++        }
++
++        @Override
++        public String toString() {
++            String s = (success) ? "success" : "failure";
++            for (String msg : expectedOutput) {
++                s += "/" + msg;
++            }
++            return s;
++        }
++    }
++
++    static Result success() {
++        return new Result(true);
++    }
++
++    static Result successNoWarning() {
++        return success().doNotExpect("WARNING");
++    }
++
++    static Result successWithWarning() {
++        return success().expect("WARNING");
++    }
++
++    static Result fail(String expectedOutput) {
++        return new Result(false).expect(expectedOutput).doNotExpect("WARNING");
++    }
++
++    @DataProvider(name = "denyCases")
++    public Object[][] denyCases() {
++        return new Object[][] {
++            { "accessPublicClassNonExportedPackage", fail("IllegalAccessError") },
++            { "accessPublicClassJdk9NonExportedPackage", fail("IllegalAccessError") },
++
++            { "reflectPublicMemberExportedPackage", successNoWarning() },
++            { "reflectNonPublicMemberExportedPackage", fail("IllegalAccessException") },
++            { "reflectPublicMemberNonExportedPackage", fail("IllegalAccessException") },
++            { "reflectNonPublicMemberNonExportedPackage", fail("IllegalAccessException") },
++            { "reflectPublicMemberJdk9NonExportedPackage", fail("IllegalAccessException") },
++            { "reflectPublicMemberApplicationModule", successNoWarning() },
++
++            { "setAccessiblePublicMemberExportedPackage", successNoWarning() },
++            { "setAccessibleNonPublicMemberExportedPackage", fail("InaccessibleObjectException") },
++            { "setAccessiblePublicMemberNonExportedPackage", fail("InaccessibleObjectException") },
++            { "setAccessibleNonPublicMemberNonExportedPackage", fail("InaccessibleObjectException") },
++            { "setAccessiblePublicMemberJdk9NonExportedPackage", fail("InaccessibleObjectException") },
++            { "setAccessiblePublicMemberApplicationModule", successNoWarning() },
++            { "setAccessibleNotPublicMemberApplicationModule", fail("InaccessibleObjectException") },
++
++            { "privateLookupPublicClassExportedPackage", fail("IllegalAccessException") },
++            { "privateLookupNonPublicClassExportedPackage", fail("IllegalAccessException") },
++            { "privateLookupPublicClassNonExportedPackage", fail("IllegalAccessException") },
++            { "privateLookupNonPublicClassNonExportedPackage", fail("IllegalAccessException") },
++            { "privateLookupPublicClassJdk9NonExportedPackage", fail("IllegalAccessException") },
++        };
++    }
++
++    @DataProvider(name = "permitCases")
++    public Object[][] permitCases() {
++        return new Object[][] {
++            { "accessPublicClassNonExportedPackage", successNoWarning() },
++            { "accessPublicClassJdk9NonExportedPackage", fail("IllegalAccessError") },
++
++            { "reflectPublicMemberExportedPackage", successNoWarning() },
++            { "reflectNonPublicMemberExportedPackage", fail("IllegalAccessException") },
++            { "reflectPublicMemberNonExportedPackage", successWithWarning() },
++            { "reflectNonPublicMemberNonExportedPackage", fail("IllegalAccessException") },
++            { "reflectPublicMemberJdk9NonExportedPackage", fail("IllegalAccessException") },
++
++            { "setAccessiblePublicMemberExportedPackage", successNoWarning()},
++            { "setAccessibleNonPublicMemberExportedPackage", successWithWarning() },
++            { "setAccessiblePublicMemberNonExportedPackage", successWithWarning() },
++            { "setAccessibleNonPublicMemberNonExportedPackage", successWithWarning() },
++            { "setAccessiblePublicMemberJdk9NonExportedPackage", fail("InaccessibleObjectException") },
++            { "setAccessiblePublicMemberApplicationModule", successNoWarning() },
++            { "setAccessibleNotPublicMemberApplicationModule", fail("InaccessibleObjectException") },
++
++            { "privateLookupPublicClassExportedPackage", successWithWarning() },
++            { "privateLookupNonPublicClassExportedPackage", successWithWarning() },
++            { "privateLookupPublicClassNonExportedPackage", successWithWarning() },
++            { "privateLookupNonPublicClassNonExportedPackage",  successWithWarning() },
++            { "privateLookupPublicClassJdk9NonExportedPackage", fail("IllegalAccessException") },
++            { "privateLookupPublicClassApplicationModule", fail("IllegalAccessException") },
++        };
++    }
++
++    /**
++     * Checks an expected result with the output captured by the given
++     * OutputAnalyzer.
++     */
++    void checkResult(Result expectedResult, OutputAnalyzer outputAnalyzer) {
++        expectedResult.expectedOutput().forEach(outputAnalyzer::shouldContain);
++        expectedResult.notExpectedOutput().forEach(outputAnalyzer::shouldNotContain);
++        int exitValue = outputAnalyzer.getExitValue();
++        if (expectedResult.shouldSucceed()) {
++            assertTrue(exitValue == 0);
++        } else {
++            assertTrue(exitValue != 0);
++        }
++    }
++
++    /**
++     * Runs the test to execute the given test action. The VM is run with the
++     * given VM options and the output checked to see that it matches the
++     * expected result.
++     */
++    OutputAnalyzer run(String action, Result expectedResult, String... vmopts)
++        throws Exception
++    {
++        Stream<String> s1 = Stream.of(vmopts);
++        Stream<String> s2 = Stream.of("-p", MODULE_PATH, "--add-modules=m",
++                "-cp", TEST_CLASSES, "TryAccess", action);
++        String[] opts = Stream.concat(s1, s2).toArray(String[]::new);
++        OutputAnalyzer outputAnalyzer = ProcessTools
++                .executeTestJava(opts)
++                .outputTo(System.out)
++                .errorTo(System.out);
++        if (expectedResult != null)
++            checkResult(expectedResult, outputAnalyzer);
++        return outputAnalyzer;
++    }
++
++    OutputAnalyzer run(String action, String... vmopts) throws Exception {
++        return run(action, null, vmopts);
++    }
++
++    /**
++     * Runs an executable JAR to execute the given test action. The VM is run
++     * with the given VM options and the output checked to see that it matches
++     * the expected result.
++     */
++    void run(Path jarFile, String action, Result expectedResult, String... vmopts)
+         throws Exception
+     {
+-        var outputAnalyzer = ProcessTools
+-            .executeTestJava(vmopts)
+-            .outputTo(System.out)
+-            .errorTo(System.out);
+-        outputAnalyzer.shouldContain(text);
++        Stream<String> s1 = Stream.of(vmopts);
++        Stream<String> s2 = Stream.of("-jar", jarFile.toString(), action);
++        String[] opts = Stream.concat(s1, s2).toArray(String[]::new);
++        checkResult(expectedResult, ProcessTools.executeTestJava(opts)
++                                                .outputTo(System.out)
++                                                .errorTo(System.out));
++    }
++
++    @Test(dataProvider = "denyCases")
++    public void testDefault(String action, Result expectedResult) throws Exception {
++        run(action, expectedResult);
++    }
++
++    @Test(dataProvider = "denyCases")
++    public void testDeny(String action, Result expectedResult) throws Exception {
++        run(action, expectedResult, "--illegal-access=deny");
++    }
++
++    @Test(dataProvider = "permitCases")
++    public void testPermit(String action, Result expectedResult) throws Exception {
++        run(action, expectedResult, "--illegal-access=permit");
+     }
+ 
+-    public void testObsolete() throws Exception {
+-        run("Ignoring option --illegal-access",
+-            "--illegal-access=permit", "--version");
++    @Test(dataProvider = "permitCases")
++    public void testWarn(String action, Result expectedResult) throws Exception {
++        run(action, expectedResult, "--illegal-access=warn");
+     }
+ 
++    @Test(dataProvider = "permitCases")
++    public void testDebug(String action, Result expectedResult) throws Exception {
++        // expect stack trace with WARNING
++        if (expectedResult.expectedOutput().anyMatch("WARNING"::equals)) {
++            expectedResult.expect("TryAccess.main");
++        }
++        run(action, expectedResult, "--illegal-access=debug");
++    }
++
++    /**
++     * Specify --add-exports to export a package
++     */
++    public void testWithAddExportsOption() throws Exception {
++        // not accessible
++        run("reflectPublicMemberNonExportedPackage", fail("IllegalAccessException"));
++
++        // should succeed with --add-exports
++        run("reflectPublicMemberNonExportedPackage", successNoWarning(),
++                "--add-exports", "java.base/sun.security.x509=ALL-UNNAMED");
++
++        // not accessible
++        run("setAccessibleNonPublicMemberNonExportedPackage", fail("InaccessibleObjectException"));
++
++        // should fail as --add-exports does not open package
++        run("setAccessibleNonPublicMemberNonExportedPackage", fail("InaccessibleObjectException"),
++                "--add-exports", "java.base/sun.nio.ch=ALL-UNNAMED");
++    }
++
++    /**
++     * Specify --add-open to open a package
++     */
++    public void testWithAddOpensOption() throws Exception {
++        // not accessible
++        run("reflectPublicMemberNonExportedPackage", fail("IllegalAccessException"));
++
++        // should succeed with --add-opens
++        run("reflectPublicMemberNonExportedPackage", successNoWarning(),
++                "--add-opens", "java.base/sun.security.x509=ALL-UNNAMED");
++
++        // not accessible
++        run("setAccessibleNonPublicMemberExportedPackage", fail("InaccessibleObjectException"));
++
++        // should succeed with --add-opens
++        run("setAccessibleNonPublicMemberExportedPackage", successNoWarning(),
++                "--add-opens", "java.base/java.lang=ALL-UNNAMED");
++    }
++
++    /**
++     * Test reflective API to export a package
++     */
++    public void testWithReflectiveExports() throws Exception {
++        // compile patch for java.base
++        Path src = Paths.get(TEST_SRC, "patchsrc", "java.base");
++        Path patch = Files.createDirectories(Paths.get("patches", "java.base"));
++        assertTrue(CompilerUtils.compile(src, patch,
++                                         "--patch-module", "java.base=" + src));
++
++        // reflectively export, then access
++        run("exportNonExportedPackages,reflectPublicMemberNonExportedPackage",
++                successNoWarning(),
++                "--patch-module", "java.base=" + patch);
++
++        // access, reflectively export, access again
++        List<String> output = run("reflectPublicMemberNonExportedPackage,"
++                        + "exportNonExportedPackages,"
++                        + "reflectPublicMemberNonExportedPackage",
++                "--patch-module", "java.base="+patch,
++                "--illegal-access=warn").asLines();
++        assertTrue(count(output, "WARNING") == 1);  // one warning
++    }
++
++    /**
++     * Test reflective API to open a package
++     */
++    public void testWithReflectiveOpens() throws Exception {
++        // compile patch for java.base
++        Path src = Paths.get(TEST_SRC, "patchsrc", "java.base");
++        Path patch = Files.createDirectories(Paths.get("patches", "java.base"));
++        assertTrue(CompilerUtils.compile(src, patch,
++                                         "--patch-module", "java.base=" + src));
++
++        // reflectively open exported package, then access
++        run("openExportedPackage,setAccessibleNonPublicMemberExportedPackage",
++                successNoWarning(),
++                "--patch-module", "java.base=" + patch);
++
++        // access, reflectively open exported package, access again
++        List<String> output1 = run("setAccessibleNonPublicMemberExportedPackage"
++                        + ",openExportedPackage"
++                        + ",setAccessibleNonPublicMemberExportedPackage",
++                "--patch-module", "java.base=" + patch,
++                "--illegal-access=warn").asLines();
++        assertTrue(count(output1, "WARNING") == 1);  // one warning
++
++        // reflectively open non-exported packages, then access
++        run("openNonExportedPackages,setAccessibleNonPublicMemberNonExportedPackage",
++                successNoWarning(),
++                "--patch-module", "java.base=" + patch);
++
++        // access, reflectively open non-exported package, access again
++        List<String> output2 = run("setAccessibleNonPublicMemberNonExportedPackage"
++                        + ",openNonExportedPackages"
++                        + ",setAccessibleNonPublicMemberNonExportedPackage",
++                "--patch-module", "java.base=" + patch,
++                "--illegal-access=warn").asLines();
++        assertTrue(count(output2, "WARNING") == 1);  // one warning
++    }
++
++    /**
++     * Specify Add-Exports in JAR file manifest
++     */
++    public void testWithAddExportsInManifest() throws Exception {
++        Manifest man = new Manifest();
++        Attributes attrs = man.getMainAttributes();
++        attrs.put(Attributes.Name.MANIFEST_VERSION, "1.0");
++        attrs.put(Attributes.Name.MAIN_CLASS, "TryAccess");
++        attrs.put(new Attributes.Name("Add-Exports"),
++                  "java.base/sun.security.x509 java.base/sun.nio.ch");
++        Path jarfile = Paths.get("x.jar");
++        Path classes = Paths.get(TEST_CLASSES);
++        JarUtils.createJarFile(jarfile, man, classes, Paths.get("TryAccess.class"));
++
++        run(jarfile, "reflectPublicMemberNonExportedPackage", successNoWarning());
++
++        run(jarfile, "reflectPublicMemberNonExportedPackage", successNoWarning(),
++                "--illegal-access=permit");
++
++        // should fail as Add-Exports does not open package
++        run(jarfile, "setAccessibleNonPublicMemberNonExportedPackage",
++            fail("InaccessibleObjectException"));
++    }
++
++    /**
++     * Specify Add-Opens in JAR file manifest
++     */
++    public void testWithAddOpensInManifest() throws Exception {
++        Manifest man = new Manifest();
++        Attributes attrs = man.getMainAttributes();
++        attrs.put(Attributes.Name.MANIFEST_VERSION, "1.0");
++        attrs.put(Attributes.Name.MAIN_CLASS, "TryAccess");
++        attrs.put(new Attributes.Name("Add-Opens"), "java.base/java.lang");
++        Path jarfile = Paths.get("x.jar");
++        Path classes = Paths.get(TEST_CLASSES);
++        JarUtils.createJarFile(jarfile, man, classes, Paths.get("TryAccess.class"));
++
++        run(jarfile, "setAccessibleNonPublicMemberExportedPackage", successNoWarning());
++
++        run(jarfile, "setAccessibleNonPublicMemberExportedPackage", successNoWarning(),
++                "--illegal-access=permit");
++    }
++
++    /**
++     * Test that --illegal-access=permit behavior is to print a warning on the
++     * first illegal access only.
++     */
++    public void testWarnOnFirstIllegalAccess() throws Exception {
++        String action1 = "reflectPublicMemberNonExportedPackage";
++        String action2 = "setAccessibleNonPublicMemberExportedPackage";
++        int warningCount = count(run(action1, "--illegal-access=permit").asLines(), "WARNING");
++        assertTrue(warningCount > 0);  // multi line warning
++
++        // same illegal access
++        List<String> output1 = run(action1 + "," + action1, "--illegal-access=permit").asLines();
++        assertTrue(count(output1, "WARNING") == warningCount);
++
++        // different illegal access
++        List<String> output2 = run(action1 + "," + action2, "--illegal-access=permit").asLines();
++        assertTrue(count(output2, "WARNING") == warningCount);
++    }
++
++    /**
++     * Test that --illegal-access=warn prints a one-line warning per each unique
++     * illegal access.
++     */
++    public void testWarnPerIllegalAccess() throws Exception {
++        String action1 = "reflectPublicMemberNonExportedPackage";
++        String action2 = "setAccessibleNonPublicMemberExportedPackage";
++
++        // same illegal access
++        String repeatedActions = action1 + "," + action1;
++        List<String> output1 = run(repeatedActions, "--illegal-access=warn").asLines();
++        assertTrue(count(output1, "WARNING") == 1);
++
++        // different illegal access
++        String differentActions = action1 + "," + action2;
++        List<String> output2 = run(differentActions, "--illegal-access=warn").asLines();
++        assertTrue(count(output2, "WARNING") == 2);
++    }
++
++    /**
++     * Specify --illegal-access more than once, last one wins
++     */
++    public void testRepeatedOption() throws Exception {
++        run("accessPublicClassNonExportedPackage", successNoWarning(),
++                "--illegal-access=deny", "--illegal-access=permit");
++        run("accessPublicClassNonExportedPackage", fail("IllegalAccessError"),
++                "--illegal-access=permit", "--illegal-access=deny");
++    }
++
++    /**
++     * Specify bad value to --illegal-access
++     */
++    public void testBadValue() throws Exception {
++        run("accessPublicClassNonExportedPackage",
++                fail("Value specified to --illegal-access not recognized"),
++                "--illegal-access=BAD");
++    }
++
++    private int count(Iterable<String> lines, CharSequence cs) {
++        int count = 0;
++        for (String line : lines) {
++            if (line.contains(cs)) count++;
++        }
++        return count;
++    }
+ }
+diff --git a/test/jdk/tools/launcher/modules/illegalaccess/TryAccess.java b/test/jdk/tools/launcher/modules/illegalaccess/TryAccess.java
+new file mode 100644
+index 00000000000..9f58c505215
+--- /dev/null
++++ b/test/jdk/tools/launcher/modules/illegalaccess/TryAccess.java
+@@ -0,0 +1,188 @@
++/*
++ * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ *
++ * This code is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License version 2 only, as
++ * published by the Free Software Foundation.
++ *
++ * This code is distributed in the hope that it will be useful, but WITHOUT
++ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
++ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++ * version 2 for more details (a copy is included in the LICENSE file that
++ * accompanied this code).
++ *
++ * You should have received a copy of the GNU General Public License version
++ * 2 along with this work; if not, write to the Free Software Foundation,
++ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
++ *
++ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
++ * or visit www.oracle.com if you need additional information or have any
++ * questions.
++ */
++
++import java.lang.invoke.MethodHandles;
++import java.lang.reflect.Constructor;
++import java.lang.reflect.Field;
++import java.lang.reflect.Method;
++import java.nio.channels.SocketChannel;
++
++/**
++ * Launched by IllegalAccessTest to attempt illegal access.
++ */
++
++public class TryAccess {
++
++    public static void main(String[] args) throws Exception {
++        String[] methodNames = args[0].split(",");
++        for (String methodName : methodNames) {
++            Method m = TryAccess.class.getDeclaredMethod(methodName);
++            m.invoke(null);
++        }
++    }
++
++    // -- static access --
++
++    static void accessPublicClassNonExportedPackage() throws Exception {
++        Object obj = new sun.security.x509.X500Name("CN=name");
++    }
++
++    static void accessPublicClassJdk9NonExportedPackage() {
++        Object obj = jdk.internal.misc.Unsafe.getUnsafe();
++    }
++
++    // -- reflective access --
++
++    static void reflectPublicMemberExportedPackage() throws Exception {
++        Constructor<?> ctor = String.class.getConstructor(String.class);
++        Object name = ctor.newInstance("value");
++    }
++
++    static void reflectNonPublicMemberExportedPackage() throws Exception {
++        Field f = String.class.getDeclaredField("value");
++        Object obj = f.get("foo");
++    }
++
++    static void reflectPublicMemberNonExportedPackage() throws Exception {
++        Class<?> clazz = Class.forName("sun.security.x509.X500Name");
++        Constructor<?> ctor = clazz.getConstructor(String.class);
++        Object obj = ctor.newInstance("CN=user");
++    }
++
++    static void reflectNonPublicMemberNonExportedPackage() throws Exception {
++        SocketChannel sc = SocketChannel.open();
++        Field f = sc.getClass().getDeclaredField("fd");
++        Object obj = f.get(sc);
++    }
++
++    static void reflectPublicMemberJdk9NonExportedPackage() throws Exception {
++        Class<?> clazz = Class.forName("jdk.internal.misc.Unsafe");
++        Method m = clazz.getMethod("getUnsafe");
++        Object obj = m.invoke(null);
++    }
++
++    static void reflectPublicMemberApplicationModule() throws Exception {
++        Class<?> clazz = Class.forName("p.Type");
++        Constructor<?> ctor = clazz.getConstructor(int.class);
++        Object obj = ctor.newInstance(1);
++    }
++
++    // -- setAccessible --
++
++    static void setAccessiblePublicMemberExportedPackage() throws Exception {
++        Constructor<?> ctor = String.class.getConstructor(String.class);
++        ctor.setAccessible(true);
++    }
++
++    static void setAccessibleNonPublicMemberExportedPackage() throws Exception {
++        Method method = ClassLoader.class.getDeclaredMethod("defineClass",
++                byte[].class, int.class, int.class);
++        method.setAccessible(true);
++    }
++
++    static void setAccessiblePublicMemberNonExportedPackage() throws Exception {
++        Class<?> clazz = Class.forName("sun.security.x509.X500Name");
++        Constructor<?> ctor = clazz.getConstructor(String.class);
++        ctor.setAccessible(true);
++    }
++
++    static void setAccessibleNonPublicMemberNonExportedPackage() throws Exception {
++        SocketChannel sc = SocketChannel.open();
++        Field f = sc.getClass().getDeclaredField("fd");
++        f.setAccessible(true);
++    }
++
++    static void setAccessiblePublicMemberJdk9NonExportedPackage() throws Exception {
++        Class<?> clazz = Class.forName("jdk.internal.misc.Unsafe");
++        Method m = clazz.getMethod("getUnsafe");
++        m.setAccessible(true);
++    }
++
++    static void setAccessiblePublicMemberApplicationModule() throws Exception {
++        Class<?> clazz = Class.forName("p.Type");
++        Constructor<?> ctor = clazz.getConstructor(int.class);
++        ctor.setAccessible(true);
++    }
++
++
++    static void setAccessibleNotPublicMemberApplicationModule() throws Exception {
++        Class<?> clazz = Class.forName("p.Type");
++        Constructor<?> ctor = clazz.getDeclaredConstructor(int.class, int.class);
++        ctor.setAccessible(true);
++    }
++
++
++    // -- privateLookupIn --
++
++    static void privateLookupPublicClassExportedPackage() throws Exception {
++        MethodHandles.privateLookupIn(String.class, MethodHandles.lookup());
++    }
++
++    static void privateLookupNonPublicClassExportedPackage() throws Exception {
++        Class<?> clazz = Class.forName("java.lang.WeakPairMap");
++        MethodHandles.privateLookupIn(clazz, MethodHandles.lookup());
++    }
++
++    static void privateLookupPublicClassNonExportedPackage() throws Exception {
++        Class<?> clazz = Class.forName("sun.security.x509.X500Name");
++        MethodHandles.privateLookupIn(clazz, MethodHandles.lookup());
++    }
++
++    static void privateLookupNonPublicClassNonExportedPackage() throws Exception {
++        Class<?> clazz = Class.forName("sun.nio.ch.SocketChannelImpl");
++        MethodHandles.privateLookupIn(clazz, MethodHandles.lookup());
++    }
++
++    static void privateLookupPublicClassJdk9NonExportedPackage() throws Exception {
++        Class<?> clazz = Class.forName("jdk.internal.misc.Unsafe");
++        MethodHandles.privateLookupIn(clazz, MethodHandles.lookup());
++    }
++
++    static void privateLookupPublicClassApplicationModule() throws Exception {
++        Class<?> clazz = Class.forName("p.Type");
++        MethodHandles.privateLookupIn(clazz, MethodHandles.lookup());
++    }
++
++
++    // -- export/open packages to this unnamed module --
++
++    static void exportNonExportedPackages() throws Exception {
++        Class<?> helper = Class.forName("java.lang.Helper");
++        Method m = helper.getMethod("export", String.class, Module.class);
++        m.invoke(null, "sun.security.x509", TryAccess.class.getModule());
++        m.invoke(null, "sun.nio.ch", TryAccess.class.getModule());
++    }
++
++    static void openExportedPackage() throws Exception {
++        Class<?> helper = Class.forName("java.lang.Helper");
++        Method m = helper.getMethod("open", String.class, Module.class);
++        m.invoke(null, "java.lang", TryAccess.class.getModule());
++    }
++
++    static void openNonExportedPackages() throws Exception {
++        Class<?> helper = Class.forName("java.lang.Helper");
++        Method m = helper.getMethod("open", String.class, Module.class);
++        m.invoke(null, "sun.security.x509", TryAccess.class.getModule());
++        m.invoke(null, "sun.nio.ch", TryAccess.class.getModule());
++    }
++}
+diff --git a/test/jdk/tools/launcher/modules/illegalaccess/modules/m/module-info.java b/test/jdk/tools/launcher/modules/illegalaccess/modules/m/module-info.java
+new file mode 100644
+index 00000000000..90248e83226
+--- /dev/null
++++ b/test/jdk/tools/launcher/modules/illegalaccess/modules/m/module-info.java
+@@ -0,0 +1,26 @@
++/*
++ * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ *
++ * This code is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License version 2 only, as
++ * published by the Free Software Foundation.
++ *
++ * This code is distributed in the hope that it will be useful, but WITHOUT
++ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
++ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++ * version 2 for more details (a copy is included in the LICENSE file that
++ * accompanied this code).
++ *
++ * You should have received a copy of the GNU General Public License version
++ * 2 along with this work; if not, write to the Free Software Foundation,
++ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
++ *
++ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
++ * or visit www.oracle.com if you need additional information or have any
++ * questions.
++ */
++
++module m {
++    exports p;
++}
+diff --git a/test/jdk/tools/launcher/modules/illegalaccess/modules/m/p/Type.java b/test/jdk/tools/launcher/modules/illegalaccess/modules/m/p/Type.java
+new file mode 100644
+index 00000000000..b83e70be94c
+--- /dev/null
++++ b/test/jdk/tools/launcher/modules/illegalaccess/modules/m/p/Type.java
+@@ -0,0 +1,31 @@
++/*
++ * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ *
++ * This code is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License version 2 only, as
++ * published by the Free Software Foundation.
++ *
++ * This code is distributed in the hope that it will be useful, but WITHOUT
++ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
++ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++ * version 2 for more details (a copy is included in the LICENSE file that
++ * accompanied this code).
++ *
++ * You should have received a copy of the GNU General Public License version
++ * 2 along with this work; if not, write to the Free Software Foundation,
++ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
++ *
++ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
++ * or visit www.oracle.com if you need additional information or have any
++ * questions.
++ */
++
++package p;
++
++public class Type {
++
++    private Type(int x, int y) { }
++
++    public Type(int x) { }
++}
+diff --git a/test/jdk/tools/launcher/modules/illegalaccess/patchsrc/java.base/java/lang/Helper.java b/test/jdk/tools/launcher/modules/illegalaccess/patchsrc/java.base/java/lang/Helper.java
+new file mode 100644
+index 00000000000..822a0a80520
+--- /dev/null
++++ b/test/jdk/tools/launcher/modules/illegalaccess/patchsrc/java.base/java/lang/Helper.java
+@@ -0,0 +1,42 @@
++/*
++ * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ *
++ * This code is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License version 2 only, as
++ * published by the Free Software Foundation.
++ *
++ * This code is distributed in the hope that it will be useful, but WITHOUT
++ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
++ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++ * version 2 for more details (a copy is included in the LICENSE file that
++ * accompanied this code).
++ *
++ * You should have received a copy of the GNU General Public License version
++ * 2 along with this work; if not, write to the Free Software Foundation,
++ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
++ *
++ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
++ * or visit www.oracle.com if you need additional information or have any
++ * questions.
++ */
++
++package java.lang;
++
++public class Helper {
++    private Helper() { }
++
++    /**
++     * Exports a package to a module.
++     */
++    public static void export(String pn, Module other) {
++        Helper.class.getModule().addExports(pn, other);
++    }
++
++    /**
++     * Opens a package to a module.
++     */
++    public static void open(String pn, Module other) {
++        Helper.class.getModule().addOpens(pn, other);
++    }
++}
+-- 
+2.34.1
+

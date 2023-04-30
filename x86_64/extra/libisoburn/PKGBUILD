@@ -1,0 +1,29 @@
+pkgname=libisoburn
+pkgver=1.5.4
+pkgrel=2
+arch=('x86_64')
+depends=('libburn' 'libisofs')
+source=(https://dev.lovelyhq.com/libburnia/libisoburn/archive/release-$pkgver.tar.gz
+	efi_size_change.patch)
+
+prepare() {
+	cd $pkgname
+
+	patch -p0 -i ../efi_size_change.patch
+}
+
+build() {
+        cd $pkgname
+	
+	./bootstrap
+	./configure --prefix=/usr         \
+	            --bindir=/bin         \
+	            --sysconfdir=/etc      \
+	            --docdir=/usr/share/doc/nano
+        make
+}
+
+package() {
+	cd $pkgname
+	make DESTDIR=$pkgdir install
+}

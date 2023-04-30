@@ -1,0 +1,18 @@
+pkgname=python3-pip
+pkgver=21.3.1
+pkgrel=2
+arch=('x86_64')
+depends=('python3')
+source=(https://github.com/pypa/pip/archive/$pkgver.tar.gz)
+
+build() {
+        cd pip-$pkgver
+
+	python setup.py build
+}
+
+package() {
+        cd pip-$pkgver
+
+	python setup.py install --prefix=/usr --root="$pkgdir"
+}

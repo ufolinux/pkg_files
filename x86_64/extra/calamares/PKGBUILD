@@ -1,0 +1,37 @@
+pkgname=calamares
+pkgver=3.2.56
+pkgrel=1
+arch=('x86_64')
+depends=('kconfig' 'kcoreaddons' 'kiconthemes' 'ki18n' 'kio' 'solid' 'yaml' 'dracut'
+         'boost' 'qt5' 'polkit-qt' 'plasma-framework' 'yaml-cpp' 'double-conversion'
+         'squashfs-tools' 'libpwquality' 'appstream' 'kpmcore')
+makedepends=('extra-cmake-modules' 'qt5' 'git')
+commitid=1c49648fc5f9264fe4611e5cb17f287f508bfc60 # 3.2.56
+source=($pkgname::"git+https://git.it-kuny.ch/drunk/source-code/calamares.git#commit=$commitid")
+
+prepare() {
+	cd ${srcdir}/calamares
+	sed -i -e 's/"Install configuration files" OFF/"Install configuration files" ON/' CMakeLists.txt
+}
+
+build() {
+	cd calamares
+
+	mkdir -p build
+	cd build
+
+        cmake .. \
+	-D CMAKE_BUILD_TYPE=Release \
+	-D CMAKE_INSTALL_PREFIX=/usr \
+	-D CMAKE_INSTALL_LIBDIR=lib \
+	-D WITH_PYTHONQT:BOOL=ON \
+	-D Boost_NO_BOOST_CMAKE=ON
+
+	make
+}
+
+package() {
+	cd calamares/build
+
+	make DESTDIR="$pkgdir" install
+}

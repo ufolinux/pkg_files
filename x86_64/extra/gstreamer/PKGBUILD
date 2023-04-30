@@ -1,0 +1,38 @@
+pkgname=gstreamer
+pkgver=1.21.2
+pkgrel=1
+arch=('x86_64')
+depends=(
+	# GStreamer
+	glib2 gobject-introspection gtk3+ libunwind libcap
+
+	# Other
+	ffmpeg libxrandr python3-gobject)
+makedepends=(valgrind bash-completion python3 mesa ninja bison)
+source=(https://gstreamer.freedesktop.org/src/gstreamer/gstreamer-1.21.2.tar.xz)
+
+prepare() {
+	cd "${pkgname}-${pkgver}"
+
+	mkdir -p build
+}
+
+build() {
+	cd "${pkgname}-${pkgver}"/build
+
+	meson \
+	--wrap-mode=nofallback \
+	--prefix=/usr \
+	--buildtype=release	\
+	-D package-origin=https://ufolinux.tk/ \
+	-D gst-plugins-bad:package-name="[GStreamer-BAD]: $pkgver - UFO" \
+	-D gst-plugins-bad:package-origin=https://ufolinux.tk/
+
+	ninja
+}
+
+package() {
+	cd "${pkgname}-${pkgver}"/build
+
+	DESTDIR=$pkgdir ninja install
+}

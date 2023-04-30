@@ -1,0 +1,23 @@
+pkgname=libsodium
+pkgver=1.0.18
+pkgrel=1
+arch=('x86_64')
+depends=('glibc')
+source=("https://download.libsodium.org/libsodium/releases/libsodium-$pkgver.tar.gz")
+
+prepare() {
+    #minisign -Vm $pkgname-$pkgver.tar.gz -P $_validminisignkey
+    echo 1
+}
+
+build() {
+    cd "$pkgname-$pkgver"
+
+    ./configure --prefix=/usr
+    make
+}
+
+package() {
+    cd "$pkgname-$pkgver"
+    make DESTDIR="$pkgdir" install
+}

@@ -1,0 +1,22 @@
+pkgname=xerces-c
+pkgver=3.2.3
+pkgrel=1
+arch=(x86_64)
+depends=(curl libnsl)
+source=(https://apache.osuosl.org/xerces/c/3/sources/${pkgname}-${pkgver}.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure \
+	--prefix=/usr \
+	--sysconfdir=/etc
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

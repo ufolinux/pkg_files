@@ -1,0 +1,27 @@
+pkgname=ndctl
+pkgver=72.1
+pkgrel=1
+arch=('x86_64')
+depends=('iniparser' 'json-c' 'keyutils' 'kmod')
+makedepends=('asciidoctor' 'bash-completion' 'systemd' 'xmlto')
+source=(https://github.com/pmem/ndctl/archive/refs/tags/v$pkgver.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	./autogen.sh
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure CFLAGS='-g -O2' --prefix=/usr --sysconfdir=/etc --libdir=/usr/lib
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

@@ -1,0 +1,20 @@
+pkgname=libxklavier
+pkgver=5.4
+pkgrel=1
+arch=('x86_64')
+depends=(glib2 libxkbfile libxml2 xkeyboard-config libxi)
+source=(git+https://anongit.freedesktop.org/git/$pkgname)
+
+build() {
+	cd $pkgname
+	./autogen.sh --prefix=/usr --with-xkb-base=/usr/bin	\
+		--with-xkb-base=/usr/share/X11/xkb
+
+	make
+}
+
+package() {
+	cd $pkgname
+
+	make DESTDIR=$pkgdir install
+}

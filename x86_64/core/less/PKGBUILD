@@ -1,0 +1,22 @@
+pkgname=less
+pkgver=590
+pkgrel=2
+arch=('x86_64')
+depends=(glibc ncurses pcre2)
+source=(http://www.greenwoodsoftware.com/$pkgname/$pkgname-$pkgver.tar.gz)
+
+build() {
+        cd $pkgname-$pkgver
+
+        ./configure		\
+	--prefix=/usr		\
+	--with-regex=pcre2	\
+	--sysconfdir=/etc
+
+        make
+}
+
+package() {
+	cd $pkgname-$pkgver
+        make DESTDIR=$pkgdir install
+}

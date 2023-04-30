@@ -1,0 +1,4 @@
+post_upgrade() {
+    chmod 755 var/log/nginx
+    chown http:log var/log/nginx
+}

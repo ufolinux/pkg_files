@@ -1,0 +1,18 @@
+pkgname=xdo
+pkgver=0.5.7
+pkgrel=1
+arch=('x86_64')
+depends=(libxcb xcb-util xcb-util-wm)
+source=(https://github.com/baskerville/${pkgname}/archive/${pkgver}/${pkgname}-${pkgver}.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	make PREFIX=/usr
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make PREFIX=/usr DESTDIR=$pkgdir install
+}

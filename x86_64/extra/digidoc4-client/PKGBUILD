@@ -1,0 +1,28 @@
+pkgname=digidoc4-client
+rname=DigiDoc4-Client
+pkgver=4.2.12
+pkgrel=1
+arch=(x86_64)
+depends=(qt5 libdigidocpp openldap pcsc-lite opensc double-conversion)
+makedepends=(cmake make)
+
+prepare() {
+	rm -rf $rname
+	git clone --recursive https://github.com/open-eid/DigiDoc4-Client -b v$pkgver
+}
+
+build() {
+	cd $rname
+
+	cmake -B build -G Ninja \
+	-D CMAKE_INSTALL_PREFIX=/usr
+}
+
+package() {
+	cd $rname
+
+	DESTDIR=$pkgdir ninja -C build install
+
+	# FIX: could not find the program 'qdigidocclient' when right click sign doc is used
+	cd $pkgdir/usr/bin && ln -sf qdigidoc4 qdigidocclient
+}

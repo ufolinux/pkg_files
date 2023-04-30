@@ -1,0 +1,20 @@
+pkgname=libdecor
+pkgver=0.1.0
+pkgrel=1
+arch=('x86_64')
+depends=('wayland' 'pango' 'dbus' 'egl-wayland' 'libxkbcommon')
+makedepends=('cmake' 'ninja' 'meson' 'wayland-protocols')
+source=(https://gitlab.gnome.org/jadahl/libdecor/uploads/81adf91d27620e20bcc5f6b9b312d768/${pkgname}-${pkgver}.tar.xz)
+
+build () {
+    rm -rf _build
+
+    meson _build "${pkgname}-${pkgver}" --prefix=/usr
+
+    meson compile -C _build
+}
+
+
+package () {
+    meson install -C _build --destdir "${pkgdir}"
+}

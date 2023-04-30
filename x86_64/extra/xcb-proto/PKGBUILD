@@ -1,0 +1,16 @@
+pkgname=xcb-proto
+pkgver=1.14.1
+pkgrel=1
+arch=('x86_64')
+source=(https://xorg.freedesktop.org/archive/individual/proto/$pkgname-$pkgver.tar.xz)
+
+build() {
+        cd $pkgname-$pkgver
+
+	PYTHON=python3 ./configure --prefix=/usr
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+}

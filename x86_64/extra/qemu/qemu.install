@@ -1,0 +1,11 @@
+post_install() {
+	if systemctl is-enabled -q qemu-ga.service; then
+		systemctl disable qemu-ga.service
+		systemctl enable qemu-guest-agent.service
+	fi
+
+	for _e in /sys/devices/virtual/misc/vhost-net; do
+		[[ -e "$_e" ]] &&  udevadm trigger "$_e"
+	done
+	:
+}

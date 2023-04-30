@@ -1,0 +1,19 @@
+pkgname=ports
+pkgver=1.6
+pkgrel=2
+arch=('x86_64')
+depends=(glibc)
+source=(http://crux.nu/files/tools/ports/$pkgname-$pkgver.tar.gz
+	core.httpup)
+
+build() {
+	cd $pkgname-$pkgver
+	make
+}
+
+package() {
+        cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir MANDIR=/usr/share/man install
+
+	install -m 0644 ../../core.httpup $pkgdir/etc/ports
+}

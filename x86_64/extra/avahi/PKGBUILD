@@ -1,0 +1,38 @@
+pkgname=avahi
+pkgver=v0.8
+pkgrel=1
+arch=(x86_64)
+depends=(libdaemon qt5 dbus expat gdbm glib2 libcap gtk3+ libevent nss gobject-introspection python3-gobject python3-dbus)
+makedepends=(git m4)
+commitid=b6ff6ab134736c0cdcd46f2cc70f21fc9db974c9
+source=(git+https://github.com/Evolinx-Linux/avahi.git#commit=$commitid)
+
+prepare() {
+	cd $pkgname
+
+	./configure \
+	--prefix=/usr \
+	with_dbus_sys=/usr/share/dbus-1/system.d \
+	--with-avahi-priv-access-group=network \
+	--with-autoipd-user=avahi \
+	--with-autoipd-group=avahi \
+	--with-systemdsystemunitdir=/usr/lib/systemd/system \
+	--with-distro=ufo \
+	--disable-mono \
+	--disable-manpages
+}
+
+build() {
+	cd $pkgname
+
+	make -j2
+}
+
+package() {
+	cd $pkgname
+
+	make DESTDIR=$pkgdir install
+
+	echo 'u avahi - "Avahi mDNS/DNS-SD daemon"' |
+		install -Dm644 /dev/stdin "$pkgdir/usr/lib/sysusers.d/$pkgname.conf"
+}

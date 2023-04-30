@@ -1,0 +1,33 @@
+_pkgname=libtiff
+pkgname=lib32-${_pkgname}
+pkgver=4.3.0
+pkgrel=1
+pkgdesc='Library for manipulation of TIFF images (32-bit)'
+url='http://www.simplesystems.org/libtiff/'
+arch=('x86_64')
+depends=('libtiff' 'lib32-libjpeg' 'lib32-zlib' 'lib32-xz' 'lib32-zstd')
+source=(https://download.osgeo.org/libtiff/tiff-${pkgver}.tar.gz)
+
+build() {
+	export CC="gcc -m32"
+	export CXX="g++ -m32"
+	export PKG_CONFIG_PATH="/usr/lib32/pkgconfig"
+
+	cd tiff-${pkgver}
+	./configure \
+	--prefix=/usr \
+	--sysconfdir=/etc \
+	--mandir=/usr/share/man \
+	--with-docdir=/usr/share/doc/${pkgname} \
+	--libdir=/usr/lib32 \
+	--includedir=/usr/include/libtiff32
+
+	make
+}
+
+package() {
+	cd tiff-${pkgver}
+	make DESTDIR="${pkgdir}" install
+
+	rm -rf "${pkgdir}"/usr/{share,bin}
+}

@@ -1,0 +1,47 @@
+pkgname=mercurial
+pkgver=6.2.2
+pkgrel=1
+arch=(x86_64)
+depends=(python3 tk)
+makedepends=(python3-pip)
+source=(https://www.mercurial-scm.org/release/$pkgname-$pkgver.tar.gz
+	mercurial.profile)
+
+prepare() {
+	pip3 install docutils
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	python3 setup.py build
+
+	make -C contrib/chg
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	python setup.py install --root="$pkgdir" --skip-build --optimize=1
+
+	make DESTDIR="${pkgdir}" PREFIX=/usr install
+
+	install -m644 -D contrib/zsh_completion "$pkgdir/usr/share/zsh/site-functions/_hg"
+	install -m644 -D contrib/bash_completion "$pkgdir/usr/share/bash-completion/completions/hg"
+
+	make -C contrib/chg DESTDIR="$pkgdir" PREFIX=/usr install
+	install -m755 contrib/hg-ssh "$pkgdir/usr/bin"
+	install -m755 contrib/hgk "$pkgdir/usr/bin"
+
+	install -d "$pkgdir/usr/share/emacs/site-lisp"
+	install -m644 contrib/{mq.el,mercurial.el} "$pkgdir/usr/share/emacs/site-lisp"
+
+	install -m755 -d "$pkgdir/etc/profile.d"
+	install -m644 "$srcdir/mercurial.profile" "$pkgdir/etc/profile.d/mercurial.sh"
+
+	install -m755 -d "$pkgdir/etc/mercurial"
+	cat <<-EOF > "$pkgdir/etc/mercurial/hgrc"
+		[web]
+		cacerts = /etc/ssl/certs/ca-certificates.crt
+		EOF
+}

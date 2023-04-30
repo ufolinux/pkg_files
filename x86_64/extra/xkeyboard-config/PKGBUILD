@@ -1,0 +1,22 @@
+pkgname=xkeyboard-config
+pkgver=2.33
+pkgrel=1
+arch=('x86_64')
+depends=(fontconfig libxcb)
+source=(https://x.org/pub/individual/data/$pkgname/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure			\
+	--prefix=/usr			\
+	--with-xkb-rules-symlink=xorg
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

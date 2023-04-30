@@ -1,0 +1,123 @@
+pkgname=lib32-systemd
+rname=systemd
+pkgver=250.2
+pkgrel=1
+arch=('x86_64')
+depends=('lib32-libcap' 'lib32-libgcrypt'
+         'lib32-xz' 'lib32-zstd' 'systemd')
+makedepends=('git' 'gperf' 'intltool' 'lib32-acl' 'lib32-bzip2'
+             'lib32-curl' 'lib32-dbus' 'lib32-glib2'
+             'lib32-gnutls' 'lib32-elfutils' 'lib32-libidn2' 'lib32-pcre2'
+             'libxslt' 'meson' 'python3-pip')
+source=("https://github.com/systemd/systemd-stable/archive/refs/tags/v${pkgver}.tar.gz")
+
+prepare() {
+	pip install setuptools
+
+	pip install jinja2
+
+        cd $rname-stable-$pkgver
+        
+        sed -i -e 's/GROUP="render"/GROUP="video"/' \
+        -e 's/GROUP="sgx", //' rules.d/50-udev-default.rules.in
+        
+        sed -i 's/+ want_libfuzzer.*$/and want_libfuzzer/' meson.build
+}
+
+build() {
+	cd $rname-stable-$pkgver        
+        mkdir -p build
+	cd build
+
+	export CC="gcc -m32"
+	export CXX="g++ -m32"
+	export PKG_CONFIG_PATH="/usr/lib32/pkgconfig"
+
+	export PATH=/bin:/sbin:/usr/bin:/usr/sbin:$PATH	
+	LANG=en_US.UTF-8				\
+	meson							\
+	--prefix=/usr						\
+	--libexecdir=/usr/lib32					\
+	--libdir=/usr/lib32					\
+	--sysconfdir=/etc					\
+	--localstatedir=/var					\
+	--buildtype=release					\
+	-D audit=false						\
+	-D blkid=false						\
+	-D gnu-efi=false					\
+	-D ima=false						\
+	-D kmod=false						\
+	-D libcryptsetup=false				\
+	-D libidn2=true						\
+	-D libiptc=false						\
+	-D lz4=false						\
+	-D microhttpd=false					\
+	-D pam=false						\
+	-D seccomp=false					\
+	-D utmp=false						\
+	-D hibernate=false					\
+	-D ldconfig=false					\
+	-D resolve=true						\
+	-D efi=false						\
+	-D tpm=false						\
+	-D environment-d=false				\
+	-D binfmt=false						\
+	-D repart=false						\
+	-D coredump=false					\
+	-D pstore=false						\
+	-D oomd=false						\
+	-D logind=false						\
+	-D hostnamed=false					\
+	-D localed=false					\
+	-D machined=true					\
+	-D portabled=false					\
+	-D sysext=false					\
+	-D userdb=false					\
+	-D homed=false					\
+	-D networkd=false					\
+	-D timedated=false					\
+	-D timesyncd=false					\
+	-D remote=false					\
+	-D create-log-dirs=false				\
+	-D nss-myhostname=true				\
+	-D nss-mymachines=true				\
+	-D nss-resolve=true					\
+	-D nss-systemd=true					\
+	-D firstboot=false					\
+	-D randomseed=false				\
+	-D backlight=false					\
+	-D vconsole=false					\
+	-D quotacheck=false					\
+	-D sysusers=false					\
+	-D tmpfiles=false					\
+	-D importd=false					\
+	-D hwdb=false						\
+	-D rfkill=false						\
+	-D xdg-autostart=false				\
+	-D man=false						\
+	-D html=false						\
+	-D translations=false					\
+	-D rpmmacrosdir=no					\
+	-D install-tests=false					\
+	-D docdir=/usr/share/doc/systemd-249	\
+	-D dbuspolicydir=/usr/share/dbus-1/system.d		\
+	-D sbat-distro='ufo'				\
+	-D sbat-distro-summary='Ufo Linux'	\
+	-D sbat-distro-pkgname="${pkgname}"		\
+	-D sbat-distro-version="${pkgver}"		\
+	-D sbat-distro-url="http://ufolinux.tk"	\
+	..
+
+	ninja
+}
+
+package() {
+	cd $rname-stable-$pkgver/build
+	
+	LANG=en_US.UTF-8 ninja
+	LANG=en_US.UTF-8 DESTDIR=$pkgdir PREFIX=$pkgdir ninja install
+
+	rm -rf "${pkgdir}"/{etc,var}
+	rm -rf "${pkgdir}"/usr/{bin,include,lib,share}
+	rm -rf $pkgdir/{sbin,lib/udev,lib/systemd,lib/modprobe.d,bin}
+}

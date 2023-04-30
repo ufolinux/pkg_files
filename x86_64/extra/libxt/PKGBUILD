@@ -1,0 +1,20 @@
+pkgname=libxt
+pkgver=master
+pkgrel=1
+arch=('x86_64')
+depends=(libxext libx11 xorgproto)
+source=(git+https://gitlab.freedesktop.org/xorg/lib/libxt.git)
+
+build() {
+	cd $pkgname
+
+	NOCONFIGURE=1 ./autogen.sh
+	./configure --prefix=/usr --libdir=/usr/lib
+	make
+}
+
+package() {
+	cd $pkgname
+
+	make DESTDIR=$pkgdir install
+}

@@ -1,0 +1,21 @@
+pkgname=zenity
+pkgver=3.42.0
+pkgrel=1
+arch=(x86_64)
+depends=(webkit2gtk libnotify)
+makedepends=(meson git)
+_commit=383c8c13899f2e6beb5d71c43d7a181d67008c9f  # tags/3.42.0^0
+source=("git+https://gitlab.gnome.org/GNOME/zenity.git#commit=$_commit")
+
+build() {
+	meson zenity build \
+	--prefix=/usr \
+	-D libnotify=true \
+	-D webkitgtk=true
+
+	meson compile -C build
+}
+
+package() {
+	meson install -C build --destdir "$pkgdir"
+}

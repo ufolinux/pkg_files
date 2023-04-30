@@ -1,0 +1,68 @@
+pkgname=tdesktop
+pkgver=3.7.6
+pkgrel=6
+pkgdesc='Official Telegram Desktop client'
+arch=('x86_64')
+url="https://github.com/telegramdesktop/tdesktop"
+commitid=4bde87cda482588c528e91038bea388e3da09f54
+depends=('ffmpeg' 'hicolor-icon-theme' 'lz4' 'minizip' 'openal'
+    'qt6' 'glibmm' 'rnnoise' 'pipewire' 'libxtst' 'libxrandr'
+    'abseil-cpp' 'tg_owt' 'webkit2gtk' 'double-conversion')
+makedepends=('cmake' 'git' 'ninja' 'python3' 'meson'
+    'extra-cmake-modules' 'wayland-protocols' 'plasma-wayland-protocols' 'llvm' 'clang')
+source=("git+https://github.com/telegramdesktop/tdesktop.git"
+	"lib_ui-animations-header-fix.patch"
+	"qt5-wayland-generator.patch"
+	"fix-tgcalls-cstdint.patch")
+
+prepare() {
+    cd $pkgname
+
+    git checkout $commitid
+
+    # Fix .git after our clone and sync/update submodules
+    git remote remove origin
+    git remote add origin $url
+
+    git submodule update --init --recursive
+
+    # Reset all submodules to original changes
+    git submodule foreach --recursive git reset --hard
+
+    # Patches
+    #patch -p0 -i $srcdir/fix-tgcalls-cstdint.patch
+    #patch -p0 -i $srcdir/lib_ui-animations-header-fix.patch
+    #patch -p1 -i $srcdir/qt5-wayland-generator.patch -d Telegram/lib_base
+
+    ##
+    # API ID/HASH is only and only allowed to be used by UfoOS developers
+    # Killing or using our trust for something else will mean hidden api keys in the future!!!
+    ##
+}
+ 
+build() {
+    cd $pkgname
+
+    export CXXFLAGS+=" -Wp,-U_GLIBCXX_ASSERTIONS"
+    cmake \
+    -B build \
+    -G Ninja \
+    -D CMAKE_INSTALL_PREFIX="/usr" \
+    -D CMAKE_MODULE_PATH=/usr/lib/cmake/Qt6WaylandClient \
+    -D DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION:BOOL=ON \
+    -D DESKTOP_APP_USE_PACKAGED:BOOL=ON \
+    -D DESKTOP_APP_USE_PACKAGED_FONTS:BOOL=ON \
+    -D DESKTOP_APP_QT6:BOOL=ON \
+    -D DESKTOP_APP_DISABLE_X11_INTEGRATION:BOOL=ON \
+    -D CMAKE_BUILD_TYPE=Release \
+    -D TDESKTOP_API_ID=12851169 \
+    -D TDESKTOP_API_HASH=bc117a073c479e6d4f19c141cc9ac75f
+
+    ninja -C build
+}
+
+package() {
+    cd $pkgname
+
+    DESTDIR=$pkgdir ninja -C build install
+}

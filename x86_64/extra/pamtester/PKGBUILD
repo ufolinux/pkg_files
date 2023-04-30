@@ -1,0 +1,25 @@
+pkgname=pamtester
+pkgver=0.1.2
+pkgrel=1
+arch=(x86_64)
+depends=(linux-pam)
+source=("http://sourceforge.net/projects/pamtester/files/pamtester/$pkgver/pamtester-$pkgver.tar.gz")
+prepare() {
+	cd "$pkgname-$pkgver"
+
+	autoreconf -fi
+}
+
+build() {
+	cd "$pkgname-$pkgver"
+
+	./configure --prefix=/usr --mandir=/usr/share/man
+
+	make
+}
+
+package() {
+	cd "$pkgname-$pkgver"
+
+	make DESTDIR="$pkgdir" install
+}

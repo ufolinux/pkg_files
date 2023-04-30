@@ -1,0 +1,14 @@
+pkgname=linux-firmware
+pkgver=20221109
+pkgrel=1
+arch=('x86_64')
+source=(https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git/snapshot/linux-firmware-$pkgver.tar.gz)
+
+build() {
+	echo "nothing"
+}
+
+package() {
+        cd $pkgname-$pkgver
+        make DESTDIR=$pkgdir install
+}

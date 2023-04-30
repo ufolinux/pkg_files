@@ -1,0 +1,97 @@
+pkgname=systemd
+pkgver=251
+pkgrel=1
+arch=('x86_64')
+depends=('acl' 'gperf' 'lz4' 'xz' 'linux-pam' 'elfutils'
+	'kmod' 'libcap' 'libidn2' 'libgcrypt'
+	'libxslt' 'util-linux'
+	'shadow' 'gnu-efi'
+	'libxkbcommon'
+	'bash-completion' 'p11-kit'
+	'gnutls')
+makedepends=('meson' 'docbook-xsl' 'git' 'rsync' 'intltool' 'python3-pip')
+source=("https://github.com/systemd/systemd-stable/archive/refs/tags/v${pkgver}.tar.gz"
+	'ufo.conf'
+	'initrd-ufo.conf'
+	'loader.conf'
+	'systemd-user.pam'
+	'systemd-hook'
+	'20-systemd-sysusers.hook'
+	'30-systemd-binfmt.hook'
+	'30-systemd-catalog.hook'
+	'30-systemd-daemon-reload.hook'
+	'30-systemd-hwdb.hook'
+	'30-systemd-sysctl.hook'
+	'30-systemd-tmpfiles.hook'
+	'30-systemd-udev-reload.hook'
+	'30-systemd-update.hook')
+
+backup=(etc/pam.d/systemd-user
+	etc/systemd/coredump.conf
+	etc/systemd/homed.conf
+	etc/systemd/journald.conf
+	etc/systemd/journal-remote.conf
+	etc/systemd/journal-upload.conf
+	etc/systemd/logind.conf
+	etc/systemd/networkd.conf)
+
+prepare() {
+	pip3 install setuptools
+
+	pip3 install jinja2
+
+        cd $pkgname-stable-$pkgver
+        
+        sed -i -e 's/GROUP="render"/GROUP="video"/' \
+        -e 's/GROUP="sgx", //' rules.d/50-udev-default.rules.in
+        
+        sed -i 's/+ want_libfuzzer.*$/and want_libfuzzer/' meson.build
+}
+
+build() {
+	cd $pkgname-stable-$pkgver        
+	mkdir -p build && cd build
+
+	export PATH=/bin:/sbin:/usr/bin:/usr/sbin:$PATH	
+	LANG=en_US.UTF-8 \
+	meson \
+		--prefix=/usr \
+		--sysconfdir=/etc \
+		--localstatedir=/var \
+		--buildtype=release \
+		-D blkid=true \
+		-D mode=release \
+		-D default-hierarchy=unified \
+		-D install-tests=false \
+		-D tests=false \
+		-D dns-servers='1.1.1.1#cloudflare-dns.com 1.0.0.1#cloudflare-dns.com 2606:4700:4700::1111#cloudflare-dns.com 2606:4700:4700::1001#cloudflare-dns.com' \
+		-D docdir=/usr/share/doc/systemd \
+		-D dbuspolicydir=/usr/share/dbus-1/system.d \
+		-D sbat-distro='ufo' \
+		-D sbat-distro-summary='Ufo Linux'\
+		-D sbat-distro-pkgname="${pkgname}" \
+		-D sbat-distro-version="${pkgver}" \
+		-D sbat-distro-url="http://ufolinux.tk" \
+		..
+
+	ninja
+}
+
+package() {
+	# Install bootctl conf file examples
+	install -D -m0644 ufo.conf "$pkgdir"/usr/share/systemd/bootctl/ufo.conf
+	install -D -m0644 ufo.conf "$pkgdir"/usr/share/systemd/bootctl/initrd-ufo.conf
+	install -D -m0644 loader.conf "$pkgdir"/usr/share/systemd/bootctl/loader.conf
+
+	cd $pkgname-stable-$pkgver/build
+	
+	LANG=en_US.UTF-8 ninja
+	LANG=en_US.UTF-8 DESTDIR=$pkgdir PREFIX=$pkgdir ninja install
+
+
+	install -D -m0644 $srcdir/systemd-user.pam $pkgdir/etc/pam.d/systemd-user
+	install -D -m0755 $srcdir/systemd-hook $pkgdir/usr/share/libalpm/scripts/systemd-hook
+	install -D -m0644 -t $pkgdir/usr/share/libalpm/hooks $srcdir/*.hook
+	install -d -o root -g 102 -m 0750 $pkgdir/usr/share/polkit-1/rules.d
+	install -d -o root -g root -m 2755 $pkgdir/var/log/journal
+}

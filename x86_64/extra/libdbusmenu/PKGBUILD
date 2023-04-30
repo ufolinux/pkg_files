@@ -1,0 +1,51 @@
+pkgname=libdbusmenu
+pkgver=16.04.0
+pkgrel=1
+arch=('x86_64')
+makedepends=('gnome-common' 'gobject-introspection' 'gtk2+' 'gtk3+' 'intltool' 'vala' 'valgrind')
+options=('!emptydirs')
+source=(https://launchpad.net/${pkgname}/${pkgver%.?}/${pkgver}/+download/${pkgname}-${pkgver}.tar.gz)
+
+prepare() {
+    cd ${pkgname}-${pkgver}
+    # don't treat warnings as errors
+    sed -i 's/-Werror//' libdbusmenu-*/Makefile.{am,in}
+    cd ..
+
+    cp -ra ${pkgname}-${pkgver}{,-gtk2}
+}
+
+build() {
+    export HAVE_VALGRIND_TRUE='#'
+    export HAVE_VALGRIND_FALSE=''
+
+    msg2 "Building gtk3..."
+    (cd ${srcdir}/${pkgname}-${pkgver}
+        ./configure --prefix=/usr \
+        --sysconfdir=/etc \
+        --localstatedir=/var \
+        --disable-{dumper,tests} \
+        --with-gtk=3
+        make
+  )
+
+    msg2 "Building gtk2..."
+    (cd ${srcdir}/${pkgname}-${pkgver}-gtk2
+        ./configure --prefix=/usr \
+        --sysconfdir=/etc \
+        --localstatedir=/var \
+        --disable-{dumper,tests} \
+        --with-gtk=2
+        make
+  )
+}
+
+package() {
+    cd ${srcdir}/${pkgname}-${pkgver}-gtk2
+    make -j1 -C libdbusmenu-glib DESTDIR="${pkgdir}" install
+    make -j1 -C libdbusmenu-gtk DESTDIR="${pkgdir}" install
+
+    cd ${srcdir}/${pkgname}-${pkgver}
+    make -j1 -C libdbusmenu-glib DESTDIR="${pkgdir}" install
+    make -j1 -C libdbusmenu-gtk DESTDIR="${pkgdir}" install
+}

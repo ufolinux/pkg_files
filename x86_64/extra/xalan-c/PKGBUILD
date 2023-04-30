@@ -1,0 +1,25 @@
+pkgname=xalan-c
+pkgver=1.12
+pkgrel=1
+arch=(x86_64)
+depends=(xerces-c)
+source=(https://downloads.apache.org/xalan/xalan-c/sources/xalan_c-$pkgver.tar.gz)
+
+build() {
+	mkdir -p xalan_c-$pkgver/build
+
+	cd xalan_c-$pkgver/build
+
+	cmake \
+	-D CMAKE_INSTALL_PREFIX=/usr \
+	-D CMAKE_BUILD_TYPE=Release \
+	..
+
+	make
+}
+
+package() {
+	cd xalan_c-$pkgver/build
+
+	make DESTDIR=$pkgdir install
+}

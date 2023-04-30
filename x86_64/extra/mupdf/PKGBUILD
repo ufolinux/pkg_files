@@ -1,0 +1,31 @@
+pkgname=mupdf
+pkgver=1.20.0
+pkgrel=1
+arch=(x86_64)
+depends=('desktop-file-utils' 'freeglut' 'glu' 'freetype2' 'harfbuzz' 'jbig2dec'
+	'libjpeg' 'openjpeg' 'openssl' 'libxext' 'freetype2' 'lcms' 'gumbo-parser')
+makedepends=(make)
+source=(https://mupdf.com/downloads/archive/mupdf-${pkgver}-source.tar.zst
+	mupdf-x11.desktop
+	mupdf.xpm)
+
+prepare() {
+	cd $pkgname-$pkgver-source
+
+	rm -rf thirdparty/{freeglut,freetype,harfbuzz,jbig2dec,libjpeg,openjpeg,zlib}
+}
+
+build() {
+	cd $pkgname-$pkgver-source
+
+	USE_SYSTEM_LIBS='yes' make build=release libs apps 
+}
+
+package() {
+	cd $pkgname-$pkgver-source
+
+	USE_SYSTEM_LIBS='yes' make prefix=$pkgdir build=release install
+
+	install -D -m0644 ../mupdf-x11.desktop "$pkgdir"/usr/share/applications/mupdf-x11.desktop
+	install -D -m0644 ../mupdf.xpm "$pkgdir"/usr/share/pixmaps/mupdf.xpm
+}

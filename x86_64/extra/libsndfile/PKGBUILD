@@ -1,0 +1,21 @@
+pkgname=libsndfile
+pkgver=1.0.31
+pkgrel=1
+arch=('x86_64')
+depends=(alsa-lib sqlite3)
+source=(https://github.com/$pkgname/$pkgname/releases/download/$pkgver/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

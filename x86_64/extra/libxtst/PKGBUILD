@@ -1,0 +1,17 @@
+pkgname=libxtst
+pkgver=1.2.3
+pkgrel=1
+arch=('x86_64')
+makedepends=(libxtrans util-macros xorgproto libxi)
+source=(https://xorg.freedesktop.org/releases/individual/lib/libXtst-$pkgver.tar.bz2)
+
+build() {
+	cd libXtst-$pkgver
+	./configure --prefix=/usr --libdir=/usr/lib --sysconfdir=/etc
+	make
+}
+
+package() {
+	cd libXtst-$pkgver
+	make DESTDIR=$pkgdir install
+}

@@ -1,0 +1,27 @@
+pkgname=pcsc-lite
+pkgver=1.9.8
+pkgrel=1
+arch=(x86_64)
+depends=(python3 systemd)
+makedepends=(make)
+source=(https://pcsclite.apdu.fr/files/$pkgname-${pkgver}.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure \
+	--prefix=/usr \
+	--enable-filter \
+	--enable-ipcdir=/run/pcscd \
+	--enable-libudev \
+	--enable-usbdropdir=/usr/lib/pcsc/drivers \
+	--with-systemdsystemunitdir=/usr/lib/systemd/system
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

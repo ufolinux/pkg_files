@@ -1,0 +1,23 @@
+pkgname=libedit
+pkgver=3.1
+pkgrel=1
+arch=('x86_64')
+source=(https://thrysoee.dk/editline/$pkgname-20210910-$pkgver.tar.gz)
+
+build() {
+	cd $pkgname-20210910-$pkgver
+
+	./configure		\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-20210910-$pkgver
+
+	make DESTDIR=$pkgdir install
+
+	# given already by readline
+	rm $pkgdir/usr/share/man/man3/history.*
+}

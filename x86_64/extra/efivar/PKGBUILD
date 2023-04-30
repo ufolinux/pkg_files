@@ -1,0 +1,17 @@
+pkgname=efivar
+pkgver=37
+pkgrel=1
+arch=('x86_64')
+source=(https://github.com/rhboot/efivar/archive/refs/heads/main.tar.gz)
+
+build() {
+	ls
+	cd $pkgname-main
+        make
+}
+
+package() {
+	cd $pkgname-main
+
+        make libdir=/usr/lib DESTDIR=$pkgdir install
+}

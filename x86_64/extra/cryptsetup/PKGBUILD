@@ -1,0 +1,23 @@
+pkgname=cryptsetup
+pkgver=2.4.3
+pkgrel=1
+arch=('x86_64')
+depends=(popt lvm2 json-c)
+makedepends=(gcc)
+source=(https://www.kernel.org/pub/linux/utils/cryptsetup/v2.4/cryptsetup-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure	\
+	--prefix=/usr	\
+	--disable-ssh-token
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

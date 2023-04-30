@@ -1,0 +1,29 @@
+pkgname=xorgproto
+pkgver=2021.5
+pkgrel=4
+arch=('x86_64')
+makedepends=('util-macros' 'meson')
+source=(https://xorg.freedesktop.org/archive/individual/proto/$pkgname-$pkgver.tar.bz2)
+
+prepare() {
+	cd $pkgname-$pkgver
+	mkdir -p build
+}
+
+build() {
+        cd $pkgname-$pkgver
+	cd build
+	
+	meson --prefix=/usr ..
+	ninja
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+	DESTDIR=$pkgdir ninja install
+
+	rm -f $pkgdir/usr/include/X11/extensions/XKBgeom.h
+	rm -f $pkgdir/usr/include/X11/extensions/apple*
+	rm -f $pkgdir/usr/share/licenses/$pkgname/COPYING-{apple,windows}wmproto
+	rm -f $pkgdir/usr/share/pkgconfig/applewmproto.pc
+}

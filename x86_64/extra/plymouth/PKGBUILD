@@ -1,0 +1,57 @@
+pkgname=plymouth
+pkgver=22.02.122
+pkgrel=1
+arch=('x86_64')
+depends=(libdrm pango systemd ttf-dejavu xf86-video-fbdev cantarell-fonts gtk3+)
+makedepends=(docbook-xml docbook-xsl)
+backup=(etc/plymouth/plymouthd.conf)
+commitid=(bfc3a2dd0fb73ac549c165cb2ff2f1c669888349)
+source=(git+https://git.martinvlba.eu/DrunkOS/plymouth.git#commit=$commitid
+	sddm-plymouth.service
+	lightdm-plymouth.service
+	plymouth-deactivate.service)
+
+prepare() {
+	cd $pkgname
+
+	autoreconf --install --symlink -Wno-portability
+}
+
+build() {
+	cd $pkgname
+
+	LDFLAGS+=" -ludev" \
+	./configure \
+	--prefix=/usr \
+	--sysconfdir=/etc \
+	--localstatedir=/var \
+	--with-runtimedir=/run \
+	--enable-systemd-integration \
+	--enable-drm \
+	--enable-tracking \
+	--enable-pango \
+	--enable-gtk \
+	--with-release-file=/etc/os-release \
+	--without-rhgb-compat-link \
+	--without-system-root-install
+
+	make -j4
+
+}
+
+package() {
+	cd $pkgname
+
+	make DESTDIR=$pkgdir install
+
+	# /var/run -> /run for us and conflicts when installed by pkg
+	mkdir -p $pkgdir/var $pkgdir/run
+	mv -f $pkgdir/var/run/* $pkgdir/run/
+	rm -r $pkgdir/var/run
+
+	# Some services that are from https://aur.archlinux.org/cgit/aur.git/tree/?h=plymouth
+	install -Dm644 $srcdir/sddm-plymouth.service $pkgdir/usr/lib/systemd/system/sddm-plymouth.service
+	install -Dm644 $srcdir/lightdm-plymouth.service $pkgdir/usr/lib/systemd/system/lightdm-plymouth.service
+
+	install -Dm644 $srcdir/plymouth-deactivate.service $pkgdir/usr/lib/systemd/system/plymouth-deactivate.service
+}

@@ -1,0 +1,90 @@
+pkgname=cups
+pkgver=2.4.2
+pkgrel=2
+arch=('x86_64')
+depends=(libtiff cups-filters libpng acl linux-pam xdg-utils gnutls bc colord gzip
+	autoconf libusb dbus hicolor-icon-theme systemd samba avahi)
+makedepends=(git)
+source=(https://github.com/OpenPrinting/cups/releases/download/v$pkgver/cups-$pkgver-source.tar.gz
+		cups.logrotate
+        cups.pam
+        cups.sysusers
+        cups-2.4.0-statedir.patch
+        # bugfixes
+        cups-freebind.patch
+        guid.patch)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	sed -e "s/format-truncation//" \
+		-i configure \
+		config-scripts/cups-compiler.m4
+
+	# Rebuild configure script
+	aclocal -I config-scripts
+	autoconf -I config-scripts
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	export DSOFLAGS=${LDFLAGS}
+
+	./configure \
+	--sysconfdir=/etc \
+	--localstatedir=/var \
+	--libdir=/usr/lib \
+	--sbindir=/usr/sbin \
+	--runstatedir=/run \
+	--with-logdir=/var/log/cups \
+	--with-docdir=/var/share/cups/etc \
+	--with-exe-file-perm=0755 \
+	--enable-dbus \
+	--with-cups-user=209 \
+	--with-cups-group=209 \
+	--enable-pam=yes \
+	--enable-raw-printing
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	mkdir -p $pkgdir/etc/cups/
+	echo "ServerName /run/cups/cups.sock" > $pkgdir/etc/cups/client.conf
+
+	make BUILDROOT=$pkgdir install install-data install-exec install-headers install-libs
+
+	install -m755 "${srcdir}"/"${pkgbase}"-${pkgver}/cups-config "${pkgdir}"/usr/bin/cups-config
+
+	cp -rf $pkgdir/var/run $pkgdir/run
+	rm -rf $pkgdir/var/run
+
+	# fix perms on /var/spool and /etc
+	chmod 755 "${pkgdir}"/var/spool
+	chmod 755 "${pkgdir}"/etc
+
+	# kill the sysv stuff
+	rm -rf "${pkgdir}"/etc/rc*.d "${pkgdir}"/etc/init.d
+	install -D -m644 ../cups.logrotate "${pkgdir}"/etc/logrotate.d/cups
+	install -D -m644 ../cups.pam "${pkgdir}"/etc/pam.d/cups
+
+	# use cups group
+	install -Dm644 "$srcdir"/cups.sysusers "${pkgdir}/usr/lib/sysusers.d/$pkgname.conf"
+	sed -i "s:#User 209:User 209:" "${pkgdir}"/etc/cups/cups-files.conf{,.default}
+	sed -i "s:#Group 209:Group 209:" "${pkgdir}"/etc/cups/cups-files.conf{,.default}
+
+	# install some more configuration files that will get filled by cupsd
+	touch "${pkgdir}"/etc/cups/printers.conf
+	touch "${pkgdir}"/etc/cups/classes.conf
+	touch "${pkgdir}"/etc/cups/subscriptions.conf
+	chgrp -R 209 "${pkgdir}"/etc/cups
+
+	# fix .desktop file
+	sed -i 's|^Exec=htmlview http://localhost:631/|Exec=xdg-open http://localhost:631/|g' "${pkgdir}"/usr/share/applications/cups.desktop
+
+	# install ssl directory where to store the certs, solves some samba issues
+	install -dm700 -g 209 "${pkgdir}"/etc/cups/ssl
+}

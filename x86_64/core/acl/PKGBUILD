@@ -1,0 +1,25 @@
+pkgname=acl
+pkgver=2.3.1
+pkgrel=3
+arch=('x86_64')
+depends=(attr)
+source=(https://download.savannah.gnu.org/releases/$pkgname/$pkgname-$pkgver.tar.gz)
+
+build() {
+        cd $pkgname-$pkgver
+
+	./configure	\
+	--prefix=/usr	\
+	--bindir=/bin	\
+	--libexecdir=/usr/lib
+        make
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+	
+	mkdir -vp $pkgdir/lib
+	mv -v $pkgdir/usr/lib/libacl.so.* $pkgdir/lib/
+	ln -sfv ../../lib/$(readlink $pkgdir/usr/lib/libacl.so) $pkgdir/usr/lib/libacl.so
+}

@@ -1,0 +1,19 @@
+pkgname=pavucontrol
+pkgver=5.0
+pkgrel=2
+arch=('x86_64')
+depends=(gtkmm json-glib libcanberra libsigc++ pulseaudio)
+source=(https://freedesktop.org/software/pulseaudio/$pkgname/$pkgname-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure --prefix=/usr --enable-gtk3
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

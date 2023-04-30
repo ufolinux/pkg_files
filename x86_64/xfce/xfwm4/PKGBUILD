@@ -1,0 +1,27 @@
+pkgname=xfwm4
+pkgver=4.18.0
+xver=4.18
+pkgrel=3
+arch=('x86_64')
+depends=(libwnck libxfce4ui libxinerama xfconf libxcomposite)
+makedepends=(intltool)
+source=(https://archive.xfce.org/src/xfce/$pkgname/$xver/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr		\
+	--enable-randr		\
+	--enable-compositor	\
+	--sysconfdir=/etc	\
+	LIBS=-lX11
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

@@ -1,0 +1,22 @@
+pkgname=xcb-util-keysyms
+pkgver=0.4.0
+pkgrel=1
+arch=('x86_64')
+depends=(libxcb)
+makedepends=(util-macros xorgproto)
+source=(https://xcb.freedesktop.org/dist/${pkgname}-${pkgver}.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

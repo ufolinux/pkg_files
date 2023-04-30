@@ -1,0 +1,26 @@
+pkgname=wireless-tools
+rname=wireless_tools
+pkgver=29
+pkgrel=1
+arch=('x86_64')
+depends=(glibc)
+source=(https://hewlettpackard.github.io/wireless-tools/wireless_tools.$pkgver.tar.gz
+	wireless_tools-29-fix_iwlist_scanning-1.patch)
+
+prepare() {
+	cd $rname.$pkgver
+
+	patch -Np1 -i ../wireless_tools-29-fix_iwlist_scanning-1.patch
+}
+
+build() {
+	cd $rname.$pkgver
+
+	make
+}
+
+package() {
+	cd $rname.$pkgver
+
+	make PREFIX=$pkgdir/usr INSTALL_MAN=$pkgdir/usr/share/man install
+}

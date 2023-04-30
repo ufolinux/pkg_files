@@ -1,0 +1,27 @@
+pkgname=fontforge
+pkgver=20220308
+pkgrel=2
+arch=(x86_64)
+depends=('libtool' 'pango' 'giflib' 'libtiff' 'libxml2' 'python3'
+         'woff2' 'gtk3+' 'libuninameslist' 'libspiro')
+makedepends=('cmake')
+source=(https://github.com/$pkgname/$pkgname/archive/refs/tags/$pkgver.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	cmake -B build \
+	-D CMAKE_BUILD_TYPE=Release \
+	-D CMAKE_INSTALL_PREFIX=/usr \
+	-D ENABLE_MAINTAINER_TOOLS=TRUE \
+	-D ENABLE_FONTFORGE_EXTRAS=TRUE \
+	-D UNIX=TRUE
+
+	make -j4 -C build
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make -C build DESTDIR="${pkgdir}" install
+}

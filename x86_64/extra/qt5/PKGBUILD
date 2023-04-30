@@ -1,0 +1,113 @@
+pkgname=qt5
+pkgver=5.15.8
+pkgrel=1
+arch=('x86_64')
+depends=(xorg-server xwayland alsa-lib cups glib2 harfbuzz icu libjpeg libpng
+	libtiff libwebp libxkbcommon mesa pcre2 sqlite3 wayland xcb-util-image xcb-util-keysyms
+	xcb-util-renderutil xcb-util-wm libinput pciutils pulseaudio bluez libglvnd fontconfig double-conversion)
+makedepends=(extra-cmake-modules perl llvm clang)
+commitid=b17a459f05a5d4b1556db3cf282393334bb8068b
+#commitid=77f657b6d467adde157b1e271279eaba82b9d3c1 # STABLE
+url=https://invent.kde.org/qt/qt/qt5.git
+source=(
+	# Base src
+	git+$url#commit=$commitid
+
+	# Final desktop entries
+	assistant-qt5.desktop
+	designer-qt5.desktop
+	linguist-qt5.desktop
+	qdbusviewer-qt5.desktop)
+
+prepare() {
+	cd qt5
+
+	# Fix git config ( Lets remove un-needed modules for less download size
+	git submodule deinit qtwebengine
+	git rm --cached qtwebengine
+	rm -rf .git/modules/qtwebengine qtwebengine
+
+	echo " "
+	echo "[ GIT FIX ]: Done"
+	echo " "
+
+	# Fix .git after our clone and sync/update submodules
+	git remote remove origin
+	git remote add origin $url
+
+	modules="qt3d qtgamepad qtquickcontrols2 qtsystems qtactiveqt qtgraphicaleffects qtquickcontrols qttools qtandroidextras qtimageformats qtquicktimeline qttranslations qtbase qtlocation qtremoteobjects qtvirtualkeyboard qtcanvas3d qtlottie qtrepotools qtwayland qtcharts qtmacextras qtscript qtwebchannel qtconnectivity qtmultimedia qtscxml qtwebglplugin qtdatavis3d qtnetworkauth qtsensors qtwebsockets qtdeclarative qtpim qtserialbus qtwebview qtdocgallery qtpurchasing qtserialport qtwinextras qtdoc qtqa qtspeech qtx11extras qtfeedback qtquick3d qtsvg qtxmlpatterns"
+	for module in $modules
+	do
+		echo " "
+		echo "[ GIT SUBMODULE ]: Submodule $module is being synced and checked out"
+		git submodule update --force --init $module
+	done
+
+	echo " "
+	echo "[ GIT SUBMODULE ]: Re-checking if everything is checked out ( failsafe )"
+	git submodule update --init --recursive
+
+	# Reset all submodules to original changes
+	git submodule foreach --recursive git reset --hard
+
+	# Lets run configure only in prepare so it wont get reconfigured later on
+	# qtdocgallery is disabled as of its errors when compiled
+	./configure \
+	-platform linux-clang \
+	-prefix /usr \
+	-headerdir /usr/include/qt \
+	-archdatadir /usr/lib/qt \
+	-datadir /usr/share/qt \
+	-sysconfdir /etc/xdg \
+	-confirm-license \
+	-dbus-linked \
+	-openssl-linked	\
+	-system-harfbuzz \
+	-opensource \
+	-system-sqlite \
+	-nomake examples \
+	-nomake tests \
+	-skip qtdocgallery \
+	-no-rpath \
+	-no-strip \
+	-skip qtwebengine \
+	-journald
+}
+
+build() {
+	cd qt5
+
+	make -j6
+}
+
+package() {
+	cd qt5
+
+	mkdir -p $pkgdir/usr
+	make INSTALL_ROOT=$pkgdir install
+
+	# Remove references to the build directory from installed library dependency (prl)
+	find $pkgdir/usr/ -name \*.prl \
+		-exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d' {} \;
+
+	# Install private headers
+	install -d -m755 "$pkgdir"/usr/include/qtxcb-private
+	cp -r qtbase/src/plugins/platforms/xcb/*.h "$pkgdir"/usr/include/qtxcb-private/
+
+	# Install images and create the menu entries for installed applications.
+	install -v -dm755 $pkgdir/usr/share/pixmaps/
+	install -v -Dm644 qttools/src/assistant/assistant/images/assistant-128.png \
+		$pkgdir/usr/share/pixmaps/assistant-qt5.png
+	install -v -Dm644 qttools/src/designer/src/designer/images/designer.png \
+		$pkgdir/usr/share/pixmaps/designer-qt5.png
+	install -v -Dm644 qttools/src/linguist/linguist/images/icons/linguist-128-32.png \
+		$pkgdir/usr/share/pixmaps/linguist-qt5.png
+	install -v -Dm644 qttools/src/qdbus/qdbusviewer/images/qdbusviewer-128.png \
+		$pkgdir/usr/share/pixmaps/qdbusviewer-qt5.png
+	install -dm755 $pkgdir/usr/share/applications
+
+	cp $srcdir/assistant-qt5.desktop $pkgdir/usr/share/applications/
+	cp $srcdir/designer-qt5.desktop $pkgdir/usr/share/applications/
+	cp $srcdir/linguist-qt5.desktop $pkgdir/usr/share/applications/
+	cp $srcdir/qdbusviewer-qt5.desktop $pkgdir/usr/share/applications/
+}

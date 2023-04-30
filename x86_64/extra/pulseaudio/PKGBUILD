@@ -1,0 +1,76 @@
+pkgname=pulseaudio
+pkgver=16.1
+pkgrel=1
+pkgdesc="A featureful, general-purpose sound server"
+arch=('x86_64')
+depends=('libsndfile' 'openssl' 'jack2' 'alsa-lib' 'dbus' 'glib2' 'libcap' 'libx11'
+	'libxcb' 'libice' 'check' 'libsm' 'libxtst' 'webrtc-audio-processing' 'gdbm'
+	'libxfixes' 'libxi' 'gst-plugins-base')
+makedepends=('perl' 'perl-modules' 'python3')
+source=(https://freedesktop.org/software/$pkgname/releases/$pkgname-$pkgver.tar.xz
+	client.conf
+	daemon.conf
+	default.pa
+	system.pa
+	webrtc-1.x.patch)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	# Patch to use latest webrtc
+	#patch -Np1 -i ../webrtc-1.x.patch
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	mkdir -p build && cd build
+
+	meson \
+	--prefix=/usr \
+	--buildtype=release \
+	-D database=gdbm \
+	-D systemd=enabled \
+	-D gsettings=enabled \
+	-D doxygen=true \
+	-D pulsedsp-location='/usr/lib/pulseaudio' \
+	-D stream-restore-clear-old-devices=true \
+	-D udevrulesdir=/usr/lib/udev/rules.d \
+	-D bluez5=disabled \
+	-D elogind=disabled \
+	..
+
+	ninja
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+
+	DESTDIR=$pkgdir ninja install
+
+	# Superseded by socket activation
+	sed -e '/autospawn/iautospawn = no' \
+ -i $pkgdir/etc/pulse/client.conf
+
+	# Disable cork-request module, can result in e.g. media players unpausing
+	# when there's a Skype call incoming
+
+	sed -e 's|/usr/bin/pactl load-module module-x11-cork-request|#&|' \
+ -i $pkgdir/usr/bin/start-pulseaudio-x11
+
+	# Required by qpaeq
+	sed -e '/Load several protocols/aload-module module-dbus-protocol' \
+ -i $pkgdir/etc/pulse/default.pa
+
+	rm -r $pkgdir/etc/dbus-1
+
+	# Replcae out stock configs
+	cp -vf $srcdir/client.conf $pkgdir/etc/pulse/
+	cp -vf $srcdir/daemon.conf $pkgdir/etc/pulse/
+	cp -vf $srcdir/default.pa $pkgdir/etc/pulse/
+	cp -vf $srcdir/system.pa $pkgdir/etc/pulse/
+
+	# Install gsettings rule for kde / plasma-pa
+	mkdir -p $pkgdir/usr/share/glib-2.0/schemas/
+	cp -f ../src/modules/gsettings/org.freedesktop.pulseaudio.gschema.xml $pkgdir/usr/share/glib-2.0/schemas/
+}

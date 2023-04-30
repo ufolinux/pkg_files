@@ -1,0 +1,26 @@
+pkgname=rpcsvc-proto
+pkgver=1.4.3
+pkgrel=1
+arch=(x86_64)
+depends=(glibc)
+source=(https://github.com/thkukuk/rpcsvc-proto/archive/v$pkgver/$pkgname-$pkgver.tar.gz)
+
+prepare() {
+    cd $pkgname-$pkgver
+
+    autoreconf -fi
+}
+
+build() {
+    cd $pkgname-$pkgver
+
+    ./configure --prefix=/usr
+
+    make
+}
+
+package() {
+    cd $pkgname-$pkgver
+
+    make DESTDIR="$pkgdir" install
+}

@@ -1,0 +1,21 @@
+pkgname=fdk-aac
+pkgver=2.0.2
+pkgrel=1
+arch=('x86_64')
+depends=(glibc)
+makedepends=(gcc)
+source=(https://downloads.sourceforge.net/opencore-amr/fdk-aac-$pkgver.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure --prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

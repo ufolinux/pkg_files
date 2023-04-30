@@ -1,0 +1,23 @@
+pkgname=byacc
+pkgver=20220128
+pkgrel=1
+arch=(x86_64)
+depends=(glibc)
+source=(http://ftp.invisible-island.net/archives/$pkgname/$pkgname-$pkgver.tgz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure \
+	--prefix=/usr \
+	--program-transform=s,^,b, \
+	--enable-btyacc
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

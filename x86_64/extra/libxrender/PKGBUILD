@@ -1,0 +1,19 @@
+pkgname=libxrender
+pkgver=0.9.10
+pkgrel=1
+arch=('x86_64')
+depends=('libx11')
+makedepends=('util-macros' 'xorgproto' 'libx11')
+source=(https://xorg.freedesktop.org/releases/individual/lib/libXrender-$pkgver.tar.bz2)
+
+build() {
+	cd libXrender-$pkgver
+
+	./configure --prefix=/usr --sysconfdir=/etc
+}
+
+package() {
+	cd libXrender-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

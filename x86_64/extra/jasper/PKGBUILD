@@ -1,0 +1,25 @@
+pkgname=jasper
+pkgver=3.0.5
+pkgrel=1
+arch=(x86_64)
+depends=(freeglut glibc glu libjpeg)
+makedepends=(libxmu)
+source=(https://github.com/mdadams/jasper/archive/version-${pkgver}.tar.gz)
+
+build() {
+	cd $pkgname-version-$pkgver
+
+	cmake -B builds \
+	-D CMAKE_INSTALL_PREFIX=/usr \
+	-D JAS_ENABLE_OPENGL=ON \
+	-D JAS_ENABLE_LIBJPEG=ON \
+	-D JAS_ENABLE_SHARED=ON
+
+	make -C builds
+}
+
+package() {
+	cd $pkgname-version-$pkgver
+
+	make -C builds DESTDIR=$pkgdir install
+}

@@ -1,0 +1,21 @@
+pkgname=bspwm
+pkgver=0.9.10
+pkgrel=1
+arch=('x86_64')
+depends=(xcb-util xcb-util-keysyms xcb-util-wm sxhkd xdo)
+makedepends=(git)
+source=(git+https://github.com/baskerville/bspwm#commit=2492695ad47c7ae8c630bdf22328334f57e41c1a)
+
+build() {
+	cd $pkgname
+
+	CFLAGS+=" -fcommon"
+
+	make PREFIX=/usr
+}
+
+package() {
+	cd $pkgname
+
+	make PREFIX=/usr DESTDIR=$pkgdir install
+}

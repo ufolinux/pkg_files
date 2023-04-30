@@ -1,0 +1,30 @@
+pkgname=swig
+pkgver=4.0.2
+pkgrel=1
+arch=('x86_64')
+depends=('pcre' 'gcc')
+source=(https://downloads.sourceforge.net/${pkgname}/${pkgname}-${pkgver}.tar.gz
+        jdk17.patch
+        python310.patch)
+
+prepare() {
+	cd ${pkgname}-${pkgver}
+	patch -Np1 -i ../jdk17.patch
+
+	# https://github.com/swig/swig/issues/2044
+	patch -Np1 -i ../python310.patch
+}
+
+build() {
+	cd ${pkgname}-${pkgver}
+
+	./configure --prefix=/usr
+
+	make
+}
+
+package() {
+	cd ${pkgname}-${pkgver}
+
+	make DESTDIR="${pkgdir}" install
+}

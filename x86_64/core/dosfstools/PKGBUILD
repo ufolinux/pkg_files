@@ -1,0 +1,22 @@
+pkgname=dosfstools
+pkgver=4.2
+pkgrel=1
+arch=('x86_64')
+depends=(glibc)
+source=(https://github.com/dosfstools/dosfstools/releases/download/v$pkgver/dosfstools-$pkgver.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure --prefix=/               \
+                    --enable-compat-symlinks \
+                    --mandir=/usr/share/man
+
+        make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+        make DESTDIR=$pkgdir install
+}

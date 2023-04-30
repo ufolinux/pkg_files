@@ -1,0 +1,49 @@
+pkgname=iptables
+pkgver=1.8.8
+pkgrel=1
+arch=(x86_64)
+depends=(libnftnl libpcap libcap libnfnetlink bash)
+backup=(etc/ethertypes etc/iptables/{ip,ip6}tables.rules)
+source=(https://www.netfilter.org/projects/iptables/files/$pkgname-$pkgver.tar.bz2
+        empty.rules simple_firewall.rules empty-{filter,mangle,nat,raw,security}.rules
+        {arp,eb,ip,ip6}tables.service iptables-{legacy,nft}-flush)
+
+prepare() {
+	mkdir -p build
+	cd $pkgname-$pkgver
+
+	# use system one
+	rm include/linux/types.h
+
+	ln -rs libiptc/linux_list.h include/libiptc
+}
+
+build() {
+	cd build
+
+	../$pkgname-$pkgver/configure \
+	--prefix=/usr \
+	--sysconfdir=/etc \
+	--libexecdir=/usr/lib \
+	--enable-bpf-compiler \
+	--enable-libipq \
+	--enable-devel \
+	--enable-shared
+
+	make
+}
+
+package() {
+	DESTDIR="$pkgdir" make -C build install
+
+	install -Dt "$pkgdir/usr/lib/systemd/system" -m644 {ip,ip6}tables.service
+	install -D iptables-legacy-flush "$pkgdir/usr/lib/systemd/scripts/iptables-flush"
+
+	install -Dm644 empty.rules "$pkgdir/etc/iptables/iptables.rules"
+	install -Dm644 empty.rules "$pkgdir/etc/iptables/ip6tables.rules"
+	install -Dt "$pkgdir/usr/share/iptables" -m644 *.rules
+	ln -srt "$pkgdir/etc/iptables" "$pkgdir"/usr/share/iptables/{empty,simple_firewall}.rules
+
+	install -Dt "$pkgdir/usr/lib/systemd/system" -m644 {arp,eb}tables.service
+	touch "$pkgdir"/etc/{arp,eb}tables.conf
+}

@@ -1,0 +1,37 @@
+pkgname=kpmcore
+pkgver=22.04.0
+pkgrel=2
+arch=(x86_64)
+depends=(kcoreaddons kwidgetsaddons ki18n polkit-qt qt5 smartmontools
+	# Required base fs support
+	e2fsprogs
+	dosfstools
+	fatresize
+	exfat-utils
+)
+makedepends=(extra-cmake-modules)
+optdepends=('xfsprogs: XFS support'
+	    'jfsutils: JFS support'
+	    'reiserfsprogs: Reiser support'
+	    'ntfs-3g: NTFS support'
+            'f2fs-tools: F2FS support'
+            'nilfs-utils: nilfs support'
+            'udftools: UDF support')
+source=(https://download.kde.org/stable/release-service/$pkgver/src/$pkgname-$pkgver.tar.xz)
+
+build() {
+	cmake -B build -S $pkgname-$pkgver \
+	-D CMAKE_INSTALL_LIBEXECDIR=lib \
+	-D BUILD_TESTING=OFF
+
+	cmake --build build
+}
+
+package() {
+	DESTDIR="$pkgdir" cmake --install build
+
+	# Hacky way but its how i deal with it for now
+	mkdir -p $pkgdir/usr/lib64 && mkdir -p $pkgdir/usr/lib && touch $pkgdir/usr/lib64/ignore
+	cp -rf $pkgdir/usr/lib64/* $pkgdir/usr/lib/
+	rm -rf $pkgdir/usr/lib64 $pkgdir/usr/lib/ignore
+}

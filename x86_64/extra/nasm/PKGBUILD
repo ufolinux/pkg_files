@@ -1,0 +1,18 @@
+pkgname=nasm
+pkgver=2.15.05
+pkgrel=1
+arch=('x86_64')
+depends=(glibc)
+makedepends=(perl fontconfig)
+source=(https://nasm.us/pub/nasm/releasebuilds/$pkgver/$pkgname-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+	./configure --prefix=/usr
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+	make DESTDIR=$pkgdir install
+}

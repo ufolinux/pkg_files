@@ -1,0 +1,28 @@
+pkgname=libsass
+pkgver=3.6.5
+pkgrel=1
+arch=('x86_64')
+depends=(glibc)
+makedepends=(gcc)
+source=(https://github.com/sass/libsass/archive/$pkgver/libsass-$pkgver.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	autoreconf -i
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure	\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

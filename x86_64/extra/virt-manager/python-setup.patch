@@ -1,0 +1,10 @@
+--- setup.py	2022-02-12 18:13:59.000000000 +0200
++++ setup.py1	2022-07-02 16:33:30.523581000 +0300
+@@ -491,6 +491,7 @@
+     author_email="virt-tools-list@redhat.com",
+     url="http://virt-manager.org",
+     license="GPLv2+",
++    py_modules=[],
+ 
+     # These wrappers are generated in our custom build command
+     scripts=([

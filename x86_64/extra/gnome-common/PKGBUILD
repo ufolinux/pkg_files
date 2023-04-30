@@ -1,0 +1,20 @@
+pkgname=gnome-common
+pkgver=3.18.0
+pkgrel=1
+arch=(x86_64)
+depends=(bash autoconf-archive intltool gtk-doc)
+source=(https://download.gnome.org/sources/$pkgname/${pkgver:0:4}/$pkgname-$pkgver.tar.xz)
+
+build() {
+    cd $pkgname-$pkgver
+
+    ./configure --prefix=/usr --with-autoconf-archive
+
+    make
+}
+
+package() {
+    cd $pkgname-$pkgver
+
+    make DESTDIR="$pkgdir" install
+}

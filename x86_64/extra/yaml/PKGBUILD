@@ -1,0 +1,22 @@
+pkgname=yaml
+pkgver=0.2.5
+pkgrel=1
+arch=('x86_64')
+depends=(glibc)
+makedepends=(doxygen)
+source=(https://github.com/yaml/libyaml/releases/download/$pkgver/yaml-$pkgver.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure	\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

@@ -1,0 +1,10 @@
+post_install() {
+  if [[ -f etc/xml/catalog ]]
+  then
+    /usr/bin/xmlcatalog --create > etc/xml/catalog
+  fi
+}
+
+post_remove() {
+  rm etc/xml/catalog
+}

@@ -1,0 +1,47 @@
+pkgname=sudo
+pkgver=1.9.9
+pkgrel=1
+arch=('x86_64')
+depends=(glibc openssl linux-pam libldap zlib)
+backup=('etc/pam.d/sudo'
+	'etc/sudo.conf'
+	'etc/sudo_logsrvd.conf'
+	'etc/sudoers')
+source=(https://github.com/sudo-project/sudo/archive/refs/tags/SUDO_1_9_8p2.tar.gz
+	sudo_logsrvd.service
+	sudo.pam
+)
+
+build() {
+        cd sudo-SUDO_1_9_9
+
+	./configure --prefix=/usr         \
+	            --bindir=/bin         \
+	            --with-rundir=/run/sudo \
+		    --with-vardir=/var/db/sudo \
+		    --disable-static      \
+		    --with-logfac=auth	  \
+	            --libexecdir=/usr/lib \
+		    --with-secure-path	  \
+		    --with-all-insults	  \
+		    --with-env-editor	  \
+		    --enable-tmpfiles.d   \
+		    --docdir=/usr/share/doc/sudo \
+		    --with-passprompt="[ sudo ]: password for %p: "
+        make
+}
+
+package() {
+	cd sudo-SUDO_1_9_9
+
+	mkdir -p $pkgdir/usr/share/doc/sudo
+	make DESTDIR=$pkgdir install
+
+	install -Dm644 -t $pkgdir/usr/lib/systemd/system ../sudo_logsrvd.service
+	rm $pkgdir/etc/sudoers.dist
+	
+	install -Dm644 "$srcdir/sudo.pam" "$pkgdir/etc/pam.d/sudo"
+
+	rm -rf $pkgdir/run/sudo
+	rm -rf $pkgdir/run
+}

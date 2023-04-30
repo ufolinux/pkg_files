@@ -1,0 +1,30 @@
+pkgname=ldb
+pkgver=2.5.0
+pkgrel=1
+arch=(x86_64)
+depends=(talloc tevent tdb popt lmdb)
+makedepends=(python3 cmocka tevent docbook-xsl)
+source=(https://samba.org/ftp/${pkgname}/${pkgname}-${pkgver}.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	./configure \
+	--prefix=/usr \
+	--bundled-libraries=NONE \
+	--bundled-libraries=replace \
+	--with-modulesdir=/usr/lib/ldb/modules \
+	--with-privatelibdir=/usr/lib/ldb
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	make -j4
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

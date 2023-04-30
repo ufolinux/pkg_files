@@ -1,0 +1,24 @@
+pkgname=libxmlb
+pkgver=0.3.7
+pkgrel=1
+arch=(x86_64)
+depends=(glib2 snowball xz)
+makedepends=(meson gobject-introspection gtk-doc)
+source=(https://people.freedesktop.org/~hughsient/releases/${pkgname}-${pkgver}.tar.xz)
+
+build() {
+	meson \
+	$pkgname-$pkgver \
+    build \
+    --prefix=/usr \
+    -D stemmer=true \
+    -D gtkdoc=false
+
+    ninja -C build
+}
+
+package() {
+	DESTDIR="${pkgdir}" meson install -C build
+
+	rm -rf "${pkgdir}"/usr/{lib,share}/installed-tests/
+}

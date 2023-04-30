@@ -1,0 +1,26 @@
+pkgname=pkcs11-helper
+pkgver=1.28.0
+pkgrel=1
+arch=(x86_64)
+depends=(gnutls nss openssl)
+source=(https://github.com/OpenSC/${pkgname}/releases/download/${pkgname}-${pkgver%.0}/${pkgname}-${pkgver}.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	libtoolize
+	aclocal
+	autoheader
+	automake --add-missing
+	autoreconf -v
+
+	./configure --prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR="$pkgdir" install
+}

@@ -1,0 +1,54 @@
+pkgname=ffmpeg
+pkgver=5.1.2
+pkgrel=1
+arch=('x86_64')
+depends=(fdk-aac freetype2 lame libtheora
+    libvorbis libvpx opus libx264 libx265
+    libass vdpau alsa-lib fribidi gmp gnutls
+    jack2 libdrm libglvnd pulseaudio libva
+    libxext sdl2 opencl-icd-loader)
+makedepends=(nasm yasm clang vulkan-headers opencl-headers)
+source=(https://ffmpeg.org/releases/ffmpeg-$pkgver.tar.xz
+    chromium-av_stream_get_first_dts.patch
+    hwcontext_vulkan.patch)
+
+prepare() {
+    cd $pkgname-$pkgver
+
+    sed -i 's/-lflite"/-lflite -lasound"/' configure
+
+    patch -p0 -i ../chromium-av_stream_get_first_dts.patch
+    patch -p1 -i ../hwcontext_vulkan.patch
+}
+
+build() {
+    cd $pkgname-$pkgver
+
+    ./configure \
+    --prefix=/usr \
+    --enable-gpl \
+    --enable-version3 \
+    --enable-nonfree \
+    --enable-shared \
+    --disable-debug \
+    --enable-libass \
+    --enable-libfdk-aac \
+    --enable-libfreetype \
+    --enable-fontconfig \
+    --enable-libmp3lame \
+    --enable-libopus \
+    --enable-libtheora \
+    --enable-libvorbis \
+    --enable-libvpx \
+    --enable-libx264 \
+    --enable-libx265 \
+    --enable-openssl
+
+    make -j4
+}
+
+package() {
+    cd $pkgname-$pkgver
+
+    make DESTDIR=$pkgdir install
+}

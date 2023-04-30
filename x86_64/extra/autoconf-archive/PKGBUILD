@@ -1,0 +1,27 @@
+pkgname=autoconf-archive
+pkgver=2021.02.19
+pkgrel=1
+pkgdesc="A collection of freely re-usable Autoconf macros"
+arch=('x86_64')
+url="https://www.gnu.org/software/autoconf-archive/"
+depends=('autoconf')
+source=("https://ftpmirror.gnu.org/${pkgname}/${pkgname}-${pkgver}.tar.xz"{,.sig}
+        "revert.patch::https://github.com/autoconf-archive/autoconf-archive/commit/59008cc7f85e1982eb298e1c424c2e6ad5942c4a.patch")
+
+prepare() {
+    cd "${pkgname}-${pkgver}"
+    patch -Np1 < "$srcdir/revert.patch" 
+}
+
+build() {
+    cd ${pkgname}-${pkgver}
+
+    ./configure --prefix=/usr
+    make
+}
+
+package() {
+    cd ${pkgname}-${pkgver}
+
+    make DESTDIR="${pkgdir}" install
+}

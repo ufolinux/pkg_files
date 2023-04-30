@@ -1,0 +1,22 @@
+pkgname=libraw
+pkgver=0.20.2
+pkgrel=1
+arch=(x86_64)
+depends=(jasper lcms)
+makedepends=(make autoconf-archive automake-1.15)
+source=(https://www.libraw.org/data/LibRaw-$pkgver.tar.gz)
+
+build() {
+	cd LibRaw-$pkgver
+
+	./configure \
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd LibRaw-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

@@ -1,0 +1,31 @@
+pkgname=lib32-libtirpc
+pkgver=1.3.2
+pkgrel=1
+arch=('x86_64')
+depends=(libtirpc)
+makedepends=(gcc)
+source=(https://downloads.sourceforge.net/libtirpc/libtirpc-$pkgver.tar.bz2)
+
+build() {
+	cd libtirpc-$pkgver
+
+	export CC="gcc -m32"
+	export PKG_CONFIG_PATH="/usr/lib32/pkgconfig"
+	export CFLAGS="$CFLAGS -Wno-format-truncation"
+
+	./configure		\
+	--prefix=/usr		\
+	--disable-gssapi	\
+	--libdir=/usr/lib32	\
+	--sysconfdir=/etc
+
+	make
+}
+
+package() {
+	cd libtirpc-$pkgver
+
+	make DESTDIR="${pkgdir}" install
+
+	rm -rf "${pkgdir}"/{etc,usr/{include,share}}
+}

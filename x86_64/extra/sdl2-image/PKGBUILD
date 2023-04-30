@@ -1,0 +1,24 @@
+pkgname=sdl2-image
+pkgver=2.0.5
+pkgrel=1
+arch=('x86_64')
+depends=('sdl2' 'libpng' 'libtiff' 'libjpeg' 'libwebp')
+makedepends=('cmake')
+source=("https://www.libsdl.org/projects/SDL_image/release/SDL2_image-${pkgver}.tar.gz")
+
+build() {
+    cd "${srcdir}/SDL2_image-${pkgver}/"
+    ./configure --disable-static --prefix=/usr \
+    --disable-jpg-shared \
+    --disable-png-shared \
+    --disable-tif-shared \
+    --disable-webp-shared
+
+    make
+}
+
+package() {
+    cd "${srcdir}/SDL2_image-${pkgver}/"
+
+    make DESTDIR="${pkgdir}/" install
+}

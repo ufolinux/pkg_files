@@ -1,0 +1,18 @@
+pkgname=at-spi2-atk
+pkgver=2.38.0
+pkgrel=1
+arch=('x86_64')
+depends=(atk at-spi2-core)
+source=(https://download.gnome.org/sources/$pkgname/2.38/$pkgname-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+	mkdir -p build && cd build
+	meson --prefix=/usr --libdir=/usr/lib --buildtype=release ..
+	ninja
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+	DESTDIR=$pkgdir ninja install
+}

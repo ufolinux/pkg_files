@@ -1,0 +1,36 @@
+pkgname=webrtc-audio-processing
+pkgver=1.1
+pkgrel=1
+arch=('x86_64')
+depends=(gcc abseil-cpp)
+makedepends=(git meson)
+commitid=e31340c243f034e26e1e876f3f32fc842f5e5b5b
+source=(https://gitlab.freedesktop.org/pulseaudio/webrtc-audio-processing/-/archive/$commitid/webrtc-audio-processing-$commitid.tar.gz)
+
+# Old one, FAILS
+#source=(http://freedesktop.org/software/pulseaudio/webrtc-audio-processing/webrtc-audio-processing-$pkgver.tar.gz)
+
+prepare() {
+	cd $pkgname-$commitid
+
+	mkdir -p build
+
+#	sed -i 's!absl_flags_registry!absl_flags_reflection!g' meson.build
+}
+
+build() {
+	cd $pkgname-$commitid
+
+	meson \
+	--prefix=/usr \
+	-D cpp_std=c++17 \
+	build
+
+	ninja -C build
+}
+
+package() {
+	cd $pkgname-$commitid
+
+	DESTDIR=$pkgdir ninja -C build install
+}

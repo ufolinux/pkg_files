@@ -1,0 +1,19 @@
+pkgname=open-vm-tools
+pkgver=11.3.5
+pkgrel=1
+arch=('x86_64')
+source=(https://github.com/vmware/open-vm-tools/releases/download/stable-$pkgver/open-vm-tools-$pkgver-18557794.tar.gz)
+
+build() {
+	ls
+        cd $pkgname-$pkgver-18557794
+
+	autoreconf -i
+	./configure
+        make
+}
+
+package() {
+	cd $pkgname-$pkgver-18557794
+	make DESTDIR=$pkgdir install
+}

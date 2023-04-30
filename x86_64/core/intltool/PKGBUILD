@@ -1,0 +1,21 @@
+pkgname=intltool
+pkgver=0.51.0
+pkgrel=2
+arch=('x86_64')
+depends=(glibc)
+source=(http://launchpad.net/intltool/trunk/$pkgver/+download/$pkgname-$pkgver.tar.gz)
+
+build() {
+        cd $pkgname-$pkgver
+
+        sed -i 's:\\\${:\\\$\\{:' intltool-update.in
+
+        ./configure --prefix=/usr
+        make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+        make DESTDIR=$pkgdir install
+}

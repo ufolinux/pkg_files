@@ -1,0 +1,18 @@
+pkgname=yarn
+pkgver=1.22.17
+pkgrel=1
+arch=(x86_64)
+depends=(nodejs)
+source=(https://github.com/yarnpkg/yarn/releases/download/v$pkgver/yarn-v$pkgver.tar.gz)
+
+package() {
+	cd yarn-v${pkgver}
+
+	install -dm755  "$pkgdir"/usr/lib/node_modules/yarn
+	cp -R * "$pkgdir"/usr/lib/node_modules/yarn
+
+	install -dm755 "$pkgdir"/usr/bin
+
+	ln -s /usr/lib/node_modules/yarn/bin/yarn.js "$pkgdir"/usr/bin/yarn
+	ln -s /usr/lib/node_modules/yarn/bin/yarn.js "$pkgdir"/usr/bin/yarnpkg
+}

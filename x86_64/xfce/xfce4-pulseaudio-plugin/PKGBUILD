@@ -1,0 +1,22 @@
+pkgname=xfce4-pulseaudio-plugin
+pkgver=0.4.5
+xver=0.4
+pkgrel=3
+arch=('x86_64')
+depends=(dbus-glib libnotify pulseaudio xfce4-panel keybinder pavucontrol)
+source=(https://archive.xfce.org/src/panel-plugins/$pkgname/$xver/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr
+exit
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

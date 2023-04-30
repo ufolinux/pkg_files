@@ -1,0 +1,25 @@
+pkgname=libffi
+pkgver=3.4.3
+pkgrel=1
+arch=('x86_64')
+depends=(glibc)
+source=(ftp://sourceware.org/pub/$pkgname/$pkgname-$pkgver.tar.gz)
+
+build() {
+        cd $pkgname-$pkgver
+
+        sed -e '/^includesdir/ s/$(libdir).*$/$(includedir)/' \
+            -i include/Makefile.in
+
+        sed -e '/^includedir/ s/=.*$/=@includedir@/' \
+            -e 's/^Cflags: -I${includedir}/Cflags:/' \
+            -i libffi.pc.in
+
+        ./configure --prefix=/usr --disable-static --with-gcc-arch=x86-64
+        make
+}
+
+package() {
+	cd $pkgname-$pkgver
+        make DESTDIR=$pkgdir install
+}

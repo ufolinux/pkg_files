@@ -1,0 +1,29 @@
+pkgname=jbig2dec
+pkgver=0.19
+gs_ver=gs9533
+pkgrel=1
+arch=(x86_64)
+depends=(libpng)
+makedepends=(make)
+source=(https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/$gs_ver/${pkgname}-${pkgver}.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	autoreconf -fi
+
+	./configure \
+	--prefix=/usr
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

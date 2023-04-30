@@ -1,0 +1,38 @@
+pkgname=docbook-xsl
+pkgver=1.79.2
+pkgrel=10
+arch=(x86_64)
+install=docbook-xsl.install
+depends=(libxml2 libxslt docbook-xml)
+source=(https://github.com/docbook/xslt10-stylesheets/releases/download/release%2F$pkgver/docbook-xsl{,-nons}-$pkgver.tar.gz
+        765567_non-recursive_string_subst.patch)
+
+prepare() {
+  cd $pkgname-$pkgver
+  patch -Np2 -i ../765567_non-recursive_string_subst.patch
+
+  cd ../$pkgname-nons-$pkgver
+  patch -Np2 -i ../765567_non-recursive_string_subst.patch
+}
+
+package() {
+  local pkgroot ns dir
+  for ns in -nons ''; do
+    pkgroot="$pkgdir/usr/share/xml/docbook/xsl-stylesheets-$pkgver$ns"
+    dir=$pkgname$ns-$pkgver
+
+    install -Dt "$pkgroot" -m644 $dir/VERSION{,.xsl}
+
+    (
+      shopt -s nullglob  # ignore missing files
+      for fn in assembly common eclipse epub epub3 fo highlighting html \
+        htmlhelp javahelp lib manpages params profiling roundtrip template \
+        website xhtml xhtml-1_1 xhtml5
+      do
+        install -Dt "$pkgroot/$fn" -m644 $dir/$fn/*.{xml,xsl,dtd,ent}
+      done
+    )
+  done
+
+  install -d "$pkgdir/etc/xml"
+}

@@ -1,0 +1,39 @@
+pkgname=base-system
+pkgver=2023.1
+pkgrel=1
+pkgdesc="Base metapckage alike pkg to give user/dev needed bootable CLI-System"
+arch=('x86_64')
+source=(os-release neofetch)
+depends=(
+	# Base packages
+	accountsservice ca-certificates diffutils file gnu-efi kmod libnl linux-pam pciutils procps-ng tar xz
+	acl dosfstools filesystem gzip less libseccomp lz4 pcre readline texinfo zlib
+	attr coreutils dracut freetype2 iana-etc libarchive libtasn1 lzo pcre2 sed tzdata
+	cpio duktape fuse2 icu libcap libtool ncurses shadow util-linux
+	bash curl e2fsprogs gawk inetutils libevent libx11 openssl pkgconf squashfs-tools wget
+	binutils dbus gettext intltool libffi libxcrypt p11-kit polkit syslinux which
+	bzip2 dhcpcd expat glib2 iproute2 libgudev libxml2 popt systemd wpa_supplicant
+	findutils nghttp2
+
+	# Needed to boot base-ufo
+	linux linux-firmware
+
+	# pkg manager
+	bottle)
+
+build() {
+	mkdir -p $pkgname-$pkgver
+	cd $pkgname-$pkgver
+}
+
+package() {
+	cd $pkgname-$pkgver
+	
+	# Make rootfs structure
+	mkdir -vp $pkgdir/etc/systemd/system/
+	mkdir -vp $pkgdir/usr/bin
+
+	# Copy over needed files
+	cp -f ../../os-release $pkgdir/etc
+	cp -f ../../neofetch $pkgdir/usr/bin && chmod +x $pkgdir/usr/bin/neofetch
+}

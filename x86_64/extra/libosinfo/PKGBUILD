@@ -1,0 +1,24 @@
+pkgname=libosinfo
+pkgver=1.10.0
+pkgrel=1
+arch=(x86_64)
+depends=(glib2 libsoup libxslt)
+makedepends=(check gobject-introspection gtk-doc meson vala)
+source=(https://releases.pagure.org/libosinfo/$pkgname-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	meson build \
+	--prefix=/usr \
+	-D with-usb-ids-path=/usr/share/hwdata/usb.ids \
+	-D with-pci-ids-path=/usr/share/hwdata/pci.ids
+
+	ninja -C build
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	DESTDIR=$pkgdir ninja -C build install
+}

@@ -1,0 +1,36 @@
+pkgname=libseccomp
+pkgver=2.5.3
+pkgrel=1
+arch=('x86_64')
+depends=(glibc)
+makedepends=(valgrind gperf python3-pip)
+source=(https://github.com/seccomp/${pkgname}/releases/download/v${pkgver}/${pkgname}-${pkgver}.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	pip install setuptools Cython
+
+	autoreconf -fi
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure	\
+	--prefix=/usr
+
+	make
+
+	cd src/python
+	env VERSION_RELEASE=$pkgver python setup.py build
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR="${pkgdir}" install
+
+	cd src/python
+	env VERSION_RELEASE=${pkgver} python setup.py install --root="${pkgdir}" --prefix=/usr -O1 --skip-build
+}

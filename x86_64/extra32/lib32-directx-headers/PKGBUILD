@@ -1,0 +1,30 @@
+pkgname=lib32-directx-headers
+pkgdesc="DirectX headers for using D3D12"
+pkgver=1.608.0
+pkgrel=1
+arch=('x86_64')
+makedepends=('meson')
+source=(https://github.com/microsoft/DirectX-Headers/archive/refs/tags/v$pkgver.tar.gz)
+
+build() {
+	# LTO breaks mesa...
+	export CXXFLAGS="$CXXFLAGS -fno-lto"
+
+	export CC="gcc -m32"
+	export CXX="g++ -m32"
+	export PKG_CONFIG="i686-pc-linux-gnu-pkg-config"
+
+	meson \
+	--prefix=/usr \
+	--libdir=/usr/lib32 \
+	DirectX-Headers-$pkgver build \
+	-Dbuild-test=false
+
+	ninja -C build
+}
+
+package() {
+	DESTDIR="$pkgdir" meson install -C build
+
+	rm -rf "${pkgdir}"/usr/{include,share,bin}
+}

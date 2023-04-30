@@ -1,0 +1,64 @@
+pkgname=fontconfig
+pkgver=2.14.0
+pkgrel=2
+arch=('x86_64')
+depends=(glibc libpng expat zstd bzip2 readline freetype2)
+source=(https://freedesktop.org/software/$pkgname/release/$pkgname-$pkgver.tar.gz
+	40-fontconfig-config.script
+	40-fontconfig-config.hook
+	fontconfig.hook)
+backup=(etc/fonts/fonts.conf)
+install=fontconfig.install
+
+prepare() {
+	mkdir -p $pkgname-$pkgver/build
+
+	cd $pkgname-$pkgver
+	autoreconf -fvi
+}
+
+build() {
+	cd $pkgname-$pkgver/build
+
+	# NOTICE: Using other methods than configure will not produce .la files that some source code's need to be compiled ( VLC as a example that searches for libfontconfig.la )
+
+	#meson \
+	#--prefix=/usr \
+	#--sysconfdir=/etc \
+	#--localstatedir=/var \
+	#-D doc-txt=disabled \
+	#-D doc-pdf=disabled \
+	#-D doc-html=disabled \
+	#..
+	
+	#ninja
+
+	./../configure \
+	--prefix=/usr \
+	--sysconfdir=/etc
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+
+	export FONTCONFIG_PATH=/etc/fonts
+	#DESTDIR=$pkgdir ninja install
+	make DESTDIR=$pkgdir install
+
+	mkdir -p $pkgdir/etc/fonts/conf.d/
+
+	cd $srcdir
+
+	# Handle conf.d using the hook to avoid overwriting the symlinks on upgrade
+	mkdir -p "$pkgdir/usr/share/fontconfig/conf.default"
+	for _f in "$pkgdir"/etc/fonts/conf.d/*.conf; do
+		ln -sfr "$pkgdir"/usr/share/fontconfig/conf.{avail,default}/"${_f##*/}"
+		rm -f "$_f"
+	done
+
+	install -Dt "$pkgdir/usr/share/libalpm/hooks" -m644 *.hook
+	install -D 40-fontconfig-config.script \
+	"$pkgdir/usr/share/libalpm/scripts/40-fontconfig-config"
+}

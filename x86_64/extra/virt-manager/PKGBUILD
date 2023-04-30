@@ -1,0 +1,31 @@
+pkgname=virt-manager
+pkgver=4.0.0
+pkgrel=1
+arch=(x86_64)
+depends=(python3-cairo vte libvirt-glib python3-libvirt cpio
+	libisoburn libosinfo spice-gtk python3-requests)
+makedepends=(python3-pip)
+source=(https://virt-manager.org/download/sources/virt-manager/virt-manager-${pkgver}.tar.gz
+	python-setup.patch)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	patch -p0 -i ../python-setup.patch
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	python3 setup.py configure --default-hvs qemu
+
+	python3 setup.py build
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	python setup.py --no-update-icon-cache --no-compile-schemas install --root $pkgdir
+	python -m compileall $pkgdir/usr/share/virt-manager
+	python -O -m compileall $pkgdir/usr/share/virt-manager
+}

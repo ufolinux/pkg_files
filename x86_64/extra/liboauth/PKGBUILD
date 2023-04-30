@@ -1,0 +1,29 @@
+pkgname=liboauth
+pkgver=1.0.3
+pkgrel=1
+arch=('x86_64')
+depends=(curl nss)
+makedepends=(doxygen)
+source=(https://downloads.sourceforge.net/liboauth/liboauth-$pkgver.tar.gz
+	https://www.linuxfromscratch.org/patches/blfs/svn/liboauth-$pkgver-openssl-1.1.0-3.patch)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	patch -Np1 -i ../liboauth-1.0.3-openssl-1.1.0-3.patch
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure	\
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

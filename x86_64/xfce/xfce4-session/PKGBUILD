@@ -1,0 +1,24 @@
+pkgname=xfce4-session
+pkgver=4.18.0
+xver=4.18
+pkgrel=3
+arch=('x86_64')
+depends=(libwnck libxfce4ui xfdesktop iceauth libsm xinit xfwm4 xorg-server libice)
+source=(https://archive.xfce.org/src/xfce/$pkgname/$xver/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr		\
+	--sysconfdir=/etc LIBS=-lX11
+
+	export IN=/usr/include
+	make CFLAGS="-I$IN/gtk-3.0/ -I$IN/pango-1.0/ -I$IN/harfbuzz/ -I$IN/cairo/ -I$IN/gdk-pixbuf-2.0/ -I$IN/xfce4/libxfce4ui-2/ -I$IN/atk-1.0/ -I$IN/gio-unix-2.0/ -I$IN/xfce4/ -I$IN/libwnck-3.0/"
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

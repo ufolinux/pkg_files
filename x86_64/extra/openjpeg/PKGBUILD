@@ -1,0 +1,31 @@
+pkgname=openjpeg
+pkgver=2.5.0
+pkgrel=1
+arch=('x86_64')
+depends=(glibc lcms libpng libtiff)
+makedepends=(cmake doxygen)
+source=(https://github.com/uclouvain/openjpeg/archive/v$pkgver/openjpeg-$pkgver.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	mkdir -p build
+}
+
+build() {
+	cd $pkgname-$pkgver/build
+
+	cmake				\
+	-D CMAKE_BUILD_TYPE=Release	\
+	-D CMAKE_INSTALL_PREFIX=/usr	\
+	-D BUILD_STATIC_LIBS=ON	\
+	..
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+
+	make DESTDIR=$pkgdir install
+}

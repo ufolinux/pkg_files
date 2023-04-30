@@ -1,0 +1,31 @@
+_pkgbasename=libxdmcp
+pkgname=lib32-$_pkgbasename
+pkgver=1.1.3
+pkgrel=2
+pkgdesc="X11 Display Manager Control Protocol library (32-bit)"
+arch=(x86_64)
+url="https://xorg.freedesktop.org/"
+license=('custom')
+depends=($_pkgbasename)
+makedepends=('util-macros')
+source=(${url}/releases/individual/lib/libXdmcp-${pkgver}.tar.bz2)
+
+build() {
+  cd libXdmcp-${pkgver}
+
+        export CC="gcc -m32"
+        export CXX="g++ -m32"
+        export PKG_CONFIG="i686-pc-linux-gnu-pkg-config"
+
+  ./configure --prefix=/usr --sysconfdir=/etc --disable-static \
+              --libdir=/usr/lib32
+  make
+}
+
+package() {
+  cd libXdmcp-${pkgver}
+
+  make DESTDIR="${pkgdir}" install
+
+  rm -rf "${pkgdir}"/usr/{include,share}
+}

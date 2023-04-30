@@ -1,0 +1,29 @@
+pkgname=lib32-dconf
+pkgver=0.40.0
+pkgrel=1
+arch=(x86_64)
+depends=(
+    dconf lib32-glib2
+)
+makedepends=(
+    bash-completion docbook-xsl git intltool meson python3 vala
+)
+ltag=4c0a26052efafae923eba42d14c5cb88da745de2
+source=(git+https://gitlab.gnome.org/GNOME/dconf.git#tag=${ltag})
+
+build() {
+    export CC='gcc -m32'
+    export PKG_CONFIG_PATH=/usr/lib32/pkgconfig
+
+    meson dconf build \
+    --prefix=/usr \
+    --libdir=/usr/lib32
+
+    ninja -C build
+}
+
+package() {
+    DESTDIR="${pkgdir}" ninja -C build install
+
+    rm -rf "${pkgdir}"/usr/{bin,include,lib,share,libexec/dconf-service}
+}

@@ -1,0 +1,28 @@
+pkgname=libgphoto2
+pkgver=2.5.29
+pkgrel=1
+arch=(x86_64)
+depends=(libexif libjpeg libusb libxml2 curl)
+makedepends=(autoconf-archive git)
+commitid=1691f4705cc08b08c7569ae3e83001ba8c3f28c2 # libgphoto2-2_5_29-release
+source=("git+https://github.com/gphoto/libgphoto2#commit=$commitid")
+
+prepare() {
+	cd $pkgname
+
+	autoreconf -fvi
+}
+
+build() {
+	cd $pkgname
+
+	./configure --prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname
+
+	make DESTDIR="$pkgdir" install
+}

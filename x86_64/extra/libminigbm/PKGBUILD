@@ -1,0 +1,22 @@
+pkgname=libminigbm-git
+pkgver=r305.ee98f4ec
+pkgrel=1
+pkgdesc="Generic Buffer Management (GBM) implementation used in Chromium OS"
+arch=(x86_64)
+url="https://chromium.googlesource.com/chromiumos/platform/minigbm/"
+makedepends=(clang)
+source=("git+https://chromium.googlesource.com/chromiumos/platform/minigbm")
+
+build() {
+    cd minigbm
+    make CC=clang
+}
+
+package() {
+    cd minigbm
+    make DESTDIR="${pkgdir}" install
+
+    rm -rf $pkgdir/usr/{/include/gbm.h,/lib/libgbm.so*,/lib/libminizip*,/lib/pkgconfig/gbm.pc}
+
+    ln -sf libminigbm.so.1.0.0 $pkgdir/usr/lib/libminigbm.so
+}

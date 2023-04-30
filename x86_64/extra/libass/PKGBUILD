@@ -1,0 +1,21 @@
+pkgname=libass
+pkgver=0.15.2
+pkgrel=1
+arch=('x86_64')
+depends=(freetype2 fribidi fontconfig harfbuzz)
+makedepends=(nasm)
+source=(https://github.com/libass/libass/releases/download/$pkgver/libass-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure --prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

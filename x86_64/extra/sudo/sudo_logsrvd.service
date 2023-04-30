@@ -1,0 +1,11 @@
+[Unit]
+Description=Suod central log server
+After=syslog.target network.target auditd.service
+
+[Service]
+ExecStart=/usr/sbin/sudo_logsrvd -n
+KillMode=process
+Type=exec
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,19 @@
+pkgname=libtool
+pkgver=2.4.6
+pkgrel=2
+arch=('x86_64')
+depends=(glibc bash tar)
+source=(https://ftp.gnu.org/gnu/$pkgname/$pkgname-$pkgver.tar.xz)
+
+build() {
+        cd $pkgname-$pkgver
+
+        ./configure --prefix=/usr
+        make
+}
+
+package() {
+        cd $pkgname-$pkgver
+
+        make DESTDIR=$pkgdir install
+}

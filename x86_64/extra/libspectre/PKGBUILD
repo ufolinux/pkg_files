@@ -1,0 +1,22 @@
+pkgname=libspectre
+pkgver=0.2.10
+pkgrel=1
+arch=(x86_64)
+depends=(ghostscript)
+makedepends=(make)
+source=(https://libspectre.freedesktop.org/releases/$pkgname-$pkgver.tar.gz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure \
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

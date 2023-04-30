@@ -1,0 +1,44 @@
+pkgname=libappindicator
+pkgver=12.10.0
+rev_ver=12.10
+pkgrel=1
+arch=(x86_64)
+depends=(dbus-glib gnome-common gobject-introspection libdbusmenu libindicator)
+source=(https://launchpad.net/${pkgname}/$rev_ver/${pkgver}/+download/${pkgname}-${pkgver}.tar.gz
+	no-python.patch)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	patch -Np1 -i ../no-python.patch
+	sed -i 's/-Werror//' src/Makefile.am
+	autoreconf -fvi
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	mkdir -p build2 build3
+	# GTK2
+	cd build2
+	./../configure \
+	--prefix=/usr \
+	--localstatedir=/var \
+	--sysconfdir=/etc \
+	--with-gtk=2
+
+	# GTK3
+	cd ../build3
+	./../configure \
+	--prefix=/usr \
+	--localstatedir=/var \
+	--sysconfdir=/etc \
+	--with-gtk=3
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+#	make -C build2 DESTDIR=$pkgdir install
+	make -C build3 DESTDIR=$pkgdir install
+}

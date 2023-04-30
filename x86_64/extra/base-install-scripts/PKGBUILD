@@ -1,0 +1,20 @@
+pkgname=base-install-scripts
+pkgver=2023.1
+pkgrel=1
+arch=('x86_64')
+depends=(bash coreutils grep bottle util-linux)
+makedepends=(asciidoc)
+commitid=a716cc810f88984bfe5808ac0d1a98d4378c5080
+source=($pkgname.tar.gz::https://git.martinvlba.eu/DrunkOS/$pkgname/archive/$commitid.tar.gz)
+
+build() {
+        cd $pkgname
+
+        make
+}
+
+package() {
+	cd $pkgname
+
+	make DESTDIR=$pkgdir install
+}

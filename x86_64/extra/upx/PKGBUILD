@@ -1,0 +1,30 @@
+pkgname=upx
+pkgver=3.96
+pkgrel=1
+arch=(x86_64)
+depends=(ucl)
+makedepends=(git perl)
+source=("git+https://github.com/upx/upx#commit=d7ba31cab8ce8d95d2c10e88d2ec787ac52005ef") # v3.96
+
+prepare() {
+	cd $pkgname
+	git submodule update --init --recursive
+
+	# Disable a warning. upx believes this is not a release version if the git revision is set.
+	sed -i 's/bool warn = true/bool warn = false/' src/main.cpp
+
+	find . -type f -exec sed -i 's+-Werror++g' {} +
+}
+
+build() {
+	make -C $pkgname \
+	CHECK_WHITESPACE=/bin/true \
+	UPX_LZMADIR="$srcdir" \
+	all
+}
+
+package() {
+	cd $pkgname
+
+	install -Dm755 src/upx.out "$pkgdir/usr/bin/upx"
+}

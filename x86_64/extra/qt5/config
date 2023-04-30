@@ -1,0 +1,152 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+[submodule "qt3d"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qt3d.git
+[submodule "qtactiveqt"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtactiveqt.git
+[submodule "qtandroidextras"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtandroidextras.git
+[submodule "qtbase"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtbase.git
+[submodule "qtcanvas3d"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtcanvas3d.git
+[submodule "qtcharts"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtcharts.git
+[submodule "qtconnectivity"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtconnectivity.git
+[submodule "qtdatavis3d"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtdatavis3d.git
+[submodule "qtdeclarative"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtdeclarative.git
+[submodule "qtdoc"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtdoc.git
+[submodule "qtdocgallery"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtdocgallery.git
+[submodule "qtfeedback"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtfeedback.git
+[submodule "qtgamepad"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtgamepad.git
+[submodule "qtgraphicaleffects"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtgraphicaleffects.git
+[submodule "qtimageformats"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtimageformats.git
+[submodule "qtlocation"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtlocation.git
+[submodule "qtlottie"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtlottie.git
+[submodule "qtmacextras"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtmacextras.git
+[submodule "qtmultimedia"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtmultimedia.git
+[submodule "qtnetworkauth"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtnetworkauth.git
+[submodule "qtpim"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtpim.git
+[submodule "qtpurchasing"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtpurchasing.git
+[submodule "qtqa"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtqa.git
+[submodule "qtquick3d"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtquick3d.git
+[submodule "qtquickcontrols"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtquickcontrols.git
+[submodule "qtquickcontrols2"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtquickcontrols2.git
+[submodule "qtquicktimeline"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtquicktimeline
+[submodule "qtremoteobjects"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtremoteobjects.git
+[submodule "qtrepotools"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtrepotools.git
+[submodule "qtscript"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtscript.git
+[submodule "qtscxml"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtscxml.git
+[submodule "qtsensors"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtsensors.git
+[submodule "qtserialbus"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtserialbus.git
+[submodule "qtserialport"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtserialport.git
+[submodule "qtspeech"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtspeech.git
+[submodule "qtsvg"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtsvg.git
+[submodule "qtsystems"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtsystems.git
+[submodule "qttools"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qttools.git
+[submodule "qttranslations"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qttranslations.git
+[submodule "qtvirtualkeyboard"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtvirtualkeyboard.git
+[submodule "qtwayland"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtwayland.git
+[submodule "qtwebchannel"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtwebchannel.git
+[submodule "qtwebglplugin"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtwebglplugin.git
+[submodule "qtwebsockets"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtwebsockets.git
+[submodule "qtwebview"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtwebview.git
+[submodule "qtwinextras"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtwinextras.git
+[submodule "qtx11extras"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtx11extras.git
+[submodule "qtxmlpatterns"]
+	active = true
+	url = https://invent.kde.org/qt/qt/qtxmlpatterns.git
+[remote "origin"]
+	url = https://invent.kde.org/qt/qt/qt5.git
+	fetch = +refs/heads/*:refs/remotes/origin/*

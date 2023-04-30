@@ -1,0 +1,39 @@
+pkgname=lib32-gdk-pixbuf
+pkgver=2.42.8
+pkgrel=1
+arch=(x86_64)
+depends=(lib32-glib2 lib32-libpng lib32-libtiff lib32-libjpeg gdk-pixbuf)
+makedepends=(git meson)
+commitid=bca00032ad68d0b0aa2c1f7558db931e52bd9cd2 # 2.42.8
+source=("git+https://gitlab.gnome.org/GNOME/gdk-pixbuf.git#commit=$commitid"
+	gdk-pixbuf-query-loaders-32.hook
+)
+
+build() {
+	export CC="gcc -m32"
+	export CXX="g++ -m32"
+	export PKG_CONFIG="i686-pc-linux-gnu-pkg-config"
+
+	meson gdk-pixbuf build \
+	--prefix=/usr \
+	--libdir /usr/lib32 \
+	--wrap-mode=nofallback \
+	-D builtin_loaders=all \
+	-D introspection=disabled \
+	-D installed_tests=false \
+	-D gtk_doc=false \
+	-D docs=false \
+	-D man=false
+
+	meson compile -C build
+}
+
+package() {
+	meson install -C build --destdir "$pkgdir"
+
+	rm -rf "$pkgdir"/usr/{include,lib,share}
+	find "$pkgdir/usr/bin" -type f -not -name gdk-pixbuf-query-loaders -delete
+	mv "$pkgdir"/usr/bin/gdk-pixbuf-query-loaders{,-32}
+
+	install -Dt "$pkgdir/usr/share/libalpm/hooks" -m644 *.hook
+}

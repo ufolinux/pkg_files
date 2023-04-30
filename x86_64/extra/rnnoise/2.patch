@@ -1,0 +1,1293 @@
+From aa3d1e09b8dc3ccb74018646f3e4fe04f177de9b Mon Sep 17 00:00:00 2001
+From: Casey Primozic <me@ameo.link>
+Date: Sun, 18 Jul 2021 15:43:06 -0700
+Subject: [PATCH 01/10] Optimize
+
+---
+ src/rnn.c | 59 +++++++++++++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 53 insertions(+), 6 deletions(-)
+
+diff --git a/src/rnn.c b/src/rnn.c
+index c54958e..9f6816d 100644
+--- a/src/rnn.c
++++ b/src/rnn.c
+@@ -106,6 +106,49 @@ void compute_dense(const DenseLayer *layer, float *output, const float *input)
+    }
+ }
+ 
++typedef struct {
++  const GRULayer *layer_ptr;
++  float *converted_input_weights;
++  float *converted_recurrent_weights;
++} CachedConvertedWeights;
++
++CachedConvertedWeights cached_weights[16];
++
++CachedConvertedWeights* get_or_initialize_weights(const GRULayer *layer) {
++    // Check to see if an entry already exists in the cache array
++    int empty_ix = 16;
++    for (int i = 0; i < 16; i++) {
++        const GRULayer* layer_ptr = (&cached_weights[i])->layer_ptr;
++        if (layer_ptr == 0) {
++            empty_ix = i;
++            break;
++        }
++        if (layer_ptr == layer) {
++            return &cached_weights[i];
++        }
++    }
++
++    if (empty_ix >= 15) {
++        return 0; // should never hit, and we'll def. find out quickly if it does
++    }
++
++    // Convert + cache weights
++    cached_weights[empty_ix].layer_ptr = layer;
++    int weights_count = 3 * layer->nb_inputs * layer->nb_neurons;
++    cached_weights[empty_ix].converted_input_weights = malloc(weights_count * sizeof(float));
++    for (int i = 0; i < weights_count; i++) {
++        cached_weights[empty_ix].converted_input_weights[i] = layer->input_weights[i];
++    }
++
++    int recurrent_weights_count = layer->nb_neurons * layer->nb_neurons * 3;
++    cached_weights[empty_ix].converted_recurrent_weights = malloc(recurrent_weights_count * sizeof(float));
++    for (int i = 0; i < recurrent_weights_count; i++) {
++        cached_weights[empty_ix].converted_recurrent_weights[i] = layer->recurrent_weights[i];
++    }
++
++    return &cached_weights[empty_ix];
++}
++
+ void compute_gru(const GRULayer *gru, float *state, const float *input)
+ {
+    int i, j;
+@@ -117,14 +160,18 @@ void compute_gru(const GRULayer *gru, float *state, const float *input)
+    M = gru->nb_inputs;
+    N = gru->nb_neurons;
+    stride = 3*N;
++
++   // Convert input and recurrent weights into a vector of floats instead of a vector of signed characters.
++   CachedConvertedWeights* converted_weights = get_or_initialize_weights(gru);
++
+    for (i=0;i<N;i++)
+    {
+       /* Compute update gate. */
+       float sum = gru->bias[i];
+       for (j=0;j<M;j++)
+-         sum += gru->input_weights[j*stride + i]*input[j];
++         sum += converted_weights->converted_input_weights[j*stride + i]*input[j];
+       for (j=0;j<N;j++)
+-         sum += gru->recurrent_weights[j*stride + i]*state[j];
++         sum += converted_weights->converted_recurrent_weights[j*stride + i]*state[j];
+       z[i] = sigmoid_approx(WEIGHTS_SCALE*sum);
+    }
+    for (i=0;i<N;i++)
+@@ -132,9 +179,9 @@ void compute_gru(const GRULayer *gru, float *state, const float *input)
+       /* Compute reset gate. */
+       float sum = gru->bias[N + i];
+       for (j=0;j<M;j++)
+-         sum += gru->input_weights[N + j*stride + i]*input[j];
++         sum += converted_weights->converted_input_weights[N + j*stride + i]*input[j];
+       for (j=0;j<N;j++)
+-         sum += gru->recurrent_weights[N + j*stride + i]*state[j];
++         sum += converted_weights->converted_recurrent_weights[N + j*stride + i]*state[j];
+       r[i] = sigmoid_approx(WEIGHTS_SCALE*sum);
+    }
+    for (i=0;i<N;i++)
+@@ -142,9 +189,9 @@ void compute_gru(const GRULayer *gru, float *state, const float *input)
+       /* Compute output. */
+       float sum = gru->bias[2*N + i];
+       for (j=0;j<M;j++)
+-         sum += gru->input_weights[2*N + j*stride + i]*input[j];
++         sum += converted_weights->converted_input_weights[2*N + j*stride + i]*input[j];
+       for (j=0;j<N;j++)
+-         sum += gru->recurrent_weights[2*N + j*stride + i]*state[j]*r[j];
++         sum += converted_weights->converted_recurrent_weights[2*N + j*stride + i]*state[j]*r[j];
+       if (gru->activation == ACTIVATION_SIGMOID) sum = sigmoid_approx(WEIGHTS_SCALE*sum);
+       else if (gru->activation == ACTIVATION_TANH) sum = tansig_approx(WEIGHTS_SCALE*sum);
+       else if (gru->activation == ACTIVATION_RELU) sum = relu(WEIGHTS_SCALE*sum);
+-- 
+GitLab
+
+
+From 5611925a8b479f137d70644fa00a0c14ebb224ed Mon Sep 17 00:00:00 2001
+From: Casey Primozic <me@ameo.link>
+Date: Sun, 18 Jul 2021 16:14:29 -0700
+Subject: [PATCH 02/10] Optimize
+
+---
+ src/rnn.c | 59 +++++++++++++++++++++++++++----------------------------
+ 1 file changed, 29 insertions(+), 30 deletions(-)
+
+diff --git a/src/rnn.c b/src/rnn.c
+index 9f6816d..849aca7 100644
+--- a/src/rnn.c
++++ b/src/rnn.c
+@@ -166,38 +166,37 @@ void compute_gru(const GRULayer *gru, float *state, const float *input)
+ 
+    for (i=0;i<N;i++)
+    {
+-      /* Compute update gate. */
+-      float sum = gru->bias[i];
+-      for (j=0;j<M;j++)
+-         sum += converted_weights->converted_input_weights[j*stride + i]*input[j];
+-      for (j=0;j<N;j++)
+-         sum += converted_weights->converted_recurrent_weights[j*stride + i]*state[j];
+-      z[i] = sigmoid_approx(WEIGHTS_SCALE*sum);
+-   }
+-   for (i=0;i<N;i++)
+-   {
+-      /* Compute reset gate. */
+-      float sum = gru->bias[N + i];
+-      for (j=0;j<M;j++)
+-         sum += converted_weights->converted_input_weights[N + j*stride + i]*input[j];
+-      for (j=0;j<N;j++)
+-         sum += converted_weights->converted_recurrent_weights[N + j*stride + i]*state[j];
+-      r[i] = sigmoid_approx(WEIGHTS_SCALE*sum);
+-   }
+-   for (i=0;i<N;i++)
+-   {
+-      /* Compute output. */
+-      float sum = gru->bias[2*N + i];
+-      for (j=0;j<M;j++)
+-         sum += converted_weights->converted_input_weights[2*N + j*stride + i]*input[j];
+-      for (j=0;j<N;j++)
+-         sum += converted_weights->converted_recurrent_weights[2*N + j*stride + i]*state[j]*r[j];
+-      if (gru->activation == ACTIVATION_SIGMOID) sum = sigmoid_approx(WEIGHTS_SCALE*sum);
+-      else if (gru->activation == ACTIVATION_TANH) sum = tansig_approx(WEIGHTS_SCALE*sum);
+-      else if (gru->activation == ACTIVATION_RELU) sum = relu(WEIGHTS_SCALE*sum);
++      float z_sum = gru->bias[i];
++      float r_sum = gru->bias[N + i];
++      float h_sum = gru->bias[2*N + i];
++
++      for (j=0;j<M;j++) {
++         /* Compute update gate. */
++         z_sum += converted_weights->converted_input_weights[j*stride + i]*input[j];
++         /* Compute reset gate. */
++         r_sum += converted_weights->converted_input_weights[N + j*stride + i]*input[j];
++         /* Compute output. */
++         h_sum += converted_weights->converted_input_weights[2*N + j*stride + i]*input[j];
++      }
++      for (j=0;j<N;j++) {
++         /* Compute update gate. */
++         z_sum += converted_weights->converted_recurrent_weights[j*stride + i]*state[j];
++         /* Compute reset gate. */
++         r_sum += converted_weights->converted_recurrent_weights[N + j*stride + i]*state[j];
++         /* Compute output. */
++         h_sum += converted_weights->converted_recurrent_weights[2*N + j*stride + i]*state[j]*r[j];
++      }
++
++      z[i] = sigmoid_approx(WEIGHTS_SCALE*z_sum);
++      r[i] = sigmoid_approx(WEIGHTS_SCALE*r_sum);
++
++      if (gru->activation == ACTIVATION_SIGMOID) h_sum = sigmoid_approx(WEIGHTS_SCALE*h_sum);
++      else if (gru->activation == ACTIVATION_TANH) h_sum = tansig_approx(WEIGHTS_SCALE*h_sum);
++      else if (gru->activation == ACTIVATION_RELU) h_sum = relu(WEIGHTS_SCALE*h_sum);
+       else *(int*)0=0;
+-      h[i] = z[i]*state[i] + (1-z[i])*sum;
++      h[i] = z[i]*state[i] + (1-z[i])*h_sum;
+    }
++
+    for (i=0;i<N;i++)
+       state[i] = h[i];
+ }
+-- 
+GitLab
+
+
+From b0e4524ffffed8fa1ea2b00d18384381237b0ac6 Mon Sep 17 00:00:00 2001
+From: Casey Primozic <me@ameo.link>
+Date: Sun, 18 Jul 2021 18:12:04 -0700
+Subject: [PATCH 03/10] Working SIMD-accelerated `compute_gru`
+
+---
+ src/rnn.c | 193 +++++++++++++++++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 176 insertions(+), 17 deletions(-)
+
+diff --git a/src/rnn.c b/src/rnn.c
+index 849aca7..093b68e 100644
+--- a/src/rnn.c
++++ b/src/rnn.c
+@@ -37,6 +37,7 @@
+ #include "rnn.h"
+ #include "rnn_data.h"
+ #include <stdio.h>
++#include <immintrin.h>
+ 
+ static OPUS_INLINE float tansig_approx(float x)
+ {
+@@ -149,7 +150,7 @@ CachedConvertedWeights* get_or_initialize_weights(const GRULayer *layer) {
+     return &cached_weights[empty_ix];
+ }
+ 
+-void compute_gru(const GRULayer *gru, float *state, const float *input)
++void compute_gru_avx2(const GRULayer *gru, float *state, const float *input)
+ {
+    int i, j;
+    int N, M;
+@@ -161,42 +162,200 @@ void compute_gru(const GRULayer *gru, float *state, const float *input)
+    N = gru->nb_neurons;
+    stride = 3*N;
+ 
+-   // Convert input and recurrent weights into a vector of floats instead of a vector of signed characters.
+-   CachedConvertedWeights* converted_weights = get_or_initialize_weights(gru);
++   int chunk_size = 8;
++   int n_remainder = N % chunk_size;
++   int n_chunk_count = (N - n_remainder) / chunk_size;
++
++   for (int i_chunk = 0; i_chunk < n_chunk_count; i_chunk++) {
++      // Load i8s
++      __m128i i8_z_sum = _mm_loadu_si128(&gru->bias[i_chunk * chunk_size]);
++      __m128i i8_r_sum = _mm_loadu_si128(&gru->bias[N + (i_chunk * chunk_size)]);
++      // Sign-extend to i32s
++      __m256i i32_z_sum = _mm256_cvtepi8_epi32(i8_z_sum);
++      __m256i i32_r_sum = _mm256_cvtepi8_epi32(i8_r_sum);
++      // Convert to f32s
++      __m256 z_sum = _mm256_cvtepi32_ps(i32_z_sum);
++      __m256 r_sum = _mm256_cvtepi32_ps(i32_r_sum);
++
++      for (j=0;j<M;j++) {
++         // Load i8s
++         __m128i z_input_weights_i8 = _mm_loadu_si128(&gru->input_weights[j*stride + (i_chunk * chunk_size)]);
++         __m128i r_input_weights_i8 = _mm_loadu_si128(&gru->input_weights[N + j*stride + (i_chunk * chunk_size)]);
++         // Sign-extend to i32s
++         __m256i z_input_weights_i32 = _mm256_cvtepi8_epi32(z_input_weights_i8);
++         __m256i r_input_weights_i32 = _mm256_cvtepi8_epi32(r_input_weights_i8);
++         // Convert to f32s
++         __m256 z_input_weights = _mm256_cvtepi32_ps(z_input_weights_i32);
++         __m256 r_input_weights = _mm256_cvtepi32_ps(r_input_weights_i32);
++
++         __m256 input_v = _mm256_broadcast_ss(&input[j]);
++
++         z_sum = _mm256_fmadd_ps(z_input_weights, input_v, z_sum);
++         r_sum = _mm256_fmadd_ps(r_input_weights, input_v, r_sum);
++      }
++      for (j=0;j<N;j++) {
++         // Load i8s
++         __m128i z_recurrent_weights_i8 = _mm_loadu_si128(&gru->recurrent_weights[j*stride + (i_chunk * chunk_size)]);
++         __m128i r_recurrent_weights_i8 = _mm_loadu_si128(&gru->recurrent_weights[N + j*stride + (i_chunk * chunk_size)]);
++         // Sign-extend to i32s
++         __m256i z_recurrent_weights_i32 = _mm256_cvtepi8_epi32(z_recurrent_weights_i8);
++         __m256i r_recurrent_weights_i32 = _mm256_cvtepi8_epi32(r_recurrent_weights_i8);
++         // Convert to f32s
++         __m256 z_recurrent_weights = _mm256_cvtepi32_ps(z_recurrent_weights_i32);
++         __m256 r_recurrent_weights = _mm256_cvtepi32_ps(r_recurrent_weights_i32);
++
++         __m256 state_v = _mm256_broadcast_ss(&state[j]);
++
++         z_sum = _mm256_fmadd_ps(z_recurrent_weights, state_v, z_sum);
++         r_sum = _mm256_fmadd_ps(r_recurrent_weights, state_v, r_sum);
++      }
++
++      // Store sums
++      _mm256_storeu_ps(&z[i_chunk * chunk_size], z_sum);
++      _mm256_storeu_ps(&r[i_chunk * chunk_size], r_sum);
++   }
++   // Remainders
++   for (int i=n_chunk_count*chunk_size; i<N; i++) {
++      float z_sum = gru->bias[i];
++      float r_sum = gru->bias[N + i];
++
++      for (j=0;j<M;j++) {
++         /* Compute update gate. */
++         z_sum += gru->input_weights[j*stride + i]*input[j];
++         /* Compute reset gate. */
++         r_sum += gru->input_weights[N + j*stride + i]*input[j];
++      }
++      for (j=0;j<N;j++) {
++         /* Compute update gate. */
++         z_sum += gru->recurrent_weights[j*stride + i]*state[j];
++         /* Compute reset gate. */
++         r_sum += gru->recurrent_weights[N + j*stride + i]*state[j];
++      }
++
++      z[i] = z_sum;
++      r[i] = r_sum;
++   }
++   // Apply sigmoid to sums
++   for (i=0;i<N;i++) {
++      z[i] = sigmoid_approx(WEIGHTS_SCALE * z[i]);
++      r[i] = sigmoid_approx(WEIGHTS_SCALE * r[i]);
++   }
++
++   /* Compute output. */
++   for (int i_chunk = 0; i_chunk < n_chunk_count; i_chunk++) {
++      // Load i8s
++      __m128i i8_sum = _mm_loadu_si128(&gru->bias[2*N + (i_chunk * chunk_size)]);
++      // Sign-extend to i32s
++      __m256i i32_sum = _mm256_cvtepi8_epi32(i8_sum);
++      // Convert to f32s
++      __m256 sum = _mm256_cvtepi32_ps(i32_sum);
++
++      for (j=0;j<M;j++) {
++         // Load i8s
++         __m128i input_weights_i8 = _mm_loadu_si128(&gru->input_weights[2*N + j*stride + (i_chunk * chunk_size)]);
++         // Sign-extend to i32s
++         __m256i input_weights_i32 = _mm256_cvtepi8_epi32(input_weights_i8);
++         // Convert to f32s
++         __m256 input_weights = _mm256_cvtepi32_ps(input_weights_i32);
++
++         __m256 input_v = _mm256_broadcast_ss(&input[j]);
++
++         sum = _mm256_fmadd_ps(input_weights, input_v, sum) ;
++      }
++
++      for (j=0;j<N;j++) {
++         // Load i8s
++         __m128i recurrent_weights_i8 = _mm_loadu_si128(&gru->recurrent_weights[2*N + j*stride + (i_chunk * chunk_size)]);
++         // Sign-extend to i32s
++         __m256i recurrent_weights_i32 = _mm256_cvtepi8_epi32(recurrent_weights_i8);
++         // Convert to f32s
++         __m256 recurrent_weights = _mm256_cvtepi32_ps(recurrent_weights_i32);
++
++         float state_times_r = state[j] * r[j];
++         __m256 state_times_r_v = _mm256_broadcast_ss(&state_times_r);
++
++         sum = _mm256_fmadd_ps(recurrent_weights, state_times_r_v, sum);
++      }
+ 
++      // Store sums
++      _mm256_storeu_ps(&h[i_chunk * chunk_size], sum);
++   }
++   // Remainders
++   for (int i=n_chunk_count*chunk_size; i<N; i++) {
++      float sum = gru->bias[2*N + i];
++      for (j=0;j<M;j++)
++         sum += gru->input_weights[2*N + j*stride + i]*input[j];
++      for (j=0;j<N;j++)
++         sum += gru->recurrent_weights[2*N + j*stride + i]*state[j]*r[j];
++
++      h[i] = sum;
++   }
++
++   for (i=0;i<N;i++) {
++      float sum = h[i];
++
++      if (gru->activation == ACTIVATION_SIGMOID) sum = sigmoid_approx(WEIGHTS_SCALE*sum);
++      else if (gru->activation == ACTIVATION_TANH) sum = tansig_approx(WEIGHTS_SCALE*sum);
++      else if (gru->activation == ACTIVATION_RELU) sum = relu(WEIGHTS_SCALE*sum);
++      else *(int*)0=0;
++      h[i] = z[i]*state[i] + (1-z[i])*sum;
++   }
++   for (i=0;i<N;i++)
++      state[i] = h[i];
++}
++
++void compute_gru(const GRULayer *gru, float *state, const float *input)
++{
++   // Check if we support AVX2 and FMA and use the SIMD-accelerated function if so
++   if (__builtin_cpu_supports("avx2") && __builtin_cpu_supports("fma")) {
++      compute_gru_avx2(gru, state, input);
++      return;
++   }
++
++   int i, j;
++   int N, M;
++   int stride;
++   float z[MAX_NEURONS];
++   float r[MAX_NEURONS];
++   float h[MAX_NEURONS];
++   M = gru->nb_inputs;
++   N = gru->nb_neurons;
++   stride = 3*N;
+    for (i=0;i<N;i++)
+    {
+       float z_sum = gru->bias[i];
+       float r_sum = gru->bias[N + i];
+-      float h_sum = gru->bias[2*N + i];
+ 
+       for (j=0;j<M;j++) {
+          /* Compute update gate. */
+-         z_sum += converted_weights->converted_input_weights[j*stride + i]*input[j];
++         z_sum += gru->input_weights[j*stride + i]*input[j];
+          /* Compute reset gate. */
+-         r_sum += converted_weights->converted_input_weights[N + j*stride + i]*input[j];
+-         /* Compute output. */
+-         h_sum += converted_weights->converted_input_weights[2*N + j*stride + i]*input[j];
++         r_sum += gru->input_weights[N + j*stride + i]*input[j];
+       }
+       for (j=0;j<N;j++) {
+          /* Compute update gate. */
+-         z_sum += converted_weights->converted_recurrent_weights[j*stride + i]*state[j];
++         z_sum += gru->recurrent_weights[j*stride + i]*state[j];
+          /* Compute reset gate. */
+-         r_sum += converted_weights->converted_recurrent_weights[N + j*stride + i]*state[j];
+-         /* Compute output. */
+-         h_sum += converted_weights->converted_recurrent_weights[2*N + j*stride + i]*state[j]*r[j];
++         r_sum += gru->recurrent_weights[N + j*stride + i]*state[j];
+       }
+ 
+       z[i] = sigmoid_approx(WEIGHTS_SCALE*z_sum);
+       r[i] = sigmoid_approx(WEIGHTS_SCALE*r_sum);
++   }
+ 
+-      if (gru->activation == ACTIVATION_SIGMOID) h_sum = sigmoid_approx(WEIGHTS_SCALE*h_sum);
+-      else if (gru->activation == ACTIVATION_TANH) h_sum = tansig_approx(WEIGHTS_SCALE*h_sum);
+-      else if (gru->activation == ACTIVATION_RELU) h_sum = relu(WEIGHTS_SCALE*h_sum);
++   /* Compute output. */
++   for (i=0;i<N;i++) {
++      float sum = gru->bias[2*N + i];
++      for (j=0;j<M;j++)
++         sum += gru->input_weights[2*N + j*stride + i]*input[j];
++      for (j=0;j<N;j++)
++         sum += gru->recurrent_weights[2*N + j*stride + i]*state[j]*r[j];
++      if (gru->activation == ACTIVATION_SIGMOID) sum = sigmoid_approx(WEIGHTS_SCALE*sum);
++      else if (gru->activation == ACTIVATION_TANH) sum = tansig_approx(WEIGHTS_SCALE*sum);
++      else if (gru->activation == ACTIVATION_RELU) sum = relu(WEIGHTS_SCALE*sum);
+       else *(int*)0=0;
+-      h[i] = z[i]*state[i] + (1-z[i])*h_sum;
++      h[i] = z[i]*state[i] + (1-z[i])*sum;
+    }
+-
+    for (i=0;i<N;i++)
+       state[i] = h[i];
+ }
+-- 
+GitLab
+
+
+From da3700ab81c998ca91f1198ffd1d6323157c500b Mon Sep 17 00:00:00 2001
+From: Casey Primozic <me@ameo.link>
+Date: Sun, 18 Jul 2021 20:27:21 -0700
+Subject: [PATCH 04/10] Add compiler flags to build config + optimize biquad
+ filter
+
+ * Add `-O3 -march=native` to the compiler flags in the autoconf/automake/autoetc. stuff
+ * Optimize biquad filter implementation
+---
+ configure.ac   |  2 +-
+ src/compile.sh |  2 +-
+ src/denoise.c  | 12 +++-----
+ src/rnn.c      | 83 +++++++++++++++++++++++++++-----------------------
+ 4 files changed, 52 insertions(+), 47 deletions(-)
+
+diff --git a/configure.ac b/configure.ac
+index 5ffc7c2..95c2d79 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -47,7 +47,7 @@ AC_SUBST(OP_LT_REVISION)
+ AC_SUBST(OP_LT_AGE)
+ 
+ CC_CHECK_CFLAGS_APPEND(
+-  [-pedantic -Wall -Wextra -Wno-sign-compare -Wno-parentheses -Wno-long-long])
++  [-O3 -march=native -pedantic -Wall -Wextra -Wno-sign-compare -Wno-parentheses -Wno-long-long])
+ 
+ # Platform-specific tweaks
+ case $host in
+diff --git a/src/compile.sh b/src/compile.sh
+index 4b2ea53..f9c7cfc 100755
+--- a/src/compile.sh
++++ b/src/compile.sh
+@@ -1,3 +1,3 @@
+ #!/bin/sh
+ 
+-gcc -DTRAINING=1 -Wall -W -O3 -g -I../include denoise.c kiss_fft.c pitch.c celt_lpc.c rnn.c rnn_data.c -o denoise_training -lm
++gcc -DTRAINING=1 -march=native -Wall -W -O3 -g -I../include denoise.c kiss_fft.c pitch.c celt_lpc.c rnn.c rnn_data.c -o denoise_training -lm
+diff --git a/src/denoise.c b/src/denoise.c
+index 5a62844..a9328ff 100644
+--- a/src/denoise.c
++++ b/src/denoise.c
+@@ -408,13 +408,11 @@ static void frame_synthesis(DenoiseState *st, float *out, const kiss_fft_cpx *y)
+ }
+ 
+ static void biquad(float *y, float mem[2], const float *x, const float *b, const float *a, int N) {
+-  int i;
+-  for (i=0;i<N;i++) {
+-    float xi, yi;
+-    xi = x[i];
+-    yi = x[i] + mem[0];
+-    mem[0] = mem[1] + (b[0]*(double)xi - a[0]*(double)yi);
+-    mem[1] = (b[1]*(double)xi - a[1]*(double)yi);
++  for (int i=0;i<N;i++) {
++    float xi = x[i];
++    float yi = xi + mem[0];
++    mem[0] = mem[1] + (b[0] * xi - a[0] * yi);
++    mem[1] = (b[1] * xi - a[1] * yi);
+     y[i] = yi;
+   }
+ }
+diff --git a/src/rnn.c b/src/rnn.c
+index 093b68e..64e3355 100644
+--- a/src/rnn.c
++++ b/src/rnn.c
+@@ -37,7 +37,6 @@
+ #include "rnn.h"
+ #include "rnn_data.h"
+ #include <stdio.h>
+-#include <immintrin.h>
+ 
+ static OPUS_INLINE float tansig_approx(float x)
+ {
+@@ -85,22 +84,22 @@ void compute_dense(const DenseLayer *layer, float *output, const float *input)
+    M = layer->nb_inputs;
+    N = layer->nb_neurons;
+    stride = N;
+-   for (i=0;i<N;i++)
++   for (i = 0;i < N;i++)
+    {
+       /* Compute update gate. */
+       float sum = layer->bias[i];
+-      for (j=0;j<M;j++)
++      for (j = 0; j<M;j++)
+          sum += layer->input_weights[j*stride + i]*input[j];
+       output[i] = WEIGHTS_SCALE*sum;
+    }
+    if (layer->activation == ACTIVATION_SIGMOID) {
+-      for (i=0;i<N;i++)
++      for (i = 0;i < N;i++)
+          output[i] = sigmoid_approx(output[i]);
+    } else if (layer->activation == ACTIVATION_TANH) {
+-      for (i=0;i<N;i++)
++      for (i = 0;i < N;i++)
+          output[i] = tansig_approx(output[i]);
+    } else if (layer->activation == ACTIVATION_RELU) {
+-      for (i=0;i<N;i++)
++      for (i = 0;i < N;i++)
+          output[i] = relu(output[i]);
+    } else {
+      *(int*)0=0;
+@@ -150,6 +149,13 @@ CachedConvertedWeights* get_or_initialize_weights(const GRULayer *layer) {
+     return &cached_weights[empty_ix];
+ }
+ 
++#if !defined(__FMA__) && defined(__AVX2__)
++    #define __FMA__ 1
++#endif
++
++#if defined(__AVX2__) && defined(__FMA__)
++#include <immintrin.h>
++
+ void compute_gru_avx2(const GRULayer *gru, float *state, const float *input)
+ {
+    int i, j;
+@@ -160,7 +166,7 @@ void compute_gru_avx2(const GRULayer *gru, float *state, const float *input)
+    float h[MAX_NEURONS];
+    M = gru->nb_inputs;
+    N = gru->nb_neurons;
+-   stride = 3*N;
++   stride = 3 * N;
+ 
+    int chunk_size = 8;
+    int n_remainder = N % chunk_size;
+@@ -177,7 +183,7 @@ void compute_gru_avx2(const GRULayer *gru, float *state, const float *input)
+       __m256 z_sum = _mm256_cvtepi32_ps(i32_z_sum);
+       __m256 r_sum = _mm256_cvtepi32_ps(i32_r_sum);
+ 
+-      for (j=0;j<M;j++) {
++      for (j = 0; j<M; j++) {
+          // Load i8s
+          __m128i z_input_weights_i8 = _mm_loadu_si128(&gru->input_weights[j*stride + (i_chunk * chunk_size)]);
+          __m128i r_input_weights_i8 = _mm_loadu_si128(&gru->input_weights[N + j*stride + (i_chunk * chunk_size)]);
+@@ -193,7 +199,7 @@ void compute_gru_avx2(const GRULayer *gru, float *state, const float *input)
+          z_sum = _mm256_fmadd_ps(z_input_weights, input_v, z_sum);
+          r_sum = _mm256_fmadd_ps(r_input_weights, input_v, r_sum);
+       }
+-      for (j=0;j<N;j++) {
++      for (j = 0; j<N; j++) {
+          // Load i8s
+          __m128i z_recurrent_weights_i8 = _mm_loadu_si128(&gru->recurrent_weights[j*stride + (i_chunk * chunk_size)]);
+          __m128i r_recurrent_weights_i8 = _mm_loadu_si128(&gru->recurrent_weights[N + j*stride + (i_chunk * chunk_size)]);
+@@ -215,17 +221,17 @@ void compute_gru_avx2(const GRULayer *gru, float *state, const float *input)
+       _mm256_storeu_ps(&r[i_chunk * chunk_size], r_sum);
+    }
+    // Remainders
+-   for (int i=n_chunk_count*chunk_size; i<N; i++) {
++   for (int i = n_chunk_count * chunk_size; i < N; i++) {
+       float z_sum = gru->bias[i];
+       float r_sum = gru->bias[N + i];
+ 
+-      for (j=0;j<M;j++) {
++      for (j = 0; j<M;j++) {
+          /* Compute update gate. */
+          z_sum += gru->input_weights[j*stride + i]*input[j];
+          /* Compute reset gate. */
+          r_sum += gru->input_weights[N + j*stride + i]*input[j];
+       }
+-      for (j=0;j<N;j++) {
++      for (j = 0; j<N;j++) {
+          /* Compute update gate. */
+          z_sum += gru->recurrent_weights[j*stride + i]*state[j];
+          /* Compute reset gate. */
+@@ -236,7 +242,7 @@ void compute_gru_avx2(const GRULayer *gru, float *state, const float *input)
+       r[i] = r_sum;
+    }
+    // Apply sigmoid to sums
+-   for (i=0;i<N;i++) {
++   for (i = 0; i < N; i++) {
+       z[i] = sigmoid_approx(WEIGHTS_SCALE * z[i]);
+       r[i] = sigmoid_approx(WEIGHTS_SCALE * r[i]);
+    }
+@@ -250,7 +256,7 @@ void compute_gru_avx2(const GRULayer *gru, float *state, const float *input)
+       // Convert to f32s
+       __m256 sum = _mm256_cvtepi32_ps(i32_sum);
+ 
+-      for (j=0;j<M;j++) {
++      for (j = 0; j < M; j++) {
+          // Load i8s
+          __m128i input_weights_i8 = _mm_loadu_si128(&gru->input_weights[2*N + j*stride + (i_chunk * chunk_size)]);
+          // Sign-extend to i32s
+@@ -263,7 +269,7 @@ void compute_gru_avx2(const GRULayer *gru, float *state, const float *input)
+          sum = _mm256_fmadd_ps(input_weights, input_v, sum) ;
+       }
+ 
+-      for (j=0;j<N;j++) {
++      for (j = 0; j < N; j++) {
+          // Load i8s
+          __m128i recurrent_weights_i8 = _mm_loadu_si128(&gru->recurrent_weights[2*N + j*stride + (i_chunk * chunk_size)]);
+          // Sign-extend to i32s
+@@ -281,36 +287,37 @@ void compute_gru_avx2(const GRULayer *gru, float *state, const float *input)
+       _mm256_storeu_ps(&h[i_chunk * chunk_size], sum);
+    }
+    // Remainders
+-   for (int i=n_chunk_count*chunk_size; i<N; i++) {
++   for (int i = n_chunk_count * chunk_size; i < N; i++) {
+       float sum = gru->bias[2*N + i];
+-      for (j=0;j<M;j++)
+-         sum += gru->input_weights[2*N + j*stride + i]*input[j];
+-      for (j=0;j<N;j++)
+-         sum += gru->recurrent_weights[2*N + j*stride + i]*state[j]*r[j];
++      for (j = 0; j < M; j++)
++         sum += gru->input_weights[2*N + j*stride + i] * input[j];
++      for (j = 0; j < N; j++)
++         sum += gru->recurrent_weights[2*N + j*stride + i] * state[j] * r[j];
+ 
+       h[i] = sum;
+    }
+ 
+-   for (i=0;i<N;i++) {
++   for (i = 0; i < N; i++) {
+       float sum = h[i];
+ 
+       if (gru->activation == ACTIVATION_SIGMOID) sum = sigmoid_approx(WEIGHTS_SCALE*sum);
+       else if (gru->activation == ACTIVATION_TANH) sum = tansig_approx(WEIGHTS_SCALE*sum);
+       else if (gru->activation == ACTIVATION_RELU) sum = relu(WEIGHTS_SCALE*sum);
+       else *(int*)0=0;
+-      h[i] = z[i]*state[i] + (1-z[i])*sum;
++      state[i] = z[i]*state[i] + (1-z[i])*sum;
+    }
+-   for (i=0;i<N;i++)
+-      state[i] = h[i];
+ }
++#endif
+ 
+ void compute_gru(const GRULayer *gru, float *state, const float *input)
+ {
+    // Check if we support AVX2 and FMA and use the SIMD-accelerated function if so
++   #if defined(__AVX2__) && defined(__FMA__)
+    if (__builtin_cpu_supports("avx2") && __builtin_cpu_supports("fma")) {
+       compute_gru_avx2(gru, state, input);
+       return;
+    }
++   #endif
+ 
+    int i, j;
+    int N, M;
+@@ -321,18 +328,18 @@ void compute_gru(const GRULayer *gru, float *state, const float *input)
+    M = gru->nb_inputs;
+    N = gru->nb_neurons;
+    stride = 3*N;
+-   for (i=0;i<N;i++)
++   for (i = 0;i < N;i++)
+    {
+       float z_sum = gru->bias[i];
+       float r_sum = gru->bias[N + i];
+ 
+-      for (j=0;j<M;j++) {
++      for (j = 0; j<M;j++) {
+          /* Compute update gate. */
+          z_sum += gru->input_weights[j*stride + i]*input[j];
+          /* Compute reset gate. */
+          r_sum += gru->input_weights[N + j*stride + i]*input[j];
+       }
+-      for (j=0;j<N;j++) {
++      for (j = 0; j<N;j++) {
+          /* Compute update gate. */
+          z_sum += gru->recurrent_weights[j*stride + i]*state[j];
+          /* Compute reset gate. */
+@@ -344,11 +351,11 @@ void compute_gru(const GRULayer *gru, float *state, const float *input)
+    }
+ 
+    /* Compute output. */
+-   for (i=0;i<N;i++) {
++   for (i = 0;i < N;i++) {
+       float sum = gru->bias[2*N + i];
+-      for (j=0;j<M;j++)
++      for (j = 0; j<M;j++)
+          sum += gru->input_weights[2*N + j*stride + i]*input[j];
+-      for (j=0;j<N;j++)
++      for (j = 0; j<N;j++)
+          sum += gru->recurrent_weights[2*N + j*stride + i]*state[j]*r[j];
+       if (gru->activation == ACTIVATION_SIGMOID) sum = sigmoid_approx(WEIGHTS_SCALE*sum);
+       else if (gru->activation == ACTIVATION_TANH) sum = tansig_approx(WEIGHTS_SCALE*sum);
+@@ -356,8 +363,8 @@ void compute_gru(const GRULayer *gru, float *state, const float *input)
+       else *(int*)0=0;
+       h[i] = z[i]*state[i] + (1-z[i])*sum;
+    }
+-   for (i=0;i<N;i++)
+-      state[i] = h[i];
++   for (i = 0;i < N;i++)
++      state[i] = h[i ];
+ }
+ 
+ #define INPUT_SIZE 42
+@@ -370,14 +377,14 @@ void compute_rnn(RNNState *rnn, float *gains, float *vad, const float *input) {
+   compute_dense(rnn->model->input_dense, dense_out, input);
+   compute_gru(rnn->model->vad_gru, rnn->vad_gru_state, dense_out);
+   compute_dense(rnn->model->vad_output, vad, rnn->vad_gru_state);
+-  for (i=0;i<rnn->model->input_dense_size;i++) noise_input[i] = dense_out[i];
+-  for (i=0;i<rnn->model->vad_gru_size;i++) noise_input[i+rnn->model->input_dense_size] = rnn->vad_gru_state[i];
+-  for (i=0;i<INPUT_SIZE;i++) noise_input[i+rnn->model->input_dense_size+rnn->model->vad_gru_size] = input[i];
++  for (i = 0;i<rnn->model->input_dense_size;i++) noise_input[i] = dense_out[i];
++  for (i = 0;i<rnn->model->vad_gru_size;i++) noise_input[i+rnn->model->input_dense_size] = rnn->vad_gru_state[i];
++  for (i = 0;i<INPUT_SIZE;i++) noise_input[i+rnn->model->input_dense_size+rnn->model->vad_gru_size] = input[i];
+   compute_gru(rnn->model->noise_gru, rnn->noise_gru_state, noise_input);
+ 
+-  for (i=0;i<rnn->model->vad_gru_size;i++) denoise_input[i] = rnn->vad_gru_state[i];
+-  for (i=0;i<rnn->model->noise_gru_size;i++) denoise_input[i+rnn->model->vad_gru_size] = rnn->noise_gru_state[i];
+-  for (i=0;i<INPUT_SIZE;i++) denoise_input[i+rnn->model->vad_gru_size+rnn->model->noise_gru_size] = input[i];
++  for (i = 0;i<rnn->model->vad_gru_size;i++) denoise_input[i] = rnn->vad_gru_state[i];
++  for (i = 0;i<rnn->model->noise_gru_size;i++) denoise_input[i+rnn->model->vad_gru_size] = rnn->noise_gru_state[i];
++  for (i = 0;i<INPUT_SIZE;i++) denoise_input[i+rnn->model->vad_gru_size+rnn->model->noise_gru_size] = input[i];
+   compute_gru(rnn->model->denoise_gru, rnn->denoise_gru_state, denoise_input);
+   compute_dense(rnn->model->denoise_output, gains, rnn->denoise_gru_state);
+ }
+-- 
+GitLab
+
+
+From 184f5524da7b2f611758edd14f78451fc3f52fbb Mon Sep 17 00:00:00 2001
+From: Casey Primozic <me@ameo.link>
+Date: Sun, 18 Jul 2021 20:31:12 -0700
+Subject: [PATCH 05/10] Fix warnings
+
+---
+ src/rnn.c | 18 +++++++++---------
+ 1 file changed, 9 insertions(+), 9 deletions(-)
+
+diff --git a/src/rnn.c b/src/rnn.c
+index 64e3355..49d867c 100644
+--- a/src/rnn.c
++++ b/src/rnn.c
+@@ -174,8 +174,8 @@ void compute_gru_avx2(const GRULayer *gru, float *state, const float *input)
+ 
+    for (int i_chunk = 0; i_chunk < n_chunk_count; i_chunk++) {
+       // Load i8s
+-      __m128i i8_z_sum = _mm_loadu_si128(&gru->bias[i_chunk * chunk_size]);
+-      __m128i i8_r_sum = _mm_loadu_si128(&gru->bias[N + (i_chunk * chunk_size)]);
++      __m128i i8_z_sum = _mm_loadu_si128((__m128i*) &gru->bias[i_chunk * chunk_size]);
++      __m128i i8_r_sum = _mm_loadu_si128((__m128i*) &gru->bias[N + (i_chunk * chunk_size)]);
+       // Sign-extend to i32s
+       __m256i i32_z_sum = _mm256_cvtepi8_epi32(i8_z_sum);
+       __m256i i32_r_sum = _mm256_cvtepi8_epi32(i8_r_sum);
+@@ -185,8 +185,8 @@ void compute_gru_avx2(const GRULayer *gru, float *state, const float *input)
+ 
+       for (j = 0; j<M; j++) {
+          // Load i8s
+-         __m128i z_input_weights_i8 = _mm_loadu_si128(&gru->input_weights[j*stride + (i_chunk * chunk_size)]);
+-         __m128i r_input_weights_i8 = _mm_loadu_si128(&gru->input_weights[N + j*stride + (i_chunk * chunk_size)]);
++         __m128i z_input_weights_i8 = _mm_loadu_si128((__m128i*) &gru->input_weights[j*stride + (i_chunk * chunk_size)]);
++         __m128i r_input_weights_i8 = _mm_loadu_si128((__m128i*) &gru->input_weights[N + j*stride + (i_chunk * chunk_size)]);
+          // Sign-extend to i32s
+          __m256i z_input_weights_i32 = _mm256_cvtepi8_epi32(z_input_weights_i8);
+          __m256i r_input_weights_i32 = _mm256_cvtepi8_epi32(r_input_weights_i8);
+@@ -201,8 +201,8 @@ void compute_gru_avx2(const GRULayer *gru, float *state, const float *input)
+       }
+       for (j = 0; j<N; j++) {
+          // Load i8s
+-         __m128i z_recurrent_weights_i8 = _mm_loadu_si128(&gru->recurrent_weights[j*stride + (i_chunk * chunk_size)]);
+-         __m128i r_recurrent_weights_i8 = _mm_loadu_si128(&gru->recurrent_weights[N + j*stride + (i_chunk * chunk_size)]);
++         __m128i z_recurrent_weights_i8 = _mm_loadu_si128((__m128i*) &gru->recurrent_weights[j*stride + (i_chunk * chunk_size)]);
++         __m128i r_recurrent_weights_i8 = _mm_loadu_si128((__m128i*) &gru->recurrent_weights[N + j*stride + (i_chunk * chunk_size)]);
+          // Sign-extend to i32s
+          __m256i z_recurrent_weights_i32 = _mm256_cvtepi8_epi32(z_recurrent_weights_i8);
+          __m256i r_recurrent_weights_i32 = _mm256_cvtepi8_epi32(r_recurrent_weights_i8);
+@@ -250,7 +250,7 @@ void compute_gru_avx2(const GRULayer *gru, float *state, const float *input)
+    /* Compute output. */
+    for (int i_chunk = 0; i_chunk < n_chunk_count; i_chunk++) {
+       // Load i8s
+-      __m128i i8_sum = _mm_loadu_si128(&gru->bias[2*N + (i_chunk * chunk_size)]);
++      __m128i i8_sum = _mm_loadu_si128((__m128i*) &gru->bias[2*N + (i_chunk * chunk_size)]);
+       // Sign-extend to i32s
+       __m256i i32_sum = _mm256_cvtepi8_epi32(i8_sum);
+       // Convert to f32s
+@@ -258,7 +258,7 @@ void compute_gru_avx2(const GRULayer *gru, float *state, const float *input)
+ 
+       for (j = 0; j < M; j++) {
+          // Load i8s
+-         __m128i input_weights_i8 = _mm_loadu_si128(&gru->input_weights[2*N + j*stride + (i_chunk * chunk_size)]);
++         __m128i input_weights_i8 = _mm_loadu_si128((__m128i*) &gru->input_weights[2*N + j*stride + (i_chunk * chunk_size)]);
+          // Sign-extend to i32s
+          __m256i input_weights_i32 = _mm256_cvtepi8_epi32(input_weights_i8);
+          // Convert to f32s
+@@ -271,7 +271,7 @@ void compute_gru_avx2(const GRULayer *gru, float *state, const float *input)
+ 
+       for (j = 0; j < N; j++) {
+          // Load i8s
+-         __m128i recurrent_weights_i8 = _mm_loadu_si128(&gru->recurrent_weights[2*N + j*stride + (i_chunk * chunk_size)]);
++         __m128i recurrent_weights_i8 = _mm_loadu_si128((__m128i*) &gru->recurrent_weights[2*N + j*stride + (i_chunk * chunk_size)]);
+          // Sign-extend to i32s
+          __m256i recurrent_weights_i32 = _mm256_cvtepi8_epi32(recurrent_weights_i8);
+          // Convert to f32s
+-- 
+GitLab
+
+
+From 59418c05caee84a7ca3b14a44102160cb06c0703 Mon Sep 17 00:00:00 2001
+From: Casey Primozic <me@ameo.link>
+Date: Sun, 18 Jul 2021 20:35:00 -0700
+Subject: [PATCH 06/10] Remove dead code
+
+---
+ src/rnn.c | 44 +-------------------------------------------
+ 1 file changed, 1 insertion(+), 43 deletions(-)
+
+diff --git a/src/rnn.c b/src/rnn.c
+index 49d867c..7fba773 100644
+--- a/src/rnn.c
++++ b/src/rnn.c
+@@ -106,49 +106,7 @@ void compute_dense(const DenseLayer *layer, float *output, const float *input)
+    }
+ }
+ 
+-typedef struct {
+-  const GRULayer *layer_ptr;
+-  float *converted_input_weights;
+-  float *converted_recurrent_weights;
+-} CachedConvertedWeights;
+-
+-CachedConvertedWeights cached_weights[16];
+-
+-CachedConvertedWeights* get_or_initialize_weights(const GRULayer *layer) {
+-    // Check to see if an entry already exists in the cache array
+-    int empty_ix = 16;
+-    for (int i = 0; i < 16; i++) {
+-        const GRULayer* layer_ptr = (&cached_weights[i])->layer_ptr;
+-        if (layer_ptr == 0) {
+-            empty_ix = i;
+-            break;
+-        }
+-        if (layer_ptr == layer) {
+-            return &cached_weights[i];
+-        }
+-    }
+-
+-    if (empty_ix >= 15) {
+-        return 0; // should never hit, and we'll def. find out quickly if it does
+-    }
+-
+-    // Convert + cache weights
+-    cached_weights[empty_ix].layer_ptr = layer;
+-    int weights_count = 3 * layer->nb_inputs * layer->nb_neurons;
+-    cached_weights[empty_ix].converted_input_weights = malloc(weights_count * sizeof(float));
+-    for (int i = 0; i < weights_count; i++) {
+-        cached_weights[empty_ix].converted_input_weights[i] = layer->input_weights[i];
+-    }
+-
+-    int recurrent_weights_count = layer->nb_neurons * layer->nb_neurons * 3;
+-    cached_weights[empty_ix].converted_recurrent_weights = malloc(recurrent_weights_count * sizeof(float));
+-    for (int i = 0; i < recurrent_weights_count; i++) {
+-        cached_weights[empty_ix].converted_recurrent_weights[i] = layer->recurrent_weights[i];
+-    }
+-
+-    return &cached_weights[empty_ix];
+-}
+-
++// FMA is always available if AVX2 is available
+ #if !defined(__FMA__) && defined(__AVX2__)
+     #define __FMA__ 1
+ #endif
+-- 
+GitLab
+
+
+From 4c4f961a9f3decd509515af1d0c5f6668f4e6d4e Mon Sep 17 00:00:00 2001
+From: Casey Primozic <me@ameo.link>
+Date: Tue, 20 Jul 2021 14:20:26 -0700
+Subject: [PATCH 07/10] Add fallback for if FMA isn't available
+
+---
+ src/rnn.c | 37 ++++++++++++++++++++++---------------
+ 1 file changed, 22 insertions(+), 15 deletions(-)
+
+diff --git a/src/rnn.c b/src/rnn.c
+index 7fba773..d84e6f0 100644
+--- a/src/rnn.c
++++ b/src/rnn.c
+@@ -106,14 +106,21 @@ void compute_dense(const DenseLayer *layer, float *output, const float *input)
+    }
+ }
+ 
+-// FMA is always available if AVX2 is available
+-#if !defined(__FMA__) && defined(__AVX2__)
+-    #define __FMA__ 1
+-#endif
+-
+-#if defined(__AVX2__) && defined(__FMA__)
++#if defined(__AVX2__)
+ #include <immintrin.h>
+ 
++// Use native FMA if available, otherwise fall back to multiply + add
++#ifdef __FMA__
++#define _MM256_FMADD_PS(a, b, c) _mm256_fmadd_ps(a, b, c)
++#else
++static OPUS_INLINE __m256 _mm256_fmadd_ps_fallback(__m256 a, __m256 b, __m256 c) {
++   __m256 multiplied = _mm256_mul_ps(a, b);
++   return _mm256_add_ps(c, multiplied);
++}
++
++#define _MM256_FMADD_PS(a, b, c) _mm256_fmadd_ps_fallback(a, b, c)
++#endif
++
+ void compute_gru_avx2(const GRULayer *gru, float *state, const float *input)
+ {
+    int i, j;
+@@ -154,8 +161,8 @@ void compute_gru_avx2(const GRULayer *gru, float *state, const float *input)
+ 
+          __m256 input_v = _mm256_broadcast_ss(&input[j]);
+ 
+-         z_sum = _mm256_fmadd_ps(z_input_weights, input_v, z_sum);
+-         r_sum = _mm256_fmadd_ps(r_input_weights, input_v, r_sum);
++         z_sum = _MM256_FMADD_PS(z_input_weights, input_v, z_sum);
++         r_sum = _MM256_FMADD_PS(r_input_weights, input_v, r_sum);
+       }
+       for (j = 0; j<N; j++) {
+          // Load i8s
+@@ -170,8 +177,8 @@ void compute_gru_avx2(const GRULayer *gru, float *state, const float *input)
+ 
+          __m256 state_v = _mm256_broadcast_ss(&state[j]);
+ 
+-         z_sum = _mm256_fmadd_ps(z_recurrent_weights, state_v, z_sum);
+-         r_sum = _mm256_fmadd_ps(r_recurrent_weights, state_v, r_sum);
++         z_sum = _MM256_FMADD_PS(z_recurrent_weights, state_v, z_sum);
++         r_sum = _MM256_FMADD_PS(r_recurrent_weights, state_v, r_sum);
+       }
+ 
+       // Store sums
+@@ -224,7 +231,7 @@ void compute_gru_avx2(const GRULayer *gru, float *state, const float *input)
+ 
+          __m256 input_v = _mm256_broadcast_ss(&input[j]);
+ 
+-         sum = _mm256_fmadd_ps(input_weights, input_v, sum) ;
++         sum = _MM256_FMADD_PS(input_weights, input_v, sum) ;
+       }
+ 
+       for (j = 0; j < N; j++) {
+@@ -238,7 +245,7 @@ void compute_gru_avx2(const GRULayer *gru, float *state, const float *input)
+          float state_times_r = state[j] * r[j];
+          __m256 state_times_r_v = _mm256_broadcast_ss(&state_times_r);
+ 
+-         sum = _mm256_fmadd_ps(recurrent_weights, state_times_r_v, sum);
++         sum = _MM256_FMADD_PS(recurrent_weights, state_times_r_v, sum);
+       }
+ 
+       // Store sums
+@@ -269,9 +276,9 @@ void compute_gru_avx2(const GRULayer *gru, float *state, const float *input)
+ 
+ void compute_gru(const GRULayer *gru, float *state, const float *input)
+ {
+-   // Check if we support AVX2 and FMA and use the SIMD-accelerated function if so
+-   #if defined(__AVX2__) && defined(__FMA__)
+-   if (__builtin_cpu_supports("avx2") && __builtin_cpu_supports("fma")) {
++   // Check if we support AVX2 support and use the SIMD-accelerated function if so
++   #if defined(__AVX2__)
++   if (__builtin_cpu_supports("avx2")) {
+       compute_gru_avx2(gru, state, input);
+       return;
+    }
+-- 
+GitLab
+
+
+From f8f7c699958241161f64a872fa60e4e9552efe8e Mon Sep 17 00:00:00 2001
+From: Casey Primozic <me@ameo.link>
+Date: Tue, 20 Jul 2021 14:27:06 -0700
+Subject: [PATCH 08/10] Use memcpy instead of explicit element-by-element copy
+
+---
+ src/rnn.c | 15 +++++++--------
+ 1 file changed, 7 insertions(+), 8 deletions(-)
+
+diff --git a/src/rnn.c b/src/rnn.c
+index d84e6f0..b28869c 100644
+--- a/src/rnn.c
++++ b/src/rnn.c
+@@ -293,7 +293,7 @@ void compute_gru(const GRULayer *gru, float *state, const float *input)
+    M = gru->nb_inputs;
+    N = gru->nb_neurons;
+    stride = 3*N;
+-   for (i = 0;i < N;i++)
++   for (i = 0; i < N; i++)
+    {
+       float z_sum = gru->bias[i];
+       float r_sum = gru->bias[N + i];
+@@ -304,7 +304,7 @@ void compute_gru(const GRULayer *gru, float *state, const float *input)
+          /* Compute reset gate. */
+          r_sum += gru->input_weights[N + j*stride + i]*input[j];
+       }
+-      for (j = 0; j<N;j++) {
++      for (j = 0; j < N; j++) {
+          /* Compute update gate. */
+          z_sum += gru->recurrent_weights[j*stride + i]*state[j];
+          /* Compute reset gate. */
+@@ -316,20 +316,19 @@ void compute_gru(const GRULayer *gru, float *state, const float *input)
+    }
+ 
+    /* Compute output. */
+-   for (i = 0;i < N;i++) {
++   for (i = 0; i < N; i++) {
+       float sum = gru->bias[2*N + i];
+-      for (j = 0; j<M;j++)
++      for (j = 0; j<M; j++)
+          sum += gru->input_weights[2*N + j*stride + i]*input[j];
+-      for (j = 0; j<N;j++)
++      for (j = 0; j<N; j++)
+          sum += gru->recurrent_weights[2*N + j*stride + i]*state[j]*r[j];
+       if (gru->activation == ACTIVATION_SIGMOID) sum = sigmoid_approx(WEIGHTS_SCALE*sum);
+       else if (gru->activation == ACTIVATION_TANH) sum = tansig_approx(WEIGHTS_SCALE*sum);
+       else if (gru->activation == ACTIVATION_RELU) sum = relu(WEIGHTS_SCALE*sum);
+       else *(int*)0=0;
+-      h[i] = z[i]*state[i] + (1-z[i])*sum;
++      h[i] = z[i] * state[i] + (1 - z[i]) * sum;
+    }
+-   for (i = 0;i < N;i++)
+-      state[i] = h[i ];
++   memcpy((void*) &state, (void*) &h, N * sizeof(float));
+ }
+ 
+ #define INPUT_SIZE 42
+-- 
+GitLab
+
+
+From 3f1e06f29e0ead8933c80318385080265055fce5 Mon Sep 17 00:00:00 2001
+From: Casey Primozic <me@ameo.link>
+Date: Tue, 20 Jul 2021 17:09:20 -0700
+Subject: [PATCH 09/10] Use `_m256_set1_ps` instead of `_m256_broadcast_ss`
+
+ * We already have the value in a register, so avoid spilling to stack and reading back
+---
+ src/rnn.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/rnn.c b/src/rnn.c
+index b28869c..4f84cfe 100644
+--- a/src/rnn.c
++++ b/src/rnn.c
+@@ -243,7 +243,7 @@ void compute_gru_avx2(const GRULayer *gru, float *state, const float *input)
+          __m256 recurrent_weights = _mm256_cvtepi32_ps(recurrent_weights_i32);
+ 
+          float state_times_r = state[j] * r[j];
+-         __m256 state_times_r_v = _mm256_broadcast_ss(&state_times_r);
++         __m256 state_times_r_v = _mm256_set1_ps(state_times_r);
+ 
+          sum = _MM256_FMADD_PS(recurrent_weights, state_times_r_v, sum);
+       }
+-- 
+GitLab
+
+
+From 866f88037d45147dd674999978ebcef7aecb43cd Mon Sep 17 00:00:00 2001
+From: Antoine Rose <antoine.rose@ringover.com>
+Date: Wed, 21 Jul 2021 17:18:53 +0200
+Subject: [PATCH 10/10] Fix AVX,AVX2,FMA detection and check compatibility only
+ once
+
+Update FMA check
+---
+ src/denoise.c  |   8 ++++
+ src/rnn.c      | 104 +++++++++++++++++++++++++++++++++++++++++++------
+ src/rnn.h      |   6 +++
+ src/rnn_data.h |   1 +
+ 4 files changed, 108 insertions(+), 11 deletions(-)
+
+diff --git a/src/denoise.c b/src/denoise.c
+index a9328ff..0a54914 100644
+--- a/src/denoise.c
++++ b/src/denoise.c
+@@ -270,6 +270,14 @@ int rnnoise_init(DenoiseState *st, RNNModel *model) {
+   st->rnn.vad_gru_state = calloc(sizeof(float), st->rnn.model->vad_gru_size);
+   st->rnn.noise_gru_state = calloc(sizeof(float), st->rnn.model->noise_gru_size);
+   st->rnn.denoise_gru_state = calloc(sizeof(float), st->rnn.model->denoise_gru_size);
++  st->rnn.compute_gru_fct = &compute_gru;
++
++#if defined(__AVX2__)
++  if(is_avx2_supported() == 1) {
++    st->rnn.compute_gru_fct = &compute_gru_avx2;
++  }
++#endif
++
+   return 0;
+ }
+ 
+diff --git a/src/rnn.c b/src/rnn.c
+index 4f84cfe..984fa2a 100644
+--- a/src/rnn.c
++++ b/src/rnn.c
+@@ -38,6 +38,96 @@
+ #include "rnn_data.h"
+ #include <stdio.h>
+ 
++// SIMD
++#include <immintrin.h>
++#include <cpuid.h>
++#include <xsaveintrin.h>
++
++
++/**************************************
++ * GCC
++ *************************************/
++
++int is_avx2_supported() {
++#if defined(__AVX2__)
++   int cpuInfo[4];
++   int max_function_id;
++   int os_enables_XSAVE_XRSTORE = 0;
++   int os_enables_avx = 0;
++   int os_enables_avx2 = 0;
++#ifdef __FMA__
++   int os_enables_fma = 0;
++#endif
++
++   // Check for GCC or WIN32, other compilers not supported
++#if !defined(__GNUC__) && !defined(_WIN32)
++   return 0;
++#endif
++
++   // WIN32 must support CPUID
++#if defined(_WIN32) && !defined(HAS_CPUID)
++   return 0;
++#endif
++
++
++   // Check CPU support
++   // See: https://github.com/gcc-mirror/gcc/blob/master/gcc/config/i386/cpuid.h
++
++#if defined(__GNUC__)
++   __cpuid_count(0, 0, cpuInfo[0], cpuInfo[1], cpuInfo[2], cpuInfo[3]);
++#else // _WIN32
++   __cpuid(cpuInfo, 0);
++#endif
++   max_function_id = cpuInfo[0];
++   if (max_function_id < 1) {
++      return 0;
++   }
++
++#if defined(__GNUC__)
++   __cpuid_count(1, 0, cpuInfo[0], cpuInfo[1], cpuInfo[2], cpuInfo[3]);
++#else // _WIN32
++   __cpuid(cpuInfo, 1);
++#endif
++   os_enables_XSAVE_XRSTORE = cpuInfo[2] & 0x08000000;
++   if(!os_enables_XSAVE_XRSTORE) {
++      return 0;
++   }
++
++#ifdef __FMA__
++   os_enables_fma = cpuInfo[2] & 0x00001000;
++#endif
++   os_enables_avx = cpuInfo[2] & 0x10000000;
++
++   if (max_function_id >= 7) {
++#if defined(__GNUC__)
++      __cpuid_count(7, 0, cpuInfo[0], cpuInfo[1], cpuInfo[2], cpuInfo[3]);
++#else // _WIN32
++      __cpuid(cpuInfo, 7);
++#endif
++      os_enables_avx2 = cpuInfo[1] & 0x00000020;
++   }
++
++
++   // Check OS support
++   // See: https://stackoverflow.com/a/22521619/2750093
++   // AVX2 and FMA: no check available, checking AVX only is your best bet
++   if(os_enables_avx) {
++      unsigned long long xcrFeatureMask = _xgetbv(0); // _XCR_XFEATURE_ENABLED_MASK
++      os_enables_avx = (xcrFeatureMask & 0x6) == 0x6;
++   }
++
++#ifdef __FMA__
++   return os_enables_avx && os_enables_avx2 && os_enables_fma;
++#else
++   return os_enables_avx && os_enables_avx2;
++#endif
++
++#else
++   return 0;
++#endif
++}
++
++
+ static OPUS_INLINE float tansig_approx(float x)
+ {
+     int i;
+@@ -276,14 +366,6 @@ void compute_gru_avx2(const GRULayer *gru, float *state, const float *input)
+ 
+ void compute_gru(const GRULayer *gru, float *state, const float *input)
+ {
+-   // Check if we support AVX2 support and use the SIMD-accelerated function if so
+-   #if defined(__AVX2__)
+-   if (__builtin_cpu_supports("avx2")) {
+-      compute_gru_avx2(gru, state, input);
+-      return;
+-   }
+-   #endif
+-
+    int i, j;
+    int N, M;
+    int stride;
+@@ -339,16 +421,16 @@ void compute_rnn(RNNState *rnn, float *gains, float *vad, const float *input) {
+   float noise_input[MAX_NEURONS*3];
+   float denoise_input[MAX_NEURONS*3];
+   compute_dense(rnn->model->input_dense, dense_out, input);
+-  compute_gru(rnn->model->vad_gru, rnn->vad_gru_state, dense_out);
++  rnn->compute_gru_fct(rnn->model->vad_gru, rnn->vad_gru_state, dense_out);
+   compute_dense(rnn->model->vad_output, vad, rnn->vad_gru_state);
+   for (i = 0;i<rnn->model->input_dense_size;i++) noise_input[i] = dense_out[i];
+   for (i = 0;i<rnn->model->vad_gru_size;i++) noise_input[i+rnn->model->input_dense_size] = rnn->vad_gru_state[i];
+   for (i = 0;i<INPUT_SIZE;i++) noise_input[i+rnn->model->input_dense_size+rnn->model->vad_gru_size] = input[i];
+-  compute_gru(rnn->model->noise_gru, rnn->noise_gru_state, noise_input);
++  rnn->compute_gru_fct(rnn->model->noise_gru, rnn->noise_gru_state, noise_input);
+ 
+   for (i = 0;i<rnn->model->vad_gru_size;i++) denoise_input[i] = rnn->vad_gru_state[i];
+   for (i = 0;i<rnn->model->noise_gru_size;i++) denoise_input[i+rnn->model->vad_gru_size] = rnn->noise_gru_state[i];
+   for (i = 0;i<INPUT_SIZE;i++) denoise_input[i+rnn->model->vad_gru_size+rnn->model->noise_gru_size] = input[i];
+-  compute_gru(rnn->model->denoise_gru, rnn->denoise_gru_state, denoise_input);
++  rnn->compute_gru_fct(rnn->model->denoise_gru, rnn->denoise_gru_state, denoise_input);
+   compute_dense(rnn->model->denoise_output, gains, rnn->denoise_gru_state);
+ }
+diff --git a/src/rnn.h b/src/rnn.h
+index 31b962f..8c711f8 100644
+--- a/src/rnn.h
++++ b/src/rnn.h
+@@ -60,10 +60,16 @@ typedef struct {
+ 
+ typedef struct RNNState RNNState;
+ 
++int is_avx2_supported();
++
+ void compute_dense(const DenseLayer *layer, float *output, const float *input);
+ 
+ void compute_gru(const GRULayer *gru, float *state, const float *input);
+ 
++#if defined(__AVX2__)
++void compute_gru_avx2(const GRULayer *gru, float *state, const float *input);
++#endif
++
+ void compute_rnn(RNNState *rnn, float *gains, float *vad, const float *input);
+ 
+ #endif /* RNN_H_ */
+diff --git a/src/rnn_data.h b/src/rnn_data.h
+index f2186fe..b74798a 100644
+--- a/src/rnn_data.h
++++ b/src/rnn_data.h
+@@ -28,6 +28,7 @@ struct RNNState {
+   float *vad_gru_state;
+   float *noise_gru_state;
+   float *denoise_gru_state;
++  void (*compute_gru_fct)(const GRULayer *gru, float *state, const float *input);
+ };
+ 
+ 
+-- 
+GitLab
+

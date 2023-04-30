@@ -1,0 +1,23 @@
+pkgname=ristretto
+pkgver=0.12.1
+xver=0.12
+pkgrel=1
+arch=('x86_64')
+depends=(libexif libxfce4ui)
+source=(https://archive.xfce.org/src/apps/$pkgname/$xver/$pkgname-$pkgver.tar.bz2)
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure		\
+	--prefix=/usr		\
+	--sysconfdir=/etc
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

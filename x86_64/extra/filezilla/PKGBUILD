@@ -1,0 +1,35 @@
+pkgname=filezilla
+pkgver=3.60.1
+pkgrel=1
+arch=(x86_64)
+depends=(glibc dbus xdg-utils libidn hicolor-icon-theme
+	sqlite3 gnutls libfilezilla ibus gtk3+ nettle wxwidgets)
+makedepends=(make gcc)
+source=(https://download.filezilla-project.org/client/FileZilla_${pkgver}_src.tar.bz2
+	wxwidgets.patch)
+
+prepare() {
+	patch -Np0 -i wxwidgets.patch
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	CCPPFLAGS=" -I/usr/include/wx-3.1" \
+	CXXFLAGS=" -I/usr/include/wx-3.1"
+	CFLAGS=" -I/usr/include/wx-3.1"
+	./configure \
+	--prefix=/usr \
+	--disable-manualupdatecheck \
+	--disable-autoupdatecheck \
+	--with-pugixml=builtin \
+	--with-wx-config=/usr/bin/wx-config
+
+	make -j4
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

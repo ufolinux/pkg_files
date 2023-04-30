@@ -1,0 +1,63 @@
+pkgname=util-linux
+pkgver=2.37.2
+pkgrel=6
+arch=('x86_64')
+depends=('python3' 'systemd' 'linux-pam')
+source=(https://www.kernel.org/pub/linux/utils/$pkgname/v${pkgver::4}/$pkgname-$pkgver.tar.xz
+	pam-{login,common,runuser,su}
+	60-rfkill.rules
+	rfkill-unblock_.service
+	rfkill-block_.service
+	util-linux.sysusers)
+backup=(etc/pam.d/chfn
+	etc/pam.d/chsh
+	etc/pam.d/login
+	etc/pam.d/runuser
+	etc/pam.d/runuser-l
+	etc/pamd.d/su
+	etc/pam.d/su-l)
+
+build() {
+        cd $pkgname-$pkgver
+
+	./configure						\
+		ADJTIME_PATH=/var/lib/hwclock/adjtime		\
+		--prefix=/usr					\
+		--localstatedir=/var				\
+		--enable-vipw					\
+		--enable-newgrp					\
+		--enable-chfn-chsh				\
+		--enable-login					\
+		--enable-write					\
+		--enable-mesg					\
+		--with-python=3					\
+		--with-systemd					\
+		--with-systemdsystemunitdir
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+	mkdir -pv $pkgdir/var/lib/hwclock
+        make DESTDIR=$pkgdir install
+
+	chmod 4755 $pkgdir/usr/bin/{newgrp,ch{sh,fn}}
+
+	install -Dm0644 $srcdir/pam-common $pkgdir/etc/pam.d/chfn
+	install -m0644 $srcdir/pam-common $pkgdir/etc/pam.d/chsh 
+	install -m0644 $srcdir/pam-login $pkgdir/etc/pam.d/login
+	install -m0644 $srcdir/pam-runuser $pkgdir/etc/pam.d/runuser
+	install -m0644 $srcdir/pam-runuser $pkgdir/etc/pam.d/runuser-l
+	install -m0644 $srcdir/pam-su $pkgdir/etc/pam.d/su
+	install -m0644 $srcdir/pam-su $pkgdir/etc/pam.d/su-l
+	
+	install -Dm0644 "$srcdir/util-linux.sysusers"	\
+		$pkgdir/usr/lib/sysusers.d/util-linux.conf
+
+	install -Dm0644 $srcdir/60-rfkill.rules	\
+		$pkgdir/usr/lib/systemd/rfkill-unblock@.service
+
+	install -Dm0644 $srcdir/rfkill-block_.service	\
+		$pkgdir/usr/lib/systemd/system/rfkill-block@.service
+}

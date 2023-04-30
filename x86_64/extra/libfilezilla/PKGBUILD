@@ -1,0 +1,27 @@
+pkgname=libfilezilla
+pkgver=0.38.0
+pkgrel=1
+arch=(x86_64)
+depends=(glibc gcc nettle gnutls nettle)
+makedepends=(make)
+source=(https://download.filezilla-project.org/libfilezilla/libfilezilla-${pkgver}.tar.bz2
+	aio-tuplefix.patch)
+
+prepare() {
+	patch -Np0 -i aio-tuplefix.patch
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure \
+	--prefix=/usr
+
+	make
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

@@ -1,0 +1,16 @@
+pkgname=python3-pkgconfig
+pkgver=1.5.5
+pkgrel=1
+arch=(x86_64)
+replace=(python-pkgconfig)
+depends=(python3)
+makedepends=(python3-pip)
+source=(https://pypi.io/packages/source/p/pkgconfig/pkgconfig-$pkgver.tar.gz)
+
+package() {
+	pip3 install setuptools
+
+	cd pkgconfig-$pkgver
+  
+	python setup.py install --prefix=/usr --root="$pkgdir" --optimize=1
+}

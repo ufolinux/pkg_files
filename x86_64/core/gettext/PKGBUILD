@@ -1,0 +1,25 @@
+pkgname=gettext
+pkgver=0.21
+pkgrel=2
+arch=('x86_64')
+depends=(bash glib2 glibc)
+source=(https://ftp.gnu.org/gnu/$pkgname/$pkgname-$pkgver.tar.xz)
+
+build() {
+        cd $pkgname-$pkgver
+
+        # suppress two invocations of test-lock which on some machines can loop forever
+        sed -i '/^TESTS =/d' gettext-runtime/tests/Makefile.in
+        sed -i 's/test-lock..EXEEXT.//' gettext-tools/gnulib-tests/Makefile.in
+
+        ./configure	\
+	--prefix=/usr
+}
+
+package() {
+	cd $pkgname-$pkgver
+        make || make -j1
+        make -j1 DESTDIR=$pkgdir install
+
+        chmod -v 0755 $pkgdir/usr/lib/preloadable_libintl.so
+}

@@ -1,0 +1,30 @@
+pkgname=lvm2
+pkgver=2.03.14
+pkgrel=1
+arch=('x86_64')
+depends=(libaio)
+source=(https://sourceware.org/ftp/lvm2/LVM2.$pkgver.tgz)
+
+build() {
+	cd LVM2.$pkgver
+
+	export PATH+=:/usr/sbin
+
+	./configure		\
+	--prefix=/usr		\
+	--enable-cmdlib		\
+	--enable-pkgconfig	\
+	--enable-usev_sync
+
+	make
+}
+
+package() {
+	cd LVM2.$pkgver
+
+	make DESTDIR=$pkgdir -C tools install_tools_dynamic
+	make DESTDIR=$pkgdir -C udev  install
+	make DESTDIR=$pkgdir -C libdm install
+	make DESTDIR=$pkgdir install
+	make DESTDIR=$pkgdir install_systemd_units 
+}

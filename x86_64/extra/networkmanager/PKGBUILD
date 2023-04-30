@@ -1,0 +1,45 @@
+pkgname=networkmanager
+pkgver=1.32.12
+pkgrel=2
+arch=('x86_64')
+depends=(libndp jansson curl dhcpcd gobject-introspection nss polkit systemd upower vala wpa_supplicant modemmanager)
+source=(https://download.gnome.org/sources/NetworkManager/1.32/NetworkManager-$pkgver.tar.xz
+	org.freedesktop.NetworkManager.policy)
+
+prepare() {
+	cd NetworkManager-$pkgver
+
+	grep -rl '^#!.*python$' | xargs sed -i '1s/python/&3/'
+	mkdir -p build
+}
+
+build() {
+	cd NetworkManager-$pkgver/build
+
+	CXXFLAGS+="-O2 -fPIC"		\
+	meson				\
+	--prefix=/usr			\
+	--buildtype=release		\
+	-D libaudit=no			\
+	-D libpsl=false			\
+	-D nmtui=true			\
+	-D ovs=false			\
+	-D ppp=false			\
+	-D selinux=false		\
+	-D qt=false			\
+	-D session_tracking=systemd	\
+	-D modem_manager=false		\
+	-D nmtui=false			\
+	..
+
+	ninja
+}
+
+package() {
+	cd NetworkManager-$pkgver/build
+
+	DESTDIR=$pkgdir ninja install
+
+	# Replcase polkit action with our modified one
+	cp -f $srcdir/org.freedesktop.NetworkManager.policy $pkgdir/usr/share/polkit-1/actions/org.freedesktop.NetworkManager.policy
+}

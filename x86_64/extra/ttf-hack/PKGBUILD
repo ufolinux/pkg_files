@@ -1,0 +1,9 @@
+pkgname=ttf-hack
+pkgver=3.003
+pkgrel=1
+arch=('x86_64')
+source=("https://github.com/source-foundry/Hack/releases/download/v${pkgver}/Hack-v${pkgver}-ttf.tar.xz")
+
+package() {
+    install -Dm644 -t "$pkgdir/usr/share/fonts/TTF" "$srcdir"/Hack-*.ttf
+}

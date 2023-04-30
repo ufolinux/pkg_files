@@ -1,0 +1,47 @@
+pkgname=udisks2
+pkgver=2.9.4
+pkgrel=3
+pkgdesc="Disk Management Service, version 2"
+arch=('x86_64')
+url="https://www.freedesktop.org/wiki/Software/udisks"
+depends=(libatasmart libblockdev libgudev libxslt polkit lvm2
+	mdadm systemd gobject-introspection ntfs-3g dosfstools gptfdisk)
+makedepends=('docbook-xsl' 'parted' 'gtk-doc')
+backup=('etc/udisks2/udisks2.conf'
+	'etc/udisks2mount_options.conf')
+source=("https://github.com/storaged-project/udisks/archive/udisks-$pkgver.tar.gz"
+	"mount_options.conf")
+
+prepare() {
+	cd udisks-udisks-$pkgver
+
+	NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+	cd udisks-udisks-$pkgver
+
+	./configure \
+	--prefix=/usr \
+	--sysconfdir=/etc \
+	--sbindir=/usr/bin \
+	--libexecdir=/usr/lib \
+	--with-systemdsystemunitdir=/usr/lib/systemd/system \
+	--localstatedir=/var \
+	enable_available_modules=yes \
+	--disable-man \
+	--disable-gtk-doc \
+	--disable-gtk-doc-pdf \
+	--disable-gtk-doc-html
+
+	make
+}
+
+package() {
+	cd udisks-udisks-$pkgver
+
+	make DESTDIR="$pkgdir" install
+
+	mkdir -p $pkgdir/etc/udisks2
+	cp ../mount_options.conf $pkgdir/etc/udisks2/mount_options.conf
+}

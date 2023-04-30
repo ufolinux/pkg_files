@@ -1,0 +1,30 @@
+pkgname=sasl2
+rname=cyrus-sasl
+pkgver=2.1.28
+pkgrel=1
+arch=(x86_64)
+depends=(openssl gdbm openldap sqlite3 linux-pam)
+source=(https://github.com/cyrusimap/$rname/releases/download/$rname-$pkgver/$rname-$pkgver.tar.gz)
+
+prepare() {
+	cd $rname-$pkgver
+
+	autoreconf -fiv
+}
+
+build() {
+	cd $rname-$pkgver
+
+	./configure \
+	--prefix=/usr \
+	--sysconfdir=/etc \
+	--with-devrandom=/dev/urandom
+
+	make
+}
+
+package() {
+	cd $rname-$pkgver
+
+	make DESTDIR=$pkgdir install
+}

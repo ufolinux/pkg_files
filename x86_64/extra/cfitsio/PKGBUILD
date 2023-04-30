@@ -1,0 +1,32 @@
+pkgname=cfitsio
+pkgver=4.1.0
+pkgrel=1
+arch=(x86_64)
+depends=(glibc curl)
+makedepends=(make m4)
+source=(https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/$pkgname-$pkgver.tar.gz)
+
+prepare() {
+	cd $pkgname-$pkgver
+
+	autoreconf -fi
+}
+
+build() {
+	cd $pkgname-$pkgver
+
+	./configure \
+	--prefix=/usr \
+	--enable-reentrant
+
+	make shared utils
+}
+
+package() {
+	cd $pkgname-$pkgver
+
+	make DESTDIR=$pkgdir install
+
+	# Conflicts fix
+	rm -f $pkgdir/usr/bin/{cookbook,smem,testprog}
+}

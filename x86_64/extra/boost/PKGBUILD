@@ -1,0 +1,33 @@
+pkgname=boost
+pkgver=1.78.0
+pkgrel=3
+arch=('x86_64')
+depends=(which icu)
+source=(https://boostorg.jfrog.io/artifactory/main/release/$pkgver/source/boost_1_78_0.tar.bz2)
+
+build() {
+	echo 1
+}
+
+build1() {
+	cd boost_1_78_0
+
+	./bootstrap.sh			\
+	--prefix=$srcdir/fkinstall	\
+	--with-python=python3
+
+	./b2 stage			\
+	threading=multi			\
+	--debug-symbols=on              \
+        --runtime-link=shared           \
+        --link=shared,static
+}
+
+package() {
+	cd boost_1_78_0
+
+	./b2 install
+
+	mkdir -p $pkgdir/usr
+	cp -rf $srcdir/fkinstall/* $pkgdir/usr/
+}

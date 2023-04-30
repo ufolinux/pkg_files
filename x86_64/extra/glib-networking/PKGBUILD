@@ -1,0 +1,25 @@
+pkgname=glib-networking
+pkgver=2.70.1
+pkgrel=1
+arch=('x86_64')
+depends=(glib2 gnutls)
+source=(https://download.gnome.org/sources/$pkgname/2.70/$pkgname-$pkgver.tar.xz)
+
+build() {
+	cd $pkgname-$pkgver
+
+	mkdir -p build && cd build
+
+	meson			\
+	--prefix=/usr		\
+	--buildtype=release	\
+	..
+
+	ninja
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+	
+	DESTDIR=$pkgdir ninja install
+}

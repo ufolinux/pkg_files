@@ -1,0 +1,19 @@
+pkgname=drivers-xorg
+pkgver=2023.1
+pkgrel=1
+arch=('x86_64')
+depends=(xf86-video-amdgpu xf86-video-vesa xf86-video-fbdev xf86-video-intel xf86-video-ati xf86-video-vmware xf86-video-vboxvideo xf86-video-nouveau
+	xf86-input-libinput xf86-input-evdev xf86-input-synaptics xf86-input-wacom xf86-video-qxl)
+makedepends=(base-system)
+
+prepare() {
+	echo "Nothing to do."
+}
+
+build() {
+	echo "Nothing to do."
+}
+
+package() {
+	echo "Nothing to do."
+}

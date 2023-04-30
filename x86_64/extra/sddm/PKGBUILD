@@ -1,0 +1,34 @@
+pkgname=sddm
+pkgver=2023.1
+pkgrel=1
+arch=(x86_64)
+depends=(xauth qt5 xorg-server base-fonts double-conversion drivers-xorg)
+makedepends=(extra-cmake-modules python3 qt5)
+backup=('usr/share/sddm/scripts/wayland-session'
+		'usr/share/sddm/scripts/Xsetup'
+		'usr/share/sddm/scripts/Xstop'
+		'etc/pam.d/sddm'
+		'etc/pam.d/sddm-autologin'
+		'etc/pam.d/sddm-greeter')
+source=(https://git.martinvlba.eu/DrunkOS/$pkgname/archive/v${pkgver}.tar.gz)
+options=(!strip)
+
+build() {
+	cmake -B build -S $pkgname-$pkgver \
+	-D CMAKE_INSTALL_PREFIX=/usr \
+	-D CMAKE_INSTALL_LIBEXECDIR=/usr/lib/sddm \
+	-D DBUS_CONFIG_DIR=/usr/share/dbus-1/system.d \
+	-D DBUS_CONFIG_FILENAME=sddm_org.freedesktop.DisplayManager.conf \
+	-D BUILD_MAN_PAGES=OFF \
+	-D UID_MAX=60513
+
+	cmake --build build
+}
+
+package() {
+	DESTDIR="$pkgdir" cmake --install build
+
+	# Double chmod scripts to be executable!!!
+	# Forgetting that will make sessions unusable
+	chmod +x "$pkgdir"/usr/share/sddm/scripts/*
+}

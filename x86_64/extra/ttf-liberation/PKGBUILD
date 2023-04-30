@@ -1,0 +1,21 @@
+pkgname=ttf-liberation
+rname=liberation-fonts
+pkgver=2.1.5
+pkgrel=1
+arch=(x86_64)
+url=https://github.com/liberationfonts/liberation-fonts
+makedepends=(fontforge python3-fonttools)
+source=($url/archive/$pkgver/liberation-fonts-$pkgver.tar.gz)
+
+build() {
+	cd $rname-$pkgver
+
+	make build
+}
+
+package() {
+	cd $rname-$pkgver
+
+	install -Dm644 -t "$pkgdir/usr/share/fonts/${pkgname#ttf-}" \
+	liberation-fonts-ttf-$pkgver/*.ttf
+}

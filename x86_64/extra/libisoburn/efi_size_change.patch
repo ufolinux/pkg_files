@@ -1,0 +1,23 @@
+--- xorriso/write_run.c	2021-01-30 16:29:28.000000000 +0200
++++ xorriso/write_run.c	2022-07-02 14:03:05.732629809 +0300
+@@ -743,16 +743,16 @@
+    {ret= 0; goto ex;}
+  }
+  el_torito_set_boot_platform_id(bootimg, (uint8_t) platform_id);
+- if(load_size / 512 > 65535) {
++ if(load_size / 512 > 256000) {
+    sprintf(xorriso->info_text,
+-           "Boot image load size exceeds 65535 blocks of 512 bytes. ");
++           "Boot image load size exceeds 256000 blocks of 512 bytes. ");
+    if(platform_id == 0xef) {
+      strcat(xorriso->info_text,
+             "Will record 0 in El Torito to extend ESP to end-of-medium.");
+      load_size= 0;
+    } else {
+-     strcat(xorriso->info_text, "Will record 65535 in El Torito.");
+-     load_size= 65535 * 512;
++     strcat(xorriso->info_text, "Will record 256000 in El Torito.");
++     load_size= 256000 * 512;
+    }
+    Xorriso_msgs_submit(xorriso, 0, xorriso->info_text, 0, "WARNING", 0);
+  }

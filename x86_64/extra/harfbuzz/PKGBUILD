@@ -1,0 +1,29 @@
+pkgname=harfbuzz
+pkgver=2.9.0
+pkgrel=2
+arch=('x86_64')
+depends=(gobject-introspection glib2 icu freetype2)
+source=(https://github.com/$pkgname/$pkgname/releases/download/$pkgver/$pkgname-$pkgver.tar.xz)
+
+prepare() {
+	mkdir -p $pkgname-$pkgver/build
+}
+
+build() {
+	cd $pkgname-$pkgver/build
+
+	meson			\
+	--prefix=/usr		\
+	--buildtype=release	\
+	-Dgraphite=disabled	\
+	-Dbenchmark=disabled	\
+	..
+
+	ninja
+}
+
+package() {
+	cd $pkgname-$pkgver/build
+
+	DESTDIR=$pkgdir	ninja install
+}

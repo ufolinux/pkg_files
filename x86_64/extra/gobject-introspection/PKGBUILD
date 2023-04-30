@@ -1,0 +1,29 @@
+pkgname=gobject-introspection
+pkgver=1.72.0
+gver=2.75.2
+pkgrel=1
+arch=('x86_64')
+makedepends=(git meson glib2)
+source=(git+https://gitlab.gnome.org/GNOME/gobject-introspection.git
+	git+https://gitlab.gnome.org/GNOME/glib.git#tag=$gver)
+
+build() {
+	meson $pkgname build	\
+	-D gtk_doc=false	\
+	-D glib_src_dir="$srcdir/glib"	\
+	--prefix=/usr --libdir=/usr/lib
+
+	meson compile -C build 
+}
+
+package() {
+	meson install -C build --destdir $pkgdir
+
+	mkdir -p $pkgdir/usr/lib/pkgconfig
+	cp -f build/meson-private/gobject-introspection-1.0.pc $pkgdir/usr/lib/pkgconfig/
+
+	# Compile and optimize py scripts
+	python -m compileall -d /usr/lib/$pkgname usr/lib/$pkgname
+	python -O -m compileall -d /usr/lib/$pkgname usr/lib/$pkgname
+}
+

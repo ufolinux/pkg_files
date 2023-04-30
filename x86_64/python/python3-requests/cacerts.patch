@@ -1,0 +1,12 @@
+--- requests/certs.py	2022-01-05 17:35:04.000000000 +0200
++++ requests/certs.py	2022-07-02 17:04:16.489049885 +0300
+@@ -12,7 +12,8 @@
+ environment, you can change the definition of where() to return a separately
+ packaged CA bundle.
+ """
+-from certifi import where
++def where():
++    return "/etc/ssl/certs/ca-certificates.cr"
+ 
+ if __name__ == '__main__':
+     print(where())
